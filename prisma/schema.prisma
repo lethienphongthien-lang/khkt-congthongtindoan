@@ -1,0 +1,957 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["relationJoins"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  SECRETARY
+  MEMBER
+}
+
+enum AccountStatus {
+  ACTIVE
+  LOCKED
+}
+
+enum MemberStatus {
+  ACTIVE // Đang sinh hoạt
+  TRANSFERRED // Đã chuyển sinh hoạt
+  GRADUATED // Đã ra trường
+}
+
+enum RegistrationStatus {
+  REGISTERED
+  CANCELLED
+}
+
+enum AttendanceMethod {
+  QR
+  MANUAL
+}
+
+enum PointType {
+  ACTIVITY
+  ADJUSTMENT
+  GAME // Điểm từ trò chơi tích điểm (có trần mỗi tuần)
+  DAILY // Điểm danh hằng ngày (+1 mỗi ngày, thưởng khi đạt chuỗi 7 và 30 ngày)
+}
+
+enum BadgeCriteria {
+  ACTIVITY_COUNT
+  VOLUNTEER_HOURS
+  TOTAL_POINTS
+  CATEGORY_COUNT
+  GAME_COUNT // Số trò chơi đã hoàn thành
+}
+
+enum ArticleKind {
+  NEWS // Tin tức
+  PLAN // Kế hoạch
+  EVENT // Sự kiện
+  ANNOUNCEMENT // Thông báo
+  STORY // Câu chuyện đẹp (Chi đoàn đăng mỗi tuần)
+  GAME // Trò chơi (BCH đăng, học sinh tương tác)
+  CAREER // Định hướng nghề nghiệp
+  DOCUMENT // Tài liệu sinh hoạt Chi đoàn (kèm tệp đính kèm)
+}
+
+enum FeedbackStatus {
+  NEW
+  READ
+  RESOLVED
+}
+
+enum NotificationType {
+  ACTIVITY_CREATED
+  ACTIVITY_REMINDER
+  ACTIVITY_CANCELLED
+  REGISTRATION
+  CHECKIN
+  POINTS
+  BADGE
+  FEED
+  POLL
+  SYSTEM
+  CERTIFICATE
+}
+
+model User {
+  id                 String        @id @default(cuid())
+  username           String        @unique
+  passwordHash       String
+  fullName           String
+  role               Role
+  status             AccountStatus @default(ACTIVE)
+  mustChangePassword Boolean       @default(true)
+  superAdmin         Boolean       @default(false) // quản trị tối cao hệ thống (chỉ vai trò ADMIN); ADMIN không phải superAdmin = Ban chấp hành Đoàn trường
+  position           String? // chức danh (Bí thư Đoàn trường, Phó Bí thư Đoàn trường...)
+  avatarUrl          String? // ảnh đại diện của tài khoản không có hồ sơ đoàn viên (vd Admin)
+  avatarPublicId     String?
+  lastLoginAt        DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  member            Member?
+  secretaryOf       Department?
+  notifications     Notification[]
+  auditLogs         AuditLog[]
+  createdActivities Activity[]         @relation("ActivityCreator")
+  pointTransactions PointTransaction[] @relation("PointCreator")
+  manualCheckins    Attendance[]       @relation("CheckedInBy")
+  posts             Post[]
+  postLikes         PostLike[]
+  postComments      PostComment[]
+  emulationRecords  EmulationRecord[]
+  pushSubscriptions PushSubscription[]
+  passkeys          Passkey[]
+  teamMessages      TeamMessage[]
+  teamChatRead      TeamChatRead?
+  articles          Article[]
+  quizzes           Quiz[]
+  chapterReports    ChapterReport[]
+
+  @@index([role, status])
+}
+
+model Department {
+  id          String    @id @default(cuid())
+  name        String // tên hiện tại, tự đổi theo năm học: 10A1 -> 11A1 -> 12A1
+  description String?
+  startYear   Int? // năm vào lớp 10 (khóa): 2026 => niên khóa 2026–2029
+  graduatedAt DateTime? // đã ra trường (tài khoản bị khóa, không còn trong thi đua)
+  isTeacher   Boolean   @default(false) // Chi đoàn giáo viên: không có khối/khóa, không lên lớp, không tính vào thống kê và thi đua của học sinh
+  secretaryId String?   @unique
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  secretary         User?              @relation(fields: [secretaryId], references: [id], onDelete: SetNull)
+  classes           Class[]
+  members           Member[]
+  activities        Activity[]
+  volunteerRequests VolunteerRequest[]
+  posts             Post[]
+  emulationRecords  EmulationRecord[]
+  chapterReports    ChapterReport[]
+  articles          Article[]
+
+  @@unique([name, startYear])
+  @@index([graduatedAt])
+}
+
+model Class {
+  id           String   @id @default(cuid())
+  name         String
+  grade        Int?
+  departmentId String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  members    Member[]
+
+  @@unique([departmentId, name])
+}
+
+model Member {
+  id               String       @id @default(cuid())
+  code             String       @unique
+  userId           String       @unique
+  fullName         String
+  gender           String?
+  dateOfBirth      DateTime?
+  joinedAt         DateTime? // ngày vào Đoàn (chỉ đoàn viên)
+  isDoanVien       Boolean      @default(true) // true: đoàn viên; false: thanh niên (học sinh chưa vào Đoàn)
+  cohort           Int? // Khóa (năm nhập học)
+  status           MemberStatus @default(ACTIVE)
+  classId          String
+  departmentId     String
+  avatarUrl        String?
+  avatarPublicId   String?
+  qrToken          String       @unique @default(cuid())
+  totalPoints      Int          @default(0)
+  volunteerMinutes Int          @default(0)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  user          User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  class         Class                  @relation(fields: [classId], references: [id], onDelete: Restrict)
+  department    Department             @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  registrations ActivityRegistration[]
+  attendances   Attendance[]
+  points        PointTransaction[]
+  badges        MemberBadge[]
+  quizAttempts  QuizAttempt[]
+  dailyCheckins DailyCheckin[]
+  certificates  Certificate[]
+  detail        MemberDetail?
+
+  @@index([departmentId, status])
+  @@index([classId])
+  @@index([cohort])
+  @@index([fullName])
+}
+
+model ActivityCategory {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  defaultPoints Int      @default(3)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  activities Activity[]
+  badges     Badge[]
+}
+
+model Activity {
+  id              String    @id @default(cuid())
+  title           String
+  description     String?
+  location        String
+  startAt         DateTime
+  endAt           DateTime
+  categoryId      String
+  departmentId    String? // null = hoạt động toàn trường
+  maxParticipants Int?
+  points          Int       @default(0)
+  volunteerHours  Float     @default(0)
+  imageUrl        String?
+  imagePublicId   String?
+  cancelledAt     DateTime?
+  reminderSentAt  DateTime? // đã gửi nhắc lịch cho người đăng ký
+  checkinOpen     Boolean   @default(false)
+  qrNonce         String    @default(cuid()) // đổi nonce => mọi QR cũ vô hiệu
+  createdById     String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  category          ActivityCategory       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  department        Department?            @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  createdBy         User                   @relation("ActivityCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  registrations     ActivityRegistration[]
+  attendances       Attendance[]
+  images            ActivityImage[]
+  pointTransactions PointTransaction[]
+  volunteerRequest  VolunteerRequest?
+
+  @@index([startAt])
+  @@index([departmentId, startAt])
+  @@index([categoryId])
+}
+
+model ActivityImage {
+  id         String   @id @default(cuid())
+  activityId String
+  imageUrl   String
+  publicId   String
+  createdAt  DateTime @default(now())
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@index([activityId])
+}
+
+model ActivityRegistration {
+  id         String             @id @default(cuid())
+  activityId String
+  memberId   String
+  status     RegistrationStatus @default(REGISTERED)
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  member   Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([activityId, memberId])
+  @@index([memberId])
+}
+
+model Attendance {
+  id            String           @id @default(cuid())
+  activityId    String
+  memberId      String
+  checkedInAt   DateTime         @default(now())
+  method        AttendanceMethod @default(QR)
+  deviceInfo    String? // user-agent
+  ipAddress     String?
+  latitude      Float? // dự phòng cho xác thực GPS
+  longitude     Float?
+  checkedInById String? // người điểm danh hộ (nếu MANUAL)
+  createdAt     DateTime         @default(now())
+
+  activity    Activity          @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  member      Member            @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  checkedInBy User?             @relation("CheckedInBy", fields: [checkedInById], references: [id], onDelete: SetNull)
+  point       PointTransaction?
+
+  @@unique([activityId, memberId])
+  @@index([memberId, checkedInAt])
+}
+
+model PointTransaction {
+  id           String    @id @default(cuid())
+  memberId     String
+  activityId   String?
+  attendanceId String?   @unique
+  type         PointType
+  points       Int
+  reason       String
+  createdById  String?
+  createdAt    DateTime  @default(now())
+
+  member     Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  activity   Activity?   @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  attendance Attendance? @relation(fields: [attendanceId], references: [id], onDelete: SetNull)
+  createdBy  User?       @relation("PointCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([memberId, createdAt])
+}
+
+/// Điểm danh hằng ngày: mỗi tài khoản một lần mỗi ngày (thứ Hai đến thứ Bảy, giờ Việt Nam).
+model DailyCheckin {
+  id        String   @id @default(cuid())
+  memberId  String
+  day       String // ngày điểm danh theo giờ Việt Nam, dạng YYYY-MM-DD
+  streak    Int      @default(1) // số ngày học điểm danh liên tiếp tính tới ngày này
+  createdAt DateTime @default(now())
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, day])
+  @@index([day])
+}
+
+model Badge {
+  id          String        @id @default(cuid())
+  name        String        @unique
+  description String
+  icon        String        @default("award") // tên icon Lucide
+  criteria    BadgeCriteria
+  threshold   Int
+  categoryId  String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  category ActivityCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  members  MemberBadge[]
+}
+
+model MemberBadge {
+  id        String   @id @default(cuid())
+  memberId  String
+  badgeId   String
+  awardedAt DateTime @default(now())
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  badge  Badge  @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, badgeId])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String?
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  target    String
+  targetId  String?
+  metadata  Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([target, targetId])
+  @@index([userId])
+}
+
+model Post {
+  id            String   @id @default(cuid())
+  authorId      String
+  departmentId  String? // null = toàn trường (chỉ Admin đăng)
+  content       String
+  imageUrl      String?
+  imagePublicId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  author     User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  department Department?   @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  likes      PostLike[]
+  comments   PostComment[]
+
+  @@index([createdAt])
+  @@index([departmentId, createdAt])
+}
+
+model PostLike {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+}
+
+model PostComment {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+}
+
+/// Điểm thi đua do Đoàn trường ghi nhận cho Chi đoàn (nề nếp, phong trào... – có thể âm).
+model EmulationRecord {
+  id           String   @id @default(cuid())
+  departmentId String
+  points       Int
+  reason       String
+  recordedAt   DateTime
+  createdById  String?
+  createdAt    DateTime @default(now())
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  createdBy  User?      @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([departmentId, recordedAt])
+  @@index([recordedAt])
+}
+
+/// Đăng ký nhận thông báo đẩy (Web Push) của từng thiết bị.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Bài viết trên trang công khai: tin tức, kế hoạch, sự kiện, thông báo (Admin quản lý).
+model Article {
+  id            String      @id @default(cuid())
+  kind          ArticleKind
+  title         String
+  slug          String      @unique
+  summary       String?
+  content       String
+  coverUrl      String?
+  coverPublicId String?
+  eventAt       DateTime? // dùng cho Sự kiện
+  eventLocation String?
+  departmentId  String? // Câu chuyện đẹp: Chi đoàn thực hiện
+  categoryId    String? // Danh mục (hiện dùng cho Kế hoạch: kế hoạch tháng, chào cờ, diễn đàn...)
+  embedUrl      String? // Trò chơi: đường dẫn nhúng (Wordwall, Kahoot, Google Forms...)
+  published     Boolean     @default(true)
+  publishedAt   DateTime?
+  viewCount     Int         @default(0) // số lượt xem trang công khai
+  authorId      String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  author      User?               @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  department  Department?         @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  category    ArticleCategory?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  attachments ArticleAttachment[]
+
+  @@index([kind, published, publishedAt])
+}
+
+/// Lượt xem bài viết công khai theo ngày (giờ Việt Nam): dùng để xem xu hướng theo tuần.
+model ArticleViewDay {
+  articleId String
+  day       String // YYYY-MM-DD
+  count     Int    @default(0)
+
+  @@id([articleId, day])
+  @@index([day])
+}
+
+/// Trang giới thiệu cố định (Đoàn trường, BCH, Cơ cấu tổ chức, Nội quy).
+model SitePage {
+  slug        String   @id
+  viewCount   Int      @default(0) // số lượt xem trang công khai
+  title       String
+  content     String
+  tabs        Json? // chia nhiều tab: [{ title, content, attachments }]; có tab thì trang công khai hiện các tab, bỏ qua content
+  attachments Json? // tệp đính kèm của trang khi KHÔNG chia tab: [{ name, url, publicId, size, mime }]
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+}
+
+/// Báo cáo của từng Chi đoàn (bí thư đăng, hiển thị công khai theo Khối/Lớp).
+model ChapterReport {
+  id            String   @id @default(cuid())
+  viewCount     Int      @default(0) // số lượt xem trang công khai
+  departmentId  String
+  title         String
+  content       String
+  imageUrl      String?
+  imagePublicId String?
+  createdById   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  createdBy  User?      @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([departmentId, createdAt])
+}
+
+/// Thông tin chung của website công khai (tiêu đề banner, địa chỉ, liên hệ...). Dạng key/value.
+model SiteSetting {
+  key   String @id
+  value String
+}
+
+/// Tệp đính kèm của bài viết (PDF, Word, Excel, PowerPoint) lưu trên Cloudinary.
+model ArticleAttachment {
+  id        String   @id @default(cuid())
+  articleId String
+  name      String
+  url       String
+  publicId  String
+  size      Int      @default(0)
+  mime      String?
+  createdAt DateTime @default(now())
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@index([articleId])
+}
+
+/// Dòng chữ chạy ở đầu trang công khai (Admin thêm/xóa/sắp xếp).
+model MarqueeItem {
+  id        String   @id @default(cuid())
+  text      String
+  link      String?
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([active, sortOrder])
+}
+
+/// Góp ý từ học sinh (gửi ẩn danh từ trang công khai).
+model Feedback {
+  id        String         @id @default(cuid())
+  category  String?
+  content   String
+  contact   String? // cách liên hệ (không bắt buộc)
+  status    FeedbackStatus @default(NEW)
+  note      String? // ghi chú xử lý của Admin
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([status, createdAt])
+}
+
+model Poll {
+  id          String    @id @default(cuid())
+  question    String
+  description String?
+  multiple    Boolean   @default(false)
+  closesAt    DateTime?
+  closed      Boolean   @default(false)
+  createdById String?
+  createdAt   DateTime  @default(now())
+
+  options PollOption[]
+  votes   PollVote[]
+
+  @@index([createdAt])
+}
+
+model PollOption {
+  id        String @id @default(cuid())
+  pollId    String
+  text      String
+  sortOrder Int    @default(0)
+
+  poll  Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes PollVote[]
+
+  @@index([pollId])
+}
+
+model PollVote {
+  id        String   @id @default(cuid())
+  pollId    String
+  optionId  String
+  userId    String
+  createdAt DateTime @default(now())
+
+  poll   Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  option PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  @@unique([pollId, userId, optionId])
+  @@index([pollId, userId])
+}
+
+/// Lịch năm học: ngày bắt đầu Tuần 1 và số tuần. Lịch giáo dục tính theo tuần (Tuần 1 bắt đầu từ `week1Start`).
+model SchoolYear {
+  startYear  Int    @id // năm bắt đầu của năm học (2026 = năm học 2026–2027)
+  week1Start String // yyyy-MM-dd (giờ VN): ngày bắt đầu Tuần 1
+  sem1Weeks  Int    @default(18) // số tuần học kỳ 1
+  totalWeeks Int    @default(35) // tổng số tuần (HK1 + HK2)
+}
+
+/// Lịch công tác tuần chính thức (theo lịch năm học): Admin soạn, công bố thì hiện trên trang công khai.
+model WeeklySchedule {
+  id          String    @id @default(cuid())
+  startYear   Int // năm học (2026 = 2026–2027)
+  week        Int // tuần trong năm học
+  published   Boolean   @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  items WeeklyScheduleItem[]
+
+  @@unique([startYear, week])
+}
+
+model WeeklyScheduleItem {
+  id         String   @id @default(cuid())
+  scheduleId String
+  date       DateTime // ngày (00:00 giờ VN) thuộc tuần
+  time       String? // vd "07:30" hoặc "Cả ngày"
+  content    String // nội dung công việc
+  assignee   String? // người/đơn vị phụ trách
+  place      String? // địa điểm
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  schedule WeeklySchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@index([scheduleId, date])
+}
+
+/// Khóa đăng nhập nhanh (vân tay / khuôn mặt / khóa bảo mật) theo chuẩn WebAuthn. Khóa công khai lưu ở đây, khóa riêng nằm trong thiết bị.
+model Passkey {
+  id           String    @id @default(cuid())
+  userId       String
+  credentialId String    @unique // base64url
+  publicKey    String // base64url
+  counter      Int       @default(0)
+  transports   String? // danh sách, cách nhau bằng dấu phẩy
+  deviceName   String?
+  createdAt    DateTime  @default(now())
+  lastUsedAt   DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ============ Trò chơi tích điểm (đố vui) ============
+enum QuestionKind {
+  CHOICE // Trắc nghiệm / đúng-sai (một đáp án đúng)
+  FILL // Điền từ / đuổi hình bắt chữ
+  ORDER // Sắp xếp đúng thứ tự
+}
+
+/// Bộ trò chơi do Ban chấp hành soạn. Chấm điểm hoàn toàn ở máy chủ, đáp án không gửi xuống máy khách trước khi trả lời.
+model Quiz {
+  id                 String    @id @default(cuid())
+  title              String
+  description        String?
+  theme              String    @default("quiz") // quiz | truefalse | picture | order | mix (chỉ để hiển thị biểu tượng, màu)
+  points             Int       @default(5) // điểm tối đa khi trả lời đúng hết (còn bị trần điểm trò chơi mỗi tuần giới hạn)
+  secondsPerQuestion Int       @default(20)
+  startsAt           DateTime?
+  endsAt             DateTime?
+  published          Boolean   @default(false)
+  departmentIds      String[]  @default([]) // rỗng: toàn trường; có giá trị: chỉ các Chi đoàn này được chơi
+  authorId           String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  author    User?          @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  questions QuizQuestion[]
+  attempts  QuizAttempt[]
+
+  @@index([published, createdAt])
+}
+
+model QuizQuestion {
+  id            String       @id @default(cuid())
+  quizId        String
+  position      Int
+  kind          QuestionKind @default(CHOICE)
+  text          String
+  imageUrl      String?
+  imagePublicId String?
+  /// CHOICE: các lựa chọn; ORDER: các mục theo ĐÚNG thứ tự; FILL: các đáp án được chấp nhận
+  options       Json
+  correct       Int          @default(0) // CHOICE: chỉ số đáp án đúng
+  explanation   String?
+
+  quiz    Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  answers QuizAnswer[]
+
+  @@index([quizId, position])
+}
+
+/// Một lượt chơi của một đoàn viên (mỗi bộ chỉ chơi một lần).
+model QuizAttempt {
+  id              String    @id @default(cuid())
+  quizId          String
+  memberId        String
+  startedAt       DateTime  @default(now())
+  questionShownAt DateTime  @default(now()) // thời điểm câu hiện tại được hiển thị (máy chủ tính giờ)
+  questionStarted Boolean   @default(false) // câu hiện tại đã được gửi cho người chơi chưa (đồng hồ chỉ chạy từ lúc đó)
+  currentIndex    Int       @default(0)
+  finishedAt      DateTime?
+  total           Int
+  correctCount    Int       @default(0)
+  bestStreak      Int       @default(0)
+  earnedPoints    Int       @default(0) // điểm đạt được theo kết quả
+  pointsAwarded   Int       @default(0) // điểm thực nhận sau khi áp trần tuần
+
+  quiz    Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  member  Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  answers QuizAnswer[]
+
+  @@unique([quizId, memberId])
+  @@index([memberId, finishedAt])
+}
+
+model QuizAnswer {
+  id         String   @id @default(cuid())
+  attemptId  String
+  questionId String
+  response   Json?
+  correct    Boolean
+  timeMs     Int
+  answeredAt DateTime @default(now())
+
+  attempt  QuizAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, questionId])
+}
+
+/// Danh mục do Admin tự tạo để phân nhóm bài viết (ví dụ Kế hoạch: kế hoạch tháng, chào cờ, diễn đàn).
+model ArticleCategory {
+  id        String      @id @default(cuid())
+  kind      ArticleKind
+  name      String
+  sortOrder Int         @default(0)
+  createdAt DateTime    @default(now())
+
+  articles Article[]
+
+  @@unique([kind, name])
+  @@index([kind, sortOrder])
+}
+
+// ============ Giấy khen, giấy chứng nhận điện tử ============
+enum CertificateKind {
+  COMMENDATION // Giấy khen (tuyên dương)
+  VOLUNTEER // Giấy chứng nhận giờ tình nguyện
+  CAMPAIGN // Giấy chứng nhận hoàn thành chiến dịch / hoạt động
+  OTHER // Giấy chứng nhận khác
+}
+
+/// Mỗi giấy có mã xác thực công khai (in thành mã QR): ai quét cũng kiểm tra được thật hay giả.
+model Certificate {
+  id             String          @id @default(cuid())
+  code           String          @unique // mã xác thực, ví dụ GK-7F3K9Q2M
+  kind           CertificateKind
+  title          String // tiêu đề trên giấy, ví dụ "Giấy khen"
+  reason         String // lý do, nội dung ghi trên giấy
+  memberId       String
+  fullName       String // lưu lại tên và Chi đoàn tại thời điểm cấp (đổi sau không ảnh hưởng giấy đã cấp)
+  departmentName String
+  volunteerHours Float? // giờ tình nguyện (cho giấy loại VOLUNTEER)
+  activityId     String?
+  issuedAt       DateTime
+  issuedById     String?
+  issuerName     String? // chức danh người ký, ví dụ "Bí thư Đoàn trường"
+  revokedAt      DateTime?
+  revokedReason  String?
+  createdAt      DateTime        @default(now())
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, issuedAt])
+  @@index([issuedAt])
+}
+
+/// Hồ sơ đoàn viên chi tiết (theo mẫu Sổ đoàn viên điện tử): thông tin cá nhân, quê quán, thường trú, học vấn, Đoàn, Đảng.
+/// Nhóm thông tin nhạy cảm (CCCD, địa chỉ, liên hệ) chỉ Admin và chính đoàn viên xem được.
+model MemberDetail {
+  id                String    @id @default(cuid())
+  memberId          String    @unique
+  ethnicity         String? // Dân tộc
+  religion          String? // Tôn giáo
+  idNumber          String? // CMND/CCCD (nhạy cảm)
+  idIssuedAt        DateTime?
+  idIssuedPlace     String?
+  educationLevel    String? // Trình độ văn hóa
+  specialization    String? // Trình độ chuyên môn
+  politicalTheory   String? // Lý luận chính trị
+  itSkill           String? // Trình độ tin học
+  foreignLanguage   String? // Ngoại ngữ
+  hometownProvince  String? // Quê quán
+  hometownWard      String?
+  hometownAddress   String? // số nhà, đường, thôn/xóm
+  permanentProvince String? // Thường trú
+  permanentWard     String?
+  permanentAddress  String? // số nhà, đường, thôn/xóm
+  currentProvince   String? // Nơi ở hiện nay
+  currentWard       String?
+  currentAddress    String? // số nhà, đường, thôn/xóm
+  occupation        String? // Nghề nghiệp hiện nay
+  phone             String?
+  email             String?
+  updatedAt         DateTime  @updatedAt
+  createdAt         DateTime  @default(now())
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+}
+
+enum VolunteerStatus {
+  PENDING // chờ Ban chấp hành duyệt
+  APPROVED // đã duyệt: hiện trên lịch tình nguyện; bí thư bấm Hoàn thành sau buổi làm việc
+  COMPLETED // bí thư đã xác nhận hoàn thành: điểm đã tự động cộng cho các đoàn viên của Chi đoàn
+  REJECTED // bị từ chối
+}
+
+/// Đăng ký tình nguyện của bí thư cho cả Chi đoàn (ví dụ "quét sân"). Admin duyệt thì mới tạo hoạt động, đăng ký đoàn viên và hiện lịch công khai.
+model VolunteerRequest {
+  id            String          @id @default(cuid())
+  departmentId  String
+  task          String
+  startAt       DateTime
+  endAt         DateTime
+  location      String
+  hours         Float // giờ tình nguyện mỗi em
+  points        Int // điểm mỗi em
+  note          String?
+  status        VolunteerStatus @default(PENDING)
+  requestedById String
+  reviewedById  String?
+  reviewedAt    DateTime?
+  rejectReason  String?
+  completedAt   DateTime? // lúc bí thư bấm Hoàn thành
+  activityId    String?         @unique // không còn dùng (trước đây gắn với hoạt động)
+  createdAt     DateTime        @default(now())
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  activity   Activity?  @relation(fields: [activityId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([departmentId, startAt])
+}
+
+enum ConfessionStatus {
+  PENDING // chờ Admin/Ban chấp hành duyệt
+  APPROVED // đã duyệt: hiện công khai
+  REJECTED // không được duyệt
+}
+
+/// Confession: ai cũng gửi được (ẩn danh, không cần đăng nhập); chỉ hiện công khai sau khi Admin/Ban chấp hành duyệt.
+model Confession {
+  id           String           @id @default(cuid())
+  content      String
+  nickname     String? // biệt danh tự đặt (không bắt buộc), không phải danh tính thật
+  status       ConfessionStatus @default(PENDING)
+  rejectReason String?
+  reviewedById String?
+  reviewedAt   DateTime?
+  createdAt    DateTime         @default(now())
+
+  likes    ConfessionLike[]
+  comments ConfessionComment[]
+
+  @@index([status, createdAt])
+}
+
+/// Lượt thích confession. Đã đăng nhập thì lưu userId, chưa đăng nhập thì lưu anonKey (mã ngẫu nhiên trong cookie của trình duyệt).
+model ConfessionLike {
+  id           String   @id @default(cuid())
+  confessionId String
+  userId       String?
+  anonKey      String?
+  createdAt    DateTime @default(now())
+
+  confession Confession @relation(fields: [confessionId], references: [id], onDelete: Cascade)
+
+  @@unique([confessionId, userId])
+  @@unique([confessionId, anonKey])
+}
+
+/// Bình luận confession: ai cũng bình luận được; chưa đăng nhập thì userId trống và hiện là "Ẩn danh".
+model ConfessionComment {
+  id           String   @id @default(cuid())
+  confessionId String
+  userId       String?
+  authorName   String
+  content      String
+  createdAt    DateTime @default(now())
+
+  confession Confession @relation(fields: [confessionId], references: [id], onDelete: Cascade)
+
+  @@index([confessionId, createdAt])
+}
+
+/// Kênh chat nội bộ của Ban chấp hành và các Bí thư Chi đoàn. Ai đang giữ vai trò ADMIN hoặc SECRETARY thì tự động ở trong kênh (kiểm tra theo vai trò mỗi lần), hết vai trò là mất quyền xem và nhắn.
+model TeamMessage {
+  id          String    @id @default(cuid())
+  authorId    String
+  content     String? // có thể trống nếu chỉ gửi tệp
+  attachments Json? // [{ url, publicId, name, size, mime, kind: "image" | "video" | "file" }]
+  deletedAt   DateTime? // thu hồi tin nhắn: nội dung bị xóa, vẫn giữ dấu vết "đã thu hồi"
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([updatedAt])
+}
+
+/// Mốc đã đọc của mỗi người trong kênh chat (để hiện số tin chưa đọc).
+model TeamChatRead {
+  userId     String   @id
+  lastReadAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

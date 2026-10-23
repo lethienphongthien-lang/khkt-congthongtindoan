@@ -1,0 +1,93 @@
+name: Sao lưu cơ sở dữ liệu
+
+# Chạy mỗi ngày lúc 04:00 sáng giờ Việt Nam (21:00 UTC hôm trước) và cho phép bấm chạy tay (Actions → Sao lưu cơ sở dữ liệu → Run workflow).
+# GitHub có thể trễ vài phút so với giờ hẹn.
+on:
+  schedule:
+    - cron: "0 21 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write # để xóa bản sao lưu cũ, chỉ giữ 7 bản gần nhất
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+env:
+  KEEP_LAST: 7
+
+jobs:
+  backup:
+    runs-on: ubuntu-24.04 # ghim phiên bản để môi trường không tự đổi khi GitHub chuyển ubuntu-latest sang bản mới
+    timeout-minutes: 30
+    steps:
+      # BẢO VỆ: bản sao lưu chứa dữ liệu cá nhân của học sinh. Kho mã công khai thì ai cũng tải được tệp (dù đã mã hóa) và đọc được nhật ký,
+      # nên chỉ chạy khi kho ở chế độ RIÊNG TƯ (Settings → General → Danger Zone → Change visibility → Private).
+      - name: Kiểm tra kho ở chế độ riêng tư
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          private="$(gh api "repos/${GITHUB_REPOSITORY}" --jq .private)"
+          if [ "$private" != "true" ]; then
+            echo "::error::Kho đang CÔNG KHAI. Hãy chuyển kho sang riêng tư (Private) trước khi chạy sao lưu để không lộ dữ liệu học sinh."
+            exit 1
+          fi
+
+      - name: Kiểm tra khóa cấu hình
+        env:
+          DB_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          [ -n "$DB_URL" ] || { echo "::error::Thiếu secret BACKUP_DATABASE_URL (địa chỉ kết nối trực tiếp tới cơ sở dữ liệu)"; exit 1; }
+          [ "${#PASS}" -ge 16 ] || { echo "::error::Secret BACKUP_PASSPHRASE phải dài ít nhất 16 ký tự"; exit 1; }
+
+      # Công cụ pg_dump phải cùng phiên bản chính với máy chủ cơ sở dữ liệu, nên hỏi máy chủ rồi cài đúng bản.
+      - name: Cài công cụ PostgreSQL đúng phiên bản máy chủ
+        env:
+          DB_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+        run: |
+          major="$(psql "$DB_URL" -Atqc 'show server_version_num' | cut -c1-2)"
+          [ -n "$major" ] || { echo "::error::Không kết nối được cơ sở dữ liệu để đọc phiên bản"; exit 1; }
+          echo "Máy chủ PostgreSQL phiên bản chính: $major"
+          sudo apt-get install -y -qq postgresql-common >/dev/null
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y >/dev/null
+          sudo apt-get install -y -qq "postgresql-client-$major" >/dev/null
+          echo "PG_BIN=/usr/lib/postgresql/$major/bin" >> "$GITHUB_ENV"
+
+      - name: Xuất cơ sở dữ liệu và mã hóa
+        env:
+          DB_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          stamp="$(TZ=Asia/Ho_Chi_Minh date +%Y-%m-%d_%H%M)"
+          name="db-backup-$stamp"
+          "$PG_BIN/pg_dump" "$DB_URL" --format=custom --no-owner --no-privileges --file="$name.dump"
+          # kiểm tra nhanh: tệp đọc được và có đủ bảng
+          tables="$("$PG_BIN/pg_restore" --list "$name.dump" | grep -c ' TABLE ' || true)"
+          size="$(stat -c %s "$name.dump")"
+          echo "Đã xuất $tables bảng, $size byte"
+          [ "$tables" -ge 10 ] || { echo "::error::Bản sao lưu có quá ít bảng ($tables), có thể bị lỗi"; exit 1; }
+          printf '%s' "$PASS" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 --symmetric --cipher-algo AES256 -o "$name.dump.gpg" "$name.dump"
+          rm -f "$name.dump"
+          echo "BACKUP_FILE=$name.dump.gpg" >> "$GITHUB_ENV"
+          echo "BACKUP_NAME=$name" >> "$GITHUB_ENV"
+
+      - name: Lưu bản sao lưu (giữ 7 ngày)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BACKUP_NAME }}
+          path: ${{ env.BACKUP_FILE }}
+          retention-days: 7
+          if-no-files-found: error
+
+      # Ngoài hạn 7 ngày, chủ động xóa mọi bản dư để chỉ còn đúng 7 bản mới nhất (kể cả khi bạn chạy tay nhiều lần trong ngày).
+      - name: Xóa bản cũ, chỉ giữ 7 bản gần nhất
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
+            --jq '.artifacts[] | select(.name | startswith("db-backup-")) | [.created_at, .id] | @tsv' \
+            | sort -r | tail -n +$((KEEP_LAST + 1)) | cut -f2 \
+            | while read -r id; do echo "Xóa bản cũ #$id"; gh api -X DELETE "repos/${GITHUB_REPOSITORY}/actions/artifacts/$id"; done

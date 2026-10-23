@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b63b8">
+<meta name="color-scheme" content="light">
+<title>Đoàn trường THPT Sơn Hà</title>
+<style>
+  html,body{margin:0;height:100%;background:#0b63b8}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#fff;text-align:center;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",Arial,sans-serif}
+  img{height:112px;width:auto;animation:pulse 1.6s ease-in-out infinite}
+  b{font-size:20px;font-weight:700}
+  span{font-size:13px;color:#cfe3f7}
+  i{display:block;margin-top:18px;width:30px;height:30px;border:3px solid rgba(255,255,255,.28);border-top-color:#ffd400;border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+  @media (prefers-reduced-motion:reduce){img,i{animation:none}}
+</style>
+</head>
+<body>
+<img src="/logo-doan.webp" alt="" width="102" height="112">
+<b>Đoàn trường THPT Sơn Hà</b>
+<span>Đoàn TNCS Hồ Chí Minh</span>
+<i></i>
+<noscript><a href="/" style="color:#ffd400">Vào trang chủ</a></noscript>
+<script>
+// Trang khởi động tĩnh (phục vụ tức thì từ CDN/bộ nhớ đệm): hiện màn hình xanh ngay, rồi chuyển tới trang chủ công khai.
+// Trang này vẫn hiển thị cho tới khi trang đích trả về, nên không bị khoảng trống/đen giữa hai trang.
+requestAnimationFrame(function(){requestAnimationFrame(function(){location.replace("/")})});
+</script>
+</body>
+</html>

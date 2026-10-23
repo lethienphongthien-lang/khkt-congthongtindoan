@@ -1,0 +1,244 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #0b63b8;
+  --color-primary-dark: #084a8c;
+  --color-primary-light: #eaf3fc;
+  --color-background: #f8fafc;
+  --color-foreground: #172033;
+  --color-muted: #64748b;
+  --color-border: #e2e8f0;
+  --color-danger: #c62828;
+  --color-danger-light: #fdecec;
+  --color-warning: #b45309;
+  --color-warning-light: #fef3c7;
+  --font-sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-script: var(--font-script), "Brush Script MT", cursive;
+}
+
+/* Màu biểu đồ (đã kiểm tra tách biệt, an toàn cho người mù màu); chế độ tối dùng bản sáng hơn */
+:root { --chart-1: #0b63b8; --chart-2: #c98600; }
+
+@layer base {
+  html { color-scheme: light; scrollbar-gutter: stable; } /* chừa sẵn chỗ thanh cuộn: trang ngắn/dài không làm nội dung và hình huy hiệu nền xê dịch */
+  body { background: var(--color-background); color: var(--color-foreground); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  h1, h2, h3 { letter-spacing: -0.01em; }
+  *:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  ::selection { background: var(--color-primary-light); }
+}
+
+/* Huy hiệu Đoàn làm hình nền mờ phía sau toàn bộ ứng dụng */
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: url("/logo-doan.webp") 50% 55% / min(70vmin, 560px) no-repeat; opacity: 0.12;
+  transform: translateZ(0); will-change: transform; /* tách thành lớp riêng: cuộn không phải vẽ lại nền */
+}
+@media (min-width: 1024px) {
+  body::before { background-position: calc(50% + 7.5rem) 55%; } /* lệch sang phải theo bề rộng thanh bên */
+}
+
+@media print {
+  .no-print { display: none !important; }
+  body::before { display: none; }
+  body { background: #fff; }
+}
+
+/* Mobile: bảng -> danh sách thẻ (nhãn lấy từ data-label do ResponsiveTable gắn) */
+@media (max-width: 639px) {
+  .rtable, .rtable tbody { display: block; width: 100%; }
+  .rtable thead { display: none; }
+  .rtable tbody tr {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0.375rem 0.75rem;
+    margin-bottom: 0.5rem; padding: 0.625rem 0.75rem;
+    background: rgb(255 255 255 / 0.85); border: 1px solid var(--color-border); border-radius: 0.5rem;
+  }
+  .rtable tbody td { display: block; min-width: 0; padding: 0; border: 0; overflow-wrap: anywhere; }
+  .rtable tbody td::before {
+    content: attr(data-label); display: block; margin-bottom: 1px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; color: var(--color-muted);
+  }
+  /* Ô đầu = tiêu đề thẻ; ô cuối rỗng nhãn (nút thao tác) trải hết dòng */
+  .rtable tbody td:first-child { grid-column: 1 / -1; font-size: 15px; }
+  .rtable tbody td:first-child::before, .rtable tbody td[data-label=""]::before { display: none; }
+  .rtable tbody td[data-label=""] { grid-column: 1 / -1; text-align: right; }
+  /* Có cột thao tác: đặt nút sát phải, cùng hàng với tiêu đề thẻ */
+  .rtable tbody tr:has(> td[data-label=""]:last-child:not(:first-child)) > td:first-child { grid-column: 1; align-self: center; }
+  .rtable tbody tr:has(> td[data-label=""]:last-child:not(:first-child)) > td[data-label=""]:last-child {
+    grid-column: 2; grid-row: 1; justify-self: end; display: flex; align-items: center;
+  }
+  .rtable tbody td.text-right { text-align: left; }
+  .rtable tbody td:only-child { grid-column: 1 / -1; }
+}
+
+/* iOS Safari tự phóng to trang khi focus vào ô nhập có chữ < 16px -> ép 16px trên mobile */
+@media (max-width: 767px) {
+  input, select, textarea { font-size: 16px !important; }
+}
+
+/* Nút ở đầu trang gọn hơn trên mobile (chỉ nhắm nút/liên kết trực tiếp, không đụng hộp thoại nằm cùng chỗ) */
+@media (max-width: 639px) {
+  .page-actions > button, .page-actions > a { height: 2rem; padding-inline: 0.625rem; font-size: 13px; }
+}
+
+/* Nội dung bài viết (RichText) */
+.prose-doan { font-size: 16px; line-height: 1.75; color: var(--color-foreground); }
+.prose-doan p { margin: 0 0 1rem; }
+.prose-doan h2 { margin: 1.75rem 0 0.75rem; font-size: 1.25rem; font-weight: 700; color: var(--color-primary-dark); }
+.prose-doan h3 { margin: 1.25rem 0 0.5rem; font-size: 1.05rem; font-weight: 600; }
+.prose-doan ul, .prose-doan ol { margin: 0 0 1rem; padding-left: 1.5rem; }
+.prose-doan li { margin-bottom: 0.25rem; }
+
+/* Dòng chữ chạy ở đầu trang công khai */
+.marquee { overflow: hidden; white-space: nowrap; }
+.marquee-track { display: flex; width: max-content; will-change: transform; animation: marquee-scroll linear infinite; }
+.marquee:hover .marquee-track { animation-play-state: paused; }
+@keyframes marquee-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) {
+  .marquee { white-space: normal; }
+  .marquee-track { animation: none; }
+}
+
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Định dạng bổ sung do trình soạn thảo tạo ra (bảng, trích dẫn, ảnh, liên kết, tô nền) */
+.prose-doan h4 { margin: 1rem 0 0.4rem; font-weight: 600; }
+.prose-doan a { color: var(--color-primary); text-decoration: underline; }
+.prose-doan blockquote { margin: 0 0 1rem; padding: 0.25rem 1rem; border-left: 4px solid var(--color-accent, #ffd400); background: #f8fafc; color: #475569; }
+.prose-doan img { display: block; max-width: 100%; height: auto; margin: 0.5rem auto 1rem; border-radius: 4px; }
+.prose-doan hr { margin: 1.5rem 0; border: 0; border-top: 1px solid #cbd5e1; }
+.prose-doan mark { padding: 0 0.15em; border-radius: 2px; }
+.prose-doan table { width: 100%; margin: 0 0 1rem; border-collapse: collapse; table-layout: fixed; }
+.prose-doan th, .prose-doan td { border: 1px solid #cbd5e1; padding: 0.4rem 0.6rem; vertical-align: top; word-break: break-word; }
+.prose-doan th { background: #eff6ff; font-weight: 600; text-align: left; }
+.prose-doan p:last-child { margin-bottom: 0; }
+/* Điện thoại: bảng trong bài giữ độ rộng tự nhiên của từng cột và tự cuộn ngang trong khung (trang không bị kéo ngang) */
+@media (max-width: 767px) {
+  .prose-doan:not(.rich-editor) table { display: block; width: 100% !important; min-width: 0 !important; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; table-layout: auto !important; }
+  .prose-doan:not(.rich-editor) col { width: auto !important; min-width: 0 !important; }
+  .prose-doan:not(.rich-editor) th, .prose-doan:not(.rich-editor) td { min-width: 4.5rem; overflow-wrap: break-word; word-break: normal; }
+  .prose-doan:not(.rich-editor) img { max-width: 100% !important; height: auto !important; }
+}
+.rich-editor p.is-editor-empty:first-child::before { content: attr(data-placeholder); float: left; height: 0; color: #94a3b8; pointer-events: none; }
+.rich-editor .selectedCell { background: #dbeafe; }
+.rich-editor img.ProseMirror-selectednode { outline: 2px solid var(--color-primary); }
+.prose-doan ul { list-style: disc; }
+.prose-doan ol { list-style: decimal; }
+.prose-doan li > p { margin: 0; }
+.rich-editor .column-resize-handle { position: absolute; top: 0; right: -2px; bottom: -2px; width: 4px; background: var(--color-primary); pointer-events: none; }
+.rich-editor.resize-cursor { cursor: col-resize; }
+.rich-editor table { position: relative; }
+.rich-editor th, .rich-editor td { position: relative; }
+
+/* Ảnh trong trình soạn thảo: khung chọn và 4 tay nắm ở góc để kéo đổi kích thước */
+.rich-editor [data-resize-container] { margin: 0.5rem 0 1rem; justify-content: flex-start; }
+.rich-editor [data-resize-wrapper] img { display: block; max-width: none; margin: 0; }
+.rich-editor [data-resize-container]:hover [data-resize-wrapper], .rich-editor [data-resize-container].ProseMirror-selectednode [data-resize-wrapper] { outline: 2px solid var(--color-primary); }
+.rich-editor [data-resize-handle] { width: 14px; height: 14px; background: #fff; border: 2px solid var(--color-primary); border-radius: 3px; z-index: 5; display: none; }
+.rich-editor [data-resize-container].ProseMirror-selectednode [data-resize-handle] { display: block; }
+.rich-editor [data-resize-handle="top-left"] { transform: translate(-50%, -50%); cursor: nwse-resize; }
+.rich-editor [data-resize-handle="top-right"] { transform: translate(50%, -50%); cursor: nesw-resize; }
+.rich-editor [data-resize-handle="bottom-left"] { transform: translate(-50%, 50%); cursor: nesw-resize; }
+.rich-editor [data-resize-handle="bottom-right"] { transform: translate(50%, 50%); cursor: nwse-resize; }
+
+/* ===== Trò chơi tích điểm: hiệu ứng ===== */
+@keyframes g-shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(5px); } }
+@keyframes g-pop { 0% { transform: scale(.85); opacity: 0; } 60% { transform: scale(1.06); opacity: 1; } 100% { transform: scale(1); } }
+@keyframes g-slide { from { transform: translateY(14px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes g-confetti { 0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; } 100% { transform: translateY(105vh) rotate(720deg); opacity: .9; } }
+@keyframes g-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+.g-shake { animation: g-shake .45s ease; }
+.g-pop { animation: g-pop .35s ease both; }
+.g-slide { animation: g-slide .3s ease both; }
+.g-pulse { animation: g-pulse .8s ease-in-out infinite; }
+.g-confetti { position: fixed; top: 0; z-index: 60; width: 10px; height: 14px; border-radius: 2px; pointer-events: none; animation: g-confetti var(--d, 3s) linear var(--delay, 0s) forwards; }
+@media (prefers-reduced-motion: reduce) { .g-shake, .g-pop, .g-slide, .g-pulse, .g-confetti { animation: none; } }
+
+/* ======================= Chế độ tối (chỉ khu quản trị) =======================
+   Bật bằng class "dark" trên <html> (nút ở thanh trên; nhớ lựa chọn trong localStorage "theme").
+   Đổi bảng màu thay vì sửa từng thành phần: các màu chữ/nền/viền chính và các màu nhấn (xanh lá, vàng, đỏ...) được đảo cho nền tối. */
+html.dark {
+  color-scheme: dark;
+  --chart-1: #3a93e6; --chart-2: #bd8800;
+  --color-background: #0e1520; --color-foreground: #e5eaf2; --color-muted: #93a1b8; --color-border: #2b374a;
+  --color-primary-light: #16304d; --color-danger-light: #3b1a1d; --color-warning-light: #3a2f12;
+  --color-slate-50: #172131; --color-slate-100: #1e2a3c; --color-slate-200: #2b374a; --color-slate-300: #3f4d65; --color-slate-400: #7f8ea8;
+  --color-slate-500: #98a6bc; --color-slate-600: #b4c0d2; --color-slate-700: #cad4e2; --color-slate-800: #e0e6f0; --color-slate-900: #f1f5f9;
+  --color-gray-50: #172131; --color-gray-100: #1e2a3c; --color-gray-200: #2b374a;
+  --color-emerald-50: #0f2a22; --color-emerald-100: #123a2e; --color-emerald-200: #1c5a45; --color-emerald-600: #34d399; --color-emerald-700: #6ee7b7; --color-emerald-800: #a7f3d0;
+  --color-green-50: #0f2a22; --color-green-100: #123a2e; --color-green-600: #34d399; --color-green-700: #6ee7b7;
+  --color-amber-50: #2d2410; --color-amber-100: #3a2e12; --color-amber-200: #5c4a1a; --color-amber-600: #fbbf24; --color-amber-700: #fcd34d; --color-amber-800: #fde68a; --color-amber-900: #fde68a;
+  --color-orange-50: #2e1c10; --color-orange-100: #3b2312; --color-orange-600: #fb923c; --color-orange-700: #fdba74;
+  --color-red-50: #2f1517; --color-red-100: #3d1a1c; --color-red-200: #5c2328; --color-red-600: #f87171; --color-red-700: #fca5a5; --color-red-800: #fecaca;
+  --color-rose-50: #2f1520; --color-rose-100: #3d1a28; --color-rose-200: #5c2339; --color-rose-500: #fb7185; --color-rose-600: #fb7185; --color-rose-700: #fda4af; --color-rose-800: #fecdd3;
+  --color-sky-50: #0f2438; --color-sky-100: #123049; --color-sky-200: #1b4a6e; --color-sky-600: #38bdf8; --color-sky-700: #7dd3fc;
+  --color-blue-600: #60a5fa; --color-blue-700: #93c5fd; /* blue-50/100 giữ nguyên: thanh bên dùng làm màu chữ */
+  --color-violet-50: #221a3d; --color-violet-100: #2c2250; --color-violet-200: #43357a; --color-violet-500: #a78bfa; --color-violet-600: #a78bfa; --color-violet-700: #c4b5fd;
+  --color-yellow-50: #2d2810; --color-yellow-200: #5c4f14; --color-yellow-300: #8a7420; --color-yellow-400: #eab308; --color-yellow-900: #fef08a;
+  --color-indigo-50: #1d2248; --color-indigo-100: #262c5c; --color-indigo-600: #818cf8; --color-indigo-700: #a5b4fc;
+  --color-purple-50: #221a3d; --color-purple-600: #c084fc;
+  --color-pink-50: #2f1530; --color-pink-600: #f472b6;
+}
+/* Nền trắng và trắng trong suốt (thẻ, bảng, ô nhập, hộp thoại) thành mặt nền tối; chữ trắng trên nút xanh giữ nguyên */
+html.dark .bg-white, html.dark .bg-white\/95, html.dark .bg-white\/90, html.dark .bg-white\/85, html.dark .bg-white\/80 { background-color: rgb(24 34 50 / 0.92) !important; }
+html.dark .bg-white\/70, html.dark .bg-white\/60 { background-color: rgb(24 34 50 / 0.7) !important; } /* bg-white/10, /15... (thanh bên, nút trong suốt) giữ nguyên */
+html.dark .bg-blue-50 { background-color: #11233f; }
+html.dark .bg-blue-100 { background-color: #16305a; }
+html.dark input, html.dark select, html.dark textarea { color: var(--color-foreground); }
+html.dark ::placeholder { color: #6b7a92; }
+html.dark .text-primary { color: #6db3f2; }
+html.dark .text-primary-dark { color: #8ec5ff; }
+html.dark .hover\:text-primary:hover { color: #8ec5ff; }
+html.dark .border-primary\/20, html.dark .border-primary\/30 { border-color: rgb(109 179 242 / 0.3); }
+html.dark .bg-primary-light\/40, html.dark .bg-primary-light\/60, html.dark .bg-primary-light\/70 { background-color: rgb(22 48 77 / 0.6); }
+html.dark body::before { opacity: 0.05; }
+html.dark .rtable tbody tr { background: rgb(24 34 50 / 0.92); }
+html.dark ::selection { background: #1f4b7a; }
+html.dark .prose-doan blockquote { background: #172131; color: #b4c0d2; }
+html.dark .prose-doan th { background: #16304d; }
+html.dark .prose-doan hr, html.dark .prose-doan th, html.dark .prose-doan td { border-color: #2b374a; }
+
+/* ===== Hiệu ứng "AI đang viết" ===== */
+@keyframes ai-pulse { 0%,100% { transform: scale(1); box-shadow: 0 0 0 0 rgb(139 92 246 / .45); } 50% { transform: scale(1.07); box-shadow: 0 0 0 14px rgb(139 92 246 / 0); } }
+@keyframes ai-shimmer { 0% { background-position: -200px 0; } 100% { background-position: 200px 0; } }
+@keyframes ai-dot { 0%,80%,100% { opacity: .2; } 40% { opacity: 1; } }
+.ai-orb { animation: ai-pulse 1.6s ease-in-out infinite; }
+.ai-line { background: linear-gradient(90deg, #ede9fe 0%, #c4b5fd 50%, #ede9fe 100%); background-size: 400px 100%; animation: ai-shimmer 1.4s linear infinite; }
+.ai-dots i { font-style: normal; animation: ai-dot 1.2s infinite; }
+.ai-dots i:nth-child(2) { animation-delay: .2s; } .ai-dots i:nth-child(3) { animation-delay: .4s; }
+@media (prefers-reduced-motion: reduce) { .ai-orb, .ai-line, .ai-dots i { animation: none; } }
+html.dark .ai-line { background: linear-gradient(90deg, #2c2250 0%, #5b4a9c 50%, #2c2250 100%); background-size: 400px 100%; }
+
+/* Chỗ cần điền do AI để lại: [ghi rõ ...] */
+.rich-editor .ai-fill { background: #fde047; color: #713f12; border-radius: 4px; padding: 1px 4px; font-weight: 600; box-shadow: 0 0 0 1.5px #facc15; }
+html.dark .rich-editor .ai-fill { background: #854d0e; color: #fef08a; box-shadow: 0 0 0 1.5px #ca8a04; }
+
+/* Lớp phủ "AI đang viết": nền tối khi ở chế độ tối */
+html.dark .ai-overlay { background-color: rgb(15 23 42 / 0.75); }
+
+/* Chỗ [ghi rõ ...] trong ô nhập thường (tóm tắt): tô vàng giống trong trình soạn thảo */
+.ph-mark { background: #fde047; color: transparent; border-radius: 4px; box-shadow: 0 0 0 1.5px #facc15; }
+html.dark .ph-mark { background: #854d0e; box-shadow: 0 0 0 1.5px #ca8a04; }
+
+/* Phân trang trang quản trị: máy tính để bàn thì cố định ở đáy màn hình (chừa chỗ cho thanh bên); điện thoại giữ nguyên */
+@media (min-width: 768px) {
+  .admin-main .pager-spacer { height: 2.25rem; }
+  .admin-main .pager { position: fixed; bottom: 0; left: 4rem; right: 0; z-index: 30; margin: 0; padding: 0.25rem 1.5rem; background: var(--color-background); border-top: 1px solid var(--color-border); }
+}
+@media (min-width: 1024px) { .admin-main .pager { left: 15rem; } }
+
+/* Khung chờ hiện ngay khi bấm chuyển trang (không để trống màn hình), vào nhẹ bằng hiệu ứng mờ dần ngắn */
+.skel-delay { animation: skel-in 0.18s ease-out both; }
+@keyframes skel-in { from { opacity: 0.35; } to { opacity: 1; } }
+
+/* Điện thoại: trang luôn vừa khung hình, không zoom, không cuộn ngang */
+@media (max-width: 767px) {
+  html { touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  html, body { max-width: 100%; overflow-x: clip; }
+  img, video { max-width: 100%; }
+  input, select, textarea { font-size: 16px; } /* iOS tự phóng to khi chạm vào ô nhập chữ nhỏ hơn 16px */
+}
+
+/* Trang Kênh chat: khung chat cố định vừa màn hình, trang chính không cuộn */
+html.chat-page, html.chat-page body { overflow: hidden; height: 100%; }
+html.chat-page .admin-main { min-height: 0 !important; height: 0; padding: 0 !important; overflow: hidden; }
