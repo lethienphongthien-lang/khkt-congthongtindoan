@@ -133,15 +133,24 @@ export function SiteHeader({ address, bannerUrl, phone, email, facebook, youtube
               {groups.map((g) => (
                 <li key={g.id}>
                   <div className="px-4 pt-3.5 pb-1 text-xs font-semibold tracking-wide text-slate-500 uppercase">{g.title}</div>
-                  <ul className="pb-1.5">{g.items.map((c) => <li key={c.href}><Link href={c.href} className="block py-2 pr-4 pl-8 text-sm text-slate-600">{c.label}</Link></li>)}</ul>
+                  <ul className="pb-1.5">
+                    {g.items.map((c) => (
+                      <li key={c.href}>
+                        {c.href.startsWith("http") ? (
+                          <a href={c.href} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between py-2 pr-4 pl-8 text-sm text-slate-600 hover:text-primary">
+                            {c.label}
+                            <ExternalLink className="size-3.5 text-slate-400" />
+                          </a>
+                        ) : (
+                          <Link href={c.href} className="block py-2 pr-4 pl-8 text-sm text-slate-600">
+                            {c.label}
+                          </Link>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
                 </li>
               ))}
-              <li>
-                <div className="px-4 pt-3.5 pb-1 text-xs font-semibold tracking-wide text-slate-500 uppercase">Liên kết</div>
-                <ul className="pb-1.5">
-                  {EXTERNAL_LINKS.map((c) => <li key={c.href}><a href={c.href} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between py-2.5 pr-4 pl-4 text-sm text-slate-700">{c.label}<ExternalLink className="size-3.5 text-slate-400" /></a></li>)}
-                </ul>
-              </li>
             </ul>
             {(phone || email || facebook || youtube) && (
               <div className="mt-2 space-y-2 border-t border-border px-4 pt-4 text-sm text-slate-700">
@@ -188,14 +197,6 @@ export function SiteHeader({ address, bannerUrl, phone, email, facebook, youtube
                   )}
                 </li>
               ))}
-              <li className="group relative">
-                <button type="button" className="flex h-full items-center gap-1 px-[clamp(8px,1vw,22px)] py-1.5 text-[clamp(11px,0.78vw+3px,14px)] font-semibold tracking-wide whitespace-nowrap text-white/90 uppercase hover:bg-white/10 hover:text-white focus:bg-white/10" aria-haspopup="menu">
-                  Liên kết<ChevronDown className="size-3.5 opacity-70" />
-                </button>
-                <ul className="invisible absolute left-0 z-10 min-w-72 border border-border bg-white py-1 text-foreground opacity-0 shadow-lg transition group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
-                  {EXTERNAL_LINKS.map((c) => <li key={c.href}><a href={c.href} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between gap-3 px-4 py-2 text-sm hover:bg-primary-light hover:text-primary-dark">{c.label}<ExternalLink className="size-3.5 opacity-50" /></a></li>)}
-                </ul>
-              </li>
             </ul>
             <Link href={loggedIn ? "/dashboard" : "/login"} className="ml-auto flex shrink-0 items-center px-3 py-1.5 text-xs font-semibold tracking-wide whitespace-nowrap text-white/90 uppercase hover:bg-white/10 hover:text-white sm:px-4 sm:text-sm">
               {loggedIn ? "Quản lý" : "Đăng nhập"}
