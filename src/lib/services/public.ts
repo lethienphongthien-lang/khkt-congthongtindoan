@@ -48,6 +48,18 @@ export const listArticles = cachedPublic("listArticles", async (kind: ArticleKin
   return { items, total };
 });
 
+export const listForumArticles = cachedPublic("listForumArticles", async (page: number, size: number) => {
+  const where = {
+    ...publishedWhere(),
+    category: { name: "Diễn đàn" },
+  };
+  const [items, total] = await Promise.all([
+    db.article.findMany({ where, orderBy: { publishedAt: "desc" }, skip: (page - 1) * size, take: size, select: articleCard }),
+    db.article.count({ where }),
+  ]);
+  return { items, total };
+});
+
 /** Danh mục của một loại bài kèm số bài đã đăng (để hiện nút lọc ở trang công khai). */
 export const articleCategoriesWithCount = cachedPublic("articleCategoriesWithCount", async (kind: ArticleKind) => {
   const [cats, counts, none] = await Promise.all([

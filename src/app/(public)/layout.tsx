@@ -4,6 +4,7 @@ import { SiteFooter } from "@/components/public/site-footer";
 import { aiConfigured } from "@/lib/ai/gemini";
 import { NavigationSkeleton } from "@/components/ui/navigation-skeleton";
 import { ChatWidget } from "@/components/public/chat-widget";
+import { TeamChatButton } from "@/components/public/team-chat-button";
 import { PublicSidebar } from "@/components/public/public-sidebar";
 import { departmentsByGrade } from "@/lib/services/public";
 import { getMarquee, getMenuConfig, getSiteSettings } from "@/lib/services/site-settings";
@@ -22,6 +23,7 @@ export default async function PublicLayout({ children }: { children: React.React
         <main className="min-w-0 flex-1"><NavigationSkeleton variant="public" className="min-h-full">{children}</NavigationSkeleton></main>
       </div>
       {aiConfigured() && <ChatWidget />}
+      <TeamChatButton />
       <SiteFooter address={settings.address} phone={settings.phone} email={settings.email} facebook={settings.facebook} youtube={settings.youtube} />
     </div>
   );
