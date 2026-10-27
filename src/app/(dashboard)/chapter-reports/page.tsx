@@ -47,6 +47,7 @@ export default async function ChapterReportsPage({
         title: true,
         createdAt: true,
         viewCount: true,
+        participantCount: true,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -170,6 +171,7 @@ export default async function ChapterReportsPage({
                           </div>
                           <div className="text-[11px] text-muted">
                             Thời gian nộp: {formatDate(report.createdAt)}
+                            {report.participantCount != null && <> · {report.participantCount} đoàn viên tham gia</>}
                           </div>
                         </div>
                       )}
@@ -252,12 +254,19 @@ export default async function ChapterReportsPage({
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
       include: {
-        department: { select: { name: true } },
+        department: { select: { name: true, _count: { select: { members: { where: { status: "ACTIVE" } } } } } },
         period: { select: { id: true, title: true } },
       },
     }),
     db.chapterReport.count({ where }),
   ]);
+
+  // Chuỗi "32/45 (71%)" hoặc "—" với báo cáo cũ chưa ghi nhận số đoàn viên tham gia
+  const participation = (r: (typeof recentReports)[number]) => {
+    if (r.participantCount == null) return null;
+    const total = r.department._count.members;
+    return total > 0 ? `${r.participantCount}/${total} (${Math.round((r.participantCount / total) * 100)}%)` : `${r.participantCount}`;
+  };
 
   return (
     <div className="space-y-8">
@@ -416,7 +425,7 @@ export default async function ChapterReportsPage({
               items={recentReports.map((r) => ({
                 id: r.id,
                 title: r.title,
-                subtitle: `Chi đoàn ${r.department.name} · ${r.period ? `[${r.period.title}] · ` : ""}${formatDate(r.createdAt)}`,
+                subtitle: `Chi đoàn ${r.department.name} · ${r.period ? `[${r.period.title}] · ` : ""}${participation(r) ? `${participation(r)} đoàn viên tham gia · ` : ""}${formatDate(r.createdAt)}`,
                 href: `/chapter-reports/${r.id}`,
               }))}
             />
@@ -427,6 +436,7 @@ export default async function ChapterReportsPage({
                     <Th>Tiêu đề</Th>
                     <Th>Chi đoàn</Th>
                     <Th>Đợt báo cáo</Th>
+                    <Th>Đoàn viên tham gia</Th>
                     <Th>Ngày nộp</Th>
                     <Th className="text-right">Thao tác</Th>
                   </tr>
@@ -448,6 +458,9 @@ export default async function ChapterReportsPage({
                         ) : (
                           <span className="italic text-slate-400">Tự do</span>
                         )}
+                      </Td>
+                      <Td className="whitespace-nowrap text-xs font-semibold tabular-nums text-foreground">
+                        {participation(r) ?? <span className="font-normal italic text-slate-400">Chưa ghi nhận</span>}
                       </Td>
                       <Td className="whitespace-nowrap text-xs text-muted">
                         {formatDate(r.createdAt)}

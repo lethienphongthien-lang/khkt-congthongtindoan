@@ -20,11 +20,13 @@ export interface DeptReportItem {
       position?: string | null;
     } | null;
   };
+  memberCount: number; // sĩ số đoàn viên đang hoạt động của Chi đoàn
   report?: {
     id: string;
     title: string;
     createdAt: Date | string;
     viewCount: number;
+    participantCount?: number | null;
   } | null;
 }
 
@@ -237,12 +239,12 @@ export function PeriodDetailTracker({
                 <Th>Chi đoàn</Th>
                 <Th>Bí thư / Phụ trách</Th>
                 <Th>Trạng thái</Th>
-                <Th>Chi tiết báo cáo</Th>
+                <Th>Đoàn viên tham gia</Th>
                 <Th className="text-right">Thao tác</Th>
               </tr>
             </thead>
             <tbody>
-              {filteredItems.map(({ department, report }) => (
+              {filteredItems.map(({ department, report, memberCount }) => (
                 <tr key={department.id} className="hover:bg-slate-50/80 transition-colors">
                   <Td className="font-semibold text-foreground">
                     <span className="inline-flex items-center gap-1.5">
@@ -285,21 +287,15 @@ export function PeriodDetailTracker({
                     )}
                   </Td>
 
-                  <Td>
-                    {report ? (
+                  <Td className="whitespace-nowrap text-xs tabular-nums">
+                    {report && report.participantCount != null ? (
                       <div>
-                        <Link
-                          href={`/chapter-reports/${report.id}`}
-                          className="font-medium text-sm text-foreground hover:text-primary line-clamp-1"
-                        >
-                          {report.title}
-                        </Link>
-                        <div className="text-[11px] text-muted">
-                          Nộp: {formatDate(report.createdAt)}
-                        </div>
+                        <span className="text-sm font-semibold text-foreground">{report.participantCount}</span>
+                        <span className="text-muted">/{memberCount}</span>
+                        {memberCount > 0 && <div className="text-[11px] text-muted">{Math.round((report.participantCount / memberCount) * 100)}% sĩ số</div>}
                       </div>
                     ) : (
-                      <span className="text-xs text-muted italic">Chưa nộp cho đợt này</span>
+                      <span className="italic text-slate-400">{report ? "Chưa ghi nhận" : "—"}</span>
                     )}
                   </Td>
 
