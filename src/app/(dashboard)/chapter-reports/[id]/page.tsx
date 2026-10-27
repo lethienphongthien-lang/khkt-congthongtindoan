@@ -25,6 +25,7 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
   const desc = [
     `Chi đoàn ${r.department.name}`,
     r.period ? `Đợt: ${r.period.title}` : null,
+    r.participantCount != null ? `${r.participantCount} đoàn viên tham gia` : null,
     formatDate(r.createdAt),
     `${r.viewCount.toLocaleString("vi-VN")} lượt xem`,
   ].filter(Boolean).join(" · ");
