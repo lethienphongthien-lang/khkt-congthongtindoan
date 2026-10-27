@@ -22,7 +22,12 @@ const create = () =>
   });
 
 // Client cache trong dev bị giữ qua hot-reload; bỏ nếu nó được tạo trước khi `prisma generate` thêm model mới.
-const cached = globalForPrisma.prisma && "post" in globalForPrisma.prisma ? globalForPrisma.prisma : undefined;
+const cached =
+  globalForPrisma.prisma &&
+  "post" in globalForPrisma.prisma &&
+  "reportPeriod" in globalForPrisma.prisma
+    ? globalForPrisma.prisma
+    : undefined;
 
 export const db = cached ?? create();
 

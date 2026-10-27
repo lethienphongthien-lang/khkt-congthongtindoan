@@ -17,7 +17,13 @@ export default async function FeedbackListPage({ searchParams }: { searchParams:
   const sp = await searchParams;
   const status = str(sp.status);
   const page = pageParam(sp.page);
-  const where: Prisma.FeedbackWhereInput = status && status in FEEDBACK_STATUS ? { status: status as keyof typeof FEEDBACK_STATUS } : {};
+  const where: Prisma.FeedbackWhereInput = {
+    ...(status && status in FEEDBACK_STATUS ? { status: status as keyof typeof FEEDBACK_STATUS } : {}),
+    AND: [
+      { OR: [{ category: null }, { category: { not: "TƯ VẤN TÂM LÝ" } }] },
+      { OR: [{ category: null }, { category: { not: { startsWith: "forum:" } } }] },
+    ],
+  };
   const [items, total, unread] = await Promise.all([
     db.feedback.findMany({ where, orderBy: { createdAt: "desc" }, skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE }),
     db.feedback.count({ where }),

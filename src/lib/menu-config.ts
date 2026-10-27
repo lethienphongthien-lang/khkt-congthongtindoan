@@ -13,24 +13,33 @@ export const DEFAULT_MENU: MenuConfig = {
   top: [
     l("ke-hoach", "Kế hoạch", "/ke-hoach"),
     l("tin-tuc", "Tin tức", "/tin-tuc"),
-    { ...l("thi-dua", "Thi đua", "/thi-dua"), children: [l("thi-dua-thang", "Bảng thi đua", "/thi-dua"), l("thanh-tich", "Thành tích", "/thi-dua/thanh-tich"), l("chi-doan-tieu-bieu", "Chi đoàn tiêu biểu", "/thi-dua/chi-doan-tieu-bieu")] },
-    l("dinh-huong", "Định hướng", "/dinh-huong-nghe-nghiep"),
-    l("sinh-hoat", "Sinh hoạt Chi đoàn", "/tai-lieu-sinh-hoat", "Sinh hoạt"),
     l("thong-bao", "Thông báo", "/thong-bao"),
-    l("tro-choi", "Trò chơi", "/tro-choi"),
+    { ...l("thi-dua", "Thi đua", "/thi-dua"), children: [l("thi-dua-thang", "Bảng thi đua", "/thi-dua"), l("thanh-tich", "Thành tích", "/thi-dua/thanh-tich"), l("chi-doan-tieu-bieu", "Chi đoàn tiêu biểu", "/thi-dua/chi-doan-tieu-bieu")] },
+    l("dinh-huong", "Hướng nghiệp", "/dinh-huong-nghe-nghiep"),
+    l("sinh-hoat", "Sinh hoạt Chi đoàn", "/tai-lieu-sinh-hoat", "Sinh hoạt"),
+    l("dien-dan", "Diễn đàn", "/dien-dan"),
+    l("tro-choi", "Góc giải trí", "/tro-choi"),
     l("gop-y", "Góp ý", "/gop-y"),
   ],
   side: [
     { id: "gioi-thieu", title: "Giới thiệu", items: [
-      l("gt-doan-truong", "Đoàn trường", "/gioi-thieu/doan-truong"), l("gt-bch", "BCH Đoàn trường", "/gioi-thieu/bch-doan-truong"),
+      l("gt-doan-truong", "Đoàn trường", "/gioi-thieu/doan-truong"),
       l("gt-co-cau", "Cơ cấu tổ chức", "/gioi-thieu/co-cau-to-chuc"), l("gt-co-do", "Cờ đỏ", "/gioi-thieu/co-do"), l("gt-noi-quy", "Nội quy", "/gioi-thieu/noi-quy"),
     ] },
     { id: "bao-cao", title: "Báo cáo Chi đoàn", kind: "reports", items: [] },
     { id: "goc-hs", title: "Góc học sinh", items: [
-      l("g-dinh-huong", "Định hướng nghề nghiệp", "/dinh-huong-nghe-nghiep"), l("g-sinh-hoat", "Tài liệu sinh hoạt Chi đoàn", "/tai-lieu-sinh-hoat"),
-      l("g-tro-choi", "Trò chơi", "/tro-choi"), l("g-tinh-nguyen", "Ngày tình nguyện tại chỗ", "/tinh-nguyen"), l("g-cau-chuyen", "Câu chuyện đẹp", "/cau-chuyen-dep"), l("g-confession", "Sơn Hà Confession", "/confession"),
+      l("g-tu-van", "Tư vấn tâm lý", "/tu-van-tam-ly"),
+      l("g-cau-chuyen", "Câu chuyện đẹp", "/cau-chuyen-dep"),
+      l("g-tinh-nguyen", "Ngày tình nguyện tại chỗ", "/tinh-nguyen"),
+      l("g-confession", "Sơn Hà Confession", "/confession"),
     ] },
-    { id: "thi-dua", title: "Thi đua", items: [l("td-thang", "Bảng thi đua", "/thi-dua"), l("td-thanh-tich", "Thành tích", "/thi-dua/thanh-tich"), l("td-tieu-bieu", "Chi đoàn tiêu biểu", "/thi-dua/chi-doan-tieu-bieu")] },
+    { id: "lien-ket", title: "Liên kết website", items: [
+      l("lk-c3sonha", "Trường THPT Sơn Hà", "https://c3sonha.quangngai.edu.vn/"),
+      l("lk-tinhdoan", "Tỉnh Đoàn Quảng Ngãi", "https://tinhdoan.quangngai.gov.vn/"),
+      l("lk-twdoan", "Trung ương Đoàn TNCS", "https://doanthanhnien.vn/"),
+      l("lk-so", "Sở GD&ĐT Quảng Ngãi", "https://quangngai.edu.vn/"),
+      l("lk-bo", "Bộ Giáo dục và Đào tạo", "https://moet.gov.vn/"),
+    ] },
   ],
 };
 
@@ -49,6 +58,14 @@ export function mergeMenu(saved: unknown): MenuConfig {
   const parsed = menuConfigSchema.safeParse(saved);
   if (!parsed.success) return structuredClone(DEFAULT_MENU);
   const cfg = structuredClone(parsed.data) as MenuConfig;
+
+  // Loại bỏ các mục đã đưa lên thanh trên khỏi nhóm Góc học sinh ở sidebar để tránh trùng lặp
+  const SIDE_MOVED_TO_TOP = new Set(["g-dinh-huong", "g-sinh-hoat", "g-tro-choi"]);
+  cfg.side = cfg.side.map((g) => g.id === "goc-hs" ? { ...g, items: g.items.filter((it) => it.custom || !SIDE_MOVED_TO_TOP.has(it.id)) } : g);
+
+  // Loại bỏ nhóm trùng lặp ở sidebar (Thi đua đã nằm trên thanh trên)
+  cfg.side = cfg.side.filter((g) => g.id !== "thi-dua");
+
   const seen = new Set<string>();
   const walk = (links: NavLink[]) => links.forEach((x) => seen.add(x.id));
   cfg.top.forEach((t) => { seen.add(t.id); walk(t.children ?? []); });
@@ -64,10 +81,20 @@ export function mergeMenu(saved: unknown): MenuConfig {
     if (!seen.has("g:" + g.id)) { cfg.side.push(structuredClone(g)); continue; }
     for (const it of g.items) if (!seen.has(it.id)) cfg.side.find((x) => x.id === g.id)?.items.push(structuredClone(it));
   }
-  // Các trang đã bỏ (hoạt động, tình nguyện): gỡ khỏi cấu hình đã lưu để không còn liên kết hỏng
-  const REMOVED = ["/lich-hoat-dong"];
+  // Các trang đã bỏ: gỡ khỏi cấu hình đã lưu để không còn liên kết hỏng
+  const REMOVED = ["/lich-hoat-dong", "/gioi-thieu/bch-doan-truong"];
   const keep = (l: NavLink) => !REMOVED.includes(l.href);
-  cfg.top = cfg.top.filter(keep).map((t) => (t.children ? { ...t, children: t.children.filter(keep) } : t));
-  cfg.side = cfg.side.map((g) => ({ ...g, items: g.items.filter(keep) }));
+  const renameDefault = <T extends NavLink>(l: T): T => {
+    if (l.id === "dinh-huong" && l.label === "Định hướng") return { ...l, label: "Hướng nghiệp" };
+    if (l.id === "g-dinh-huong" && (l.label === "Định hướng" || l.label === "Định hướng nghề nghiệp")) return { ...l, label: "Hướng nghiệp" };
+    if (l.id === "tro-choi" && l.label === "Trò chơi") return { ...l, label: "Góc giải trí" };
+    if (l.id === "g-tro-choi" && l.label === "Trò chơi") return { ...l, label: "Góc giải trí" };
+    return l;
+  };
+  cfg.top = cfg.top.filter(keep).map((t) => {
+    const ren = renameDefault(t);
+    return ren.children ? { ...ren, children: ren.children.filter(keep).map(renameDefault) } : ren;
+  });
+  cfg.side = cfg.side.map((g) => ({ ...g, items: g.items.filter(keep).map(renameDefault) }));
   return cfg;
 }

@@ -116,6 +116,7 @@ model User {
   articles          Article[]
   quizzes           Quiz[]
   chapterReports    ChapterReport[]
+  reportPeriods     ReportPeriod[]
 
   @@index([role, status])
 }
@@ -514,11 +515,31 @@ model SitePage {
   updatedById String?
 }
 
+/// Đợt báo cáo dành cho các Chi đoàn (BCH tạo đợt, các Chi đoàn nộp báo cáo theo đợt).
+model ReportPeriod {
+  id           String    @id @default(cuid())
+  title        String
+  description  String?
+  startDate    DateTime?
+  endDate      DateTime?
+  academicYear String?
+  status       String    @default("OPEN") // OPEN | CLOSED
+  createdById  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  createdBy User?           @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  reports   ChapterReport[]
+
+  @@index([status, createdAt])
+}
+
 /// Báo cáo của từng Chi đoàn (bí thư đăng, hiển thị công khai theo Khối/Lớp).
 model ChapterReport {
   id            String   @id @default(cuid())
   viewCount     Int      @default(0) // số lượt xem trang công khai
   departmentId  String
+  periodId      String?
   title         String
   content       String
   imageUrl      String?
@@ -527,10 +548,13 @@ model ChapterReport {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  createdBy  User?      @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  department Department    @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  period     ReportPeriod? @relation(fields: [periodId], references: [id], onDelete: SetNull)
+  createdBy  User?         @relation(fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([departmentId, createdAt])
+  @@index([periodId])
+  @@unique([departmentId, periodId])
 }
 
 /// Thông tin chung của website công khai (tiêu đề banner, địa chỉ, liên hệ...). Dạng key/value.

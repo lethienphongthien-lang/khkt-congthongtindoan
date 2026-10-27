@@ -3,9 +3,9 @@ import { Globe, LogIn, Mail, MapPin, Phone, PlayCircle } from "lucide-react";
 import { DoanLogo } from "@/components/layout/logo";
 
 const GROUPS: { title: string; links: [string, string][] }[] = [
-  { title: "Giới thiệu", links: [["Đoàn trường", "/gioi-thieu/doan-truong"], ["BCH Đoàn trường", "/gioi-thieu/bch-doan-truong"], ["Cơ cấu tổ chức", "/gioi-thieu/co-cau-to-chuc"], ["Cờ đỏ", "/gioi-thieu/co-do"], ["Nội quy", "/gioi-thieu/noi-quy"]] },
-  { title: "Thông tin", links: [["Tin tức", "/tin-tuc"], ["Kế hoạch", "/ke-hoach"], ["Thông báo", "/thong-bao"], ["Lịch công tác", "/lich-cong-tac"], ["Báo cáo Chi đoàn", "/bao-cao-chi-doan"]] },
-  { title: "Dành cho học sinh", links: [["Thi đua", "/thi-dua"], ["Trò chơi", "/tro-choi"], ["Định hướng nghề nghiệp", "/dinh-huong-nghe-nghiep"], ["Tài liệu sinh hoạt", "/tai-lieu-sinh-hoat"], ["Góp ý ẩn danh", "/gop-y"], ["Sơn Hà Confession", "/confession"]] },
+  { title: "Giới thiệu", links: [["Đoàn trường", "/gioi-thieu/doan-truong"], ["Cơ cấu tổ chức", "/gioi-thieu/co-cau-to-chuc"], ["Cờ đỏ", "/gioi-thieu/co-do"], ["Nội quy", "/gioi-thieu/noi-quy"]] },
+  { title: "Thông tin", links: [["Tin tức", "/tin-tuc"], ["Kế hoạch", "/ke-hoach"], ["Thông báo", "/thong-bao"], ["Diễn đàn", "/dien-dan"], ["Lịch công tác", "/lich-cong-tac"], ["Báo cáo Chi đoàn", "/bao-cao-chi-doan"]] },
+  { title: "Dành cho học sinh", links: [["Thi đua", "/thi-dua"], ["Góc giải trí", "/tro-choi"], ["Hướng nghiệp", "/dinh-huong-nghe-nghiep"], ["Tư vấn tâm lý", "/tu-van-tam-ly"], ["Tài liệu sinh hoạt", "/tai-lieu-sinh-hoat"], ["Góp ý ẩn danh", "/gop-y"], ["Sơn Hà Confession", "/confession"]] },
 ];
 
 type Props = { address: string; phone: string; email: string; facebook?: string; youtube?: string };

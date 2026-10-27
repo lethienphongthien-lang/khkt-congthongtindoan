@@ -14,7 +14,20 @@ export default async function DepartmentReportsPage({ params, searchParams }: { 
   const dept = await db.department.findUnique({ where: { id }, select: { id: true, name: true } });
   if (!dept) notFound();
   const [reports, total] = await Promise.all([
-    db.chapterReport.findMany({ where: { departmentId: id }, orderBy: { createdAt: "desc" }, skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE, select: { id: true, title: true, content: true, createdAt: true, viewCount: true } }),
+    db.chapterReport.findMany({
+      where: { departmentId: id },
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        createdAt: true,
+        viewCount: true,
+        period: { select: { title: true } },
+      },
+    }),
     db.chapterReport.count({ where: { departmentId: id } }),
   ]);
   return (
@@ -24,7 +37,14 @@ export default async function DepartmentReportsPage({ params, searchParams }: { 
       <div className="rounded border border-border bg-white/85 px-4">
         {reports.length === 0 ? <EmptyPublic text="Chi đoàn chưa đăng báo cáo nào." /> : reports.map((r) => (
           <article key={r.id} className="border-b border-border py-3 last:border-0">
-            <Link href={`/bao-cao-chi-doan/bao-cao/${r.id}`} className="font-semibold hover:text-primary">{r.title}</Link>
+            <div className="flex items-start justify-between gap-2">
+              <Link href={`/bao-cao-chi-doan/bao-cao/${r.id}`} className="font-semibold hover:text-primary">{r.title}</Link>
+              {r.period && (
+                <span className="shrink-0 rounded bg-primary-light px-2 py-0.5 text-xs text-primary font-medium">
+                  {r.period.title}
+                </span>
+              )}
+            </div>
             <div className="text-xs text-muted">{formatDate(r.createdAt)} · {r.viewCount.toLocaleString("vi-VN")} lượt xem</div>
             <p className="mt-1 line-clamp-2 text-sm text-slate-600">{plainText(r.content, 200)}</p>
           </article>

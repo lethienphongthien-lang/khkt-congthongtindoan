@@ -11,11 +11,50 @@ const SUGGEST = ["Sắp tới có hoạt động gì?", "Cách tham gia trò ch�
 /** Chatbot hỏi đáp nổi ở góc dưới trang công khai. Chỉ trả lời từ nội dung công khai của website. */
 export function ChatWidget() {
   const [open, setOpen] = useState(false);
+  const [hiddenByOther, setHiddenByOther] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [msgs, busy, open]);
+
+  // Đồng bộ đóng/ẩn khi khung chat khác (Kênh BCH & Bí thư) đang mở để không đè lên nhau
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      if ((e as CustomEvent).detail === "team") {
+        setOpen(false);
+        setHiddenByOther(true);
+      }
+    };
+    const onClose = (e: Event) => {
+      if ((e as CustomEvent).detail === "team") {
+        setHiddenByOther(false);
+      }
+    };
+    window.addEventListener("floating-widget-open", onOpen);
+    window.addEventListener("floating-widget-close", onClose);
+    return () => {
+      window.removeEventListener("floating-widget-open", onOpen);
+      window.removeEventListener("floating-widget-close", onClose);
+    };
+  }, []);
+
+  function toggleOpen() {
+    setOpen((prev) => {
+      const next = !prev;
+      if (next) {
+        window.dispatchEvent(new CustomEvent("floating-widget-open", { detail: "ai" }));
+      } else {
+        window.dispatchEvent(new CustomEvent("floating-widget-close", { detail: "ai" }));
+      }
+      return next;
+    });
+  }
+
+  function handleClose() {
+    setOpen(false);
+    window.dispatchEvent(new CustomEvent("floating-widget-close", { detail: "ai" }));
+  }
 
   async function ask(text: string) {
     const question = text.trim();
@@ -29,13 +68,15 @@ export function ChatWidget() {
     finally { setBusy(false); }
   }
 
+  if (hiddenByOther) return null;
+
   return (
-    <div className="no-print fixed bottom-4 right-4 z-40 flex flex-col items-end gap-2">
+    <div className={cn("no-print fixed right-4 z-40 flex flex-col items-end gap-2", open ? "bottom-4 z-50" : "bottom-4")}>
       {open && (
         <div role="dialog" aria-label="Trợ lý AI Đoàn trường" className="flex h-[min(44rem,calc(100dvh-6rem))] w-[min(30rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-border bg-white shadow-2xl">
           <div className="flex items-center gap-2 bg-primary px-3 py-2.5 text-white">
             <Sparkles className="size-4" /><div className="flex-1 text-sm font-semibold">Trợ lý Đoàn trường <span className="ml-1 rounded bg-white/20 px-1.5 py-0.5 text-[10px] font-bold tracking-wide">AI</span></div>
-            <button type="button" onClick={() => setOpen(false)} aria-label="Đóng" className="rounded p-1 hover:bg-white/15"><X className="size-4" /></button>
+            <button type="button" onClick={handleClose} aria-label="Đóng" className="rounded p-1 hover:bg-white/15"><X className="size-4" /></button>
           </div>
           <div className="flex-1 space-y-2.5 overflow-y-auto bg-slate-50 p-3 text-sm">
             <div className="max-w-[88%] rounded-2xl rounded-tl-sm bg-white px-3 py-2 shadow-sm">Xin chào! Mình là trợ lý AI của Đoàn trường THPT Sơn Hà. Bạn cứ hỏi về hoạt động, sự kiện, kế hoạch… Mình chỉ trả lời theo nội dung đã đăng trên website.</div>
@@ -63,7 +104,7 @@ export function ChatWidget() {
           <div className="bg-white px-3 pb-1.5 text-center text-[11px] text-muted">Do AI trả lời, có thể chưa chính xác. Hãy kiểm tra lại với Đoàn trường.</div>
         </div>
       )}
-      <button type="button" onClick={() => setOpen((o) => !o)} aria-label={open ? "Đóng trợ lý" : "Hỏi trợ lý AI Đoàn trường"} className="flex size-12 items-center justify-center rounded-full bg-primary text-white shadow-lg hover:bg-primary-dark">
+      <button type="button" onClick={toggleOpen} aria-label={open ? "Đóng trợ lý" : "Hỏi trợ lý AI Đoàn trường"} className="flex size-12 items-center justify-center rounded-full bg-primary text-white shadow-lg hover:bg-primary-dark">
         {open ? <X className="size-5" /> : <MessageCircle className="size-6" />}
       </button>
     </div>

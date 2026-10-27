@@ -15,6 +15,8 @@ import { RichText } from "@/components/public/rich-text";
 import { ViewTracker } from "@/components/public/view-tracker";
 import { Attachments } from "@/components/public/attachments";
 import { Block, SideArticleList } from "@/components/public/blocks";
+import { ForumDiscussion } from "@/components/public/forum-discussion";
+import { getForumComments } from "@/actions/forum";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const a = await getArticle((await params).slug);
@@ -31,8 +33,13 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   if (!a) notFound();
   // Số lượt xem đọc trực tiếp (không qua bộ nhớ đệm) để người xem thấy số mới ngay
   const views = (await db.article.findUnique({ where: { id: a.id }, select: { viewCount: true } }))?.viewCount ?? a.viewCount;
-  const canEdit = (await getCurrentUser())?.role === "ADMIN"; // Admin và Ban chấp hành
-  const related = (await relatedArticles(a)).filter((g) => g.items.length);
+  const user = await getCurrentUser();
+  const canEdit = user?.role === "ADMIN"; // Admin và Ban chấp hành
+  const isForum = a.category?.name?.trim().toLowerCase() === "diễn đàn";
+  const [related, forumComments] = await Promise.all([
+    relatedArticles(a).then((arr) => arr.filter((g) => g.items.length)),
+    isForum ? getForumComments(a.id) : Promise.resolve([]),
+  ]);
   // Dữ liệu có cấu trúc (JSON-LD) giúp Google hiểu đây là bài viết/sự kiện và hiển thị đẹp hơn trong kết quả tìm kiếm
   const base = siteUrl();
   const jsonLd = a.kind === "EVENT" && a.eventAt
@@ -66,6 +73,13 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
       {a.summary && <p className="my-5 text-lg font-medium text-slate-700">{a.summary}</p>}
       <div className="overflow-x-auto rounded bg-white/85 p-5"><RichText text={a.content} /></div>
       <Attachments files={a.attachments.map((f) => ({ id: f.id, name: f.name, url: f.url, size: f.size }))} />
+      {isForum && (
+        <ForumDiscussion
+          articleId={a.id}
+          initialComments={forumComments}
+          currentUser={user ? { fullName: user.fullName, role: user.role } : null}
+        />
+      )}
     </article>
     <aside className="space-y-6">
       {related.map((g) => (

@@ -11,13 +11,26 @@ export default async function EditReportPage({ params }: { params: Promise<{ id:
   const user = await requireRole(["ADMIN", "SECRETARY"]);
   const r = await db.chapterReport.findUnique({ where: { id: (await params).id }, include: { department: { select: { name: true } } } });
   if (!r || !canManageDepartment(user, r.departmentId)) notFound(); // bí thư không sửa được báo cáo của Chi đoàn khác
-  const departments = user.role === "ADMIN" ? await db.department.findMany({ where: { graduatedAt: null }, orderBy: { name: "asc" }, select: { id: true, name: true } }) : [];
+
+  const [departments, periods] = await Promise.all([
+    user.role === "ADMIN" ? db.department.findMany({ where: { graduatedAt: null }, orderBy: { name: "asc" }, select: { id: true, name: true } }) : [],
+    db.reportPeriod.findMany({
+      orderBy: { createdAt: "desc" },
+      select: { id: true, title: true, status: true, endDate: true },
+    }),
+  ]);
+
   return (
     <>
       <PageHeader title="Sửa báo cáo" />
-      <ReportForm id={r.id} departments={departments} fixedDepartment={user.role === "SECRETARY" ? r.department.name : undefined}
+      <ReportForm
+        id={r.id}
+        departments={departments}
+        periods={periods}
+        fixedDepartment={user.role === "SECRETARY" ? r.department.name : undefined}
         image={r.imageUrl && r.imagePublicId ? { imageUrl: r.imageUrl, publicId: r.imagePublicId } : null}
-        initial={{ departmentId: r.departmentId, title: r.title, content: r.content }} />
+        initial={{ departmentId: r.departmentId, title: r.title, content: r.content, periodId: r.periodId }}
+      />
     </>
   );
 }

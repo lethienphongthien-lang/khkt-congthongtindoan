@@ -184,23 +184,50 @@ export function SitePageForm({ slug, title, initial, initialTabs = [], initialFi
   );
 }
 
-export function ReportForm({ id, departments, fixedDepartment, initial, image }: {
+export function ReportForm({ id, departments, fixedDepartment, periods = [], defaultPeriodId, initial, image }: {
   id?: string; departments: { id: string; name: string }[]; fixedDepartment?: string;
-  initial?: { departmentId: string; title: string; content: string }; image?: UploadedImage;
+  periods?: { id: string; title: string; status: string; endDate?: Date | string | null }[];
+  defaultPeriodId?: string;
+  initial?: { departmentId: string; title: string; content: string; periodId?: string | null }; image?: UploadedImage;
 }) {
   const router = useRouter();
-  const [v, setV] = useState(initial ?? { departmentId: "", title: "", content: "" });
+  const [v, setV] = useState({
+    departmentId: initial?.departmentId ?? "",
+    periodId: initial?.periodId ?? defaultPeriodId ?? "",
+    title: initial?.title ?? "",
+    content: initial?.content ?? "",
+  });
   const [img, setImg] = useState<UploadedImage>(image ?? null);
   const [errors, setErrors] = useState<Errors>({});
   const [busy, setBusy] = useState(false);
   return (
     <div className="w-full space-y-4">
-      <Field label="Chi đoàn" required error={errors.departmentId}>
-        {fixedDepartment ? <Input value={fixedDepartment} disabled readOnly /> : (
-          <Select value={v.departmentId} onChange={(e) => setV({ ...v, departmentId: e.target.value })}><option value="">Chọn Chi đoàn</option>{departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</Select>
-        )}
-      </Field>
-      <Field label="Tiêu đề báo cáo" required error={errors.title}><WrapInput value={v.title} onChange={(e) => setV({ ...v, title: e.target.value })} placeholder="Ví dụ: Báo cáo hoạt động tháng 10" /></Field>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field label="Chi đoàn" required error={errors.departmentId}>
+          {fixedDepartment ? <Input value={fixedDepartment} disabled readOnly /> : (
+            <Select value={v.departmentId} onChange={(e) => setV({ ...v, departmentId: e.target.value })}><option value="">Chọn Chi đoàn</option>{departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</Select>
+          )}
+        </Field>
+        <Field label="Đợt báo cáo" hint="Chọn đợt báo cáo theo yêu cầu của BCH (nếu có)" error={errors.periodId}>
+          <Select value={v.periodId} onChange={(e) => {
+            const pId = e.target.value;
+            const p = periods.find((x) => x.id === pId);
+            setV((prev) => ({
+              ...prev,
+              periodId: pId,
+              title: prev.title || (p ? `Báo cáo ${p.title}` : ""),
+            }));
+          }}>
+            <option value="">(Không chọn đợt - Báo cáo thường xuyên/định kỳ)</option>
+            {periods.map((p) => (
+              <option key={p.id} value={p.id} disabled={p.status === "CLOSED" && p.id !== initial?.periodId}>
+                {p.title} {p.status === "CLOSED" ? "— [Đã đóng]" : p.endDate ? `— [Hạn: ${new Date(p.endDate).toLocaleDateString("vi-VN")}]` : ""}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      </div>
+      <Field label="Tiêu đề báo cáo" required error={errors.title}><WrapInput value={v.title} onChange={(e) => setV({ ...v, title: e.target.value })} placeholder="Ví dụ: Báo cáo hoạt động công tác Đoàn tháng 10/2026" /></Field>
       <Field group label="Nội dung" required error={errors.content}><RichEditor value={v.content} onChange={(content) => setV((p) => ({ ...p, content }))} /></Field>
       <Field label="Ảnh minh họa"><ImageUpload folder="activities" value={img} onChange={setImg} /></Field>
       <HeaderActions>
@@ -210,7 +237,7 @@ export function ReportForm({ id, departments, fixedDepartment, initial, image }:
           setBusy(false);
           if (!res.ok) { toast.error(res.error); setErrors(toErrors(res.fieldErrors)); return; }
           toast.success(res.message); router.push("/chapter-reports"); router.refresh();
-        }}>{id ? "Lưu thay đổi" : "Đăng báo cáo"}</Button>
+        }}>{id ? "Lưu thay đổi" : "Nộp báo cáo"}</Button>
         <Button variant="secondary" onClick={() => router.back()}>Hủy</Button>
       </HeaderActions>
     </div>
