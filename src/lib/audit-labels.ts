@@ -32,6 +32,7 @@ const LABELS: Record<string, string> = {
   "marquee.create": "Thêm dòng chữ chạy", "marquee.delete": "Xóa dòng chữ chạy",
   "category.create": "Tạo danh mục", "category.rename": "Đổi tên danh mục", "category.delete": "Xóa danh mục",
   "report.create": "Đăng báo cáo Chi đoàn", "report.update": "Sửa báo cáo Chi đoàn", "report.delete": "Xóa báo cáo Chi đoàn",
+  "report_period.create": "Tạo đợt báo cáo", "report_period.update": "Sửa đợt báo cáo", "report_period.delete": "Xóa đợt báo cáo",
   "post.create": "Đăng bài lên bảng tin", "post.delete": "Xóa bài trên bảng tin", "poll.create": "Tạo bình chọn", "poll.delete": "Xóa bình chọn", "confession.approve": "Duyệt confession", "confession.reject": "Từ chối confession", "confession.delete": "Xóa confession", "confession.comment.delete": "Xóa bình luận confession",
   "feedback.update": "Xử lý góp ý", "feedback.delete": "Xóa góp ý",
   "quiz.create": "Tạo trò chơi tích điểm", "quiz.update": "Sửa trò chơi tích điểm", "quiz.delete": "Xóa trò chơi tích điểm", "quiz.cap": "Đổi trần điểm trò chơi mỗi tuần",
@@ -41,7 +42,7 @@ const LABELS: Record<string, string> = {
 /** Tên đối tượng bị tác động. */
 export const TARGET_LABELS: Record<string, string> = {
   User: "Tài khoản", Member: "Đoàn viên", Activity: "Hoạt động", Article: "Bài viết", Department: "Chi đoàn", Quiz: "Trò chơi", Poll: "Bình chọn", Confession: "Confession",
-  ChapterReport: "Báo cáo Chi đoàn", Badge: "Huy hiệu", MarqueeItem: "Chữ chạy", ArticleCategory: "Danh mục", ActivityCategory: "Loại hoạt động",
+  ChapterReport: "Báo cáo Chi đoàn", ReportPeriod: "Đợt báo cáo", Badge: "Huy hiệu", MarqueeItem: "Chữ chạy", ArticleCategory: "Danh mục", ActivityCategory: "Loại hoạt động",
   Feedback: "Góp ý", Post: "Bài bảng tin", SitePage: "Trang giới thiệu", SiteSetting: "Cài đặt", SchoolYear: "Năm học", WeeklySchedule: "Lịch công tác", System: "Hệ thống", Chat: "Chatbot",
 };
 
