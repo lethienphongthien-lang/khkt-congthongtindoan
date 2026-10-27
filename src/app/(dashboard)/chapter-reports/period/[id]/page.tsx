@@ -35,11 +35,12 @@ export default async function PeriodReportTrackerPage({
         secretary: {
           select: { id: true, fullName: true, username: true, position: true },
         },
+        _count: { select: { members: { where: { status: "ACTIVE" } } } },
       },
     }),
     db.chapterReport.findMany({
       where: { periodId: id },
-      select: { id: true, departmentId: true, title: true, createdAt: true, viewCount: true },
+      select: { id: true, departmentId: true, title: true, createdAt: true, viewCount: true, participantCount: true },
     }),
     db.schoolYear.findMany({ orderBy: { startYear: "desc" } }),
   ]);
@@ -52,6 +53,7 @@ export default async function PeriodReportTrackerPage({
 
   const trackerItems = departments.map((d) => ({
     department: d,
+    memberCount: d._count.members,
     report: reportMap.get(d.id) ?? null,
   }));
 

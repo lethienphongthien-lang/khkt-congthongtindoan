@@ -173,6 +173,7 @@ export const reportSchema = z.object({
   periodId: z.string().trim().nullish(),
   title: z.string().trim().min(3, "Tiêu đề tối thiểu 3 ký tự").max(200),
   content: z.string().trim().min(1, "Nhập nội dung").max(200000),
+  participantCount: z.preprocess(emptyToUndef, z.coerce.number({ message: "Nhập số đoàn viên tham gia" }).int("Phải là số nguyên").min(0, "Không được âm").max(5000)),
   imageUrl: optionalText(500),
   imagePublicId: optionalText(300),
 });

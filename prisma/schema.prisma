@@ -544,6 +544,7 @@ model ChapterReport {
   content       String
   imageUrl      String?
   imagePublicId String?
+  participantCount Int? // số đoàn viên tham gia hoạt động nêu trong báo cáo (trống ở báo cáo cũ)
   createdById   String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

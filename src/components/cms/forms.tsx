@@ -188,7 +188,7 @@ export function ReportForm({ id, departments, fixedDepartment, periods = [], def
   id?: string; departments: { id: string; name: string }[]; fixedDepartment?: string;
   periods?: { id: string; title: string; status: string; endDate?: Date | string | null }[];
   defaultPeriodId?: string;
-  initial?: { departmentId: string; title: string; content: string; periodId?: string | null }; image?: UploadedImage;
+  initial?: { departmentId: string; title: string; content: string; periodId?: string | null; participantCount?: number | null }; image?: UploadedImage;
 }) {
   const router = useRouter();
   const [v, setV] = useState({
@@ -196,6 +196,7 @@ export function ReportForm({ id, departments, fixedDepartment, periods = [], def
     periodId: initial?.periodId ?? defaultPeriodId ?? "",
     title: initial?.title ?? "",
     content: initial?.content ?? "",
+    participantCount: initial?.participantCount != null ? String(initial.participantCount) : "",
   });
   const [img, setImg] = useState<UploadedImage>(image ?? null);
   const [errors, setErrors] = useState<Errors>({});
@@ -227,6 +228,7 @@ export function ReportForm({ id, departments, fixedDepartment, periods = [], def
           </Select>
         </Field>
       </div>
+      <Field label="Số đoàn viên tham gia" required hint="Số đoàn viên của Chi đoàn đã tham gia hoạt động trong báo cáo, không vượt quá sĩ số Chi đoàn" error={errors.participantCount}><Input type="number" min={0} inputMode="numeric" value={v.participantCount} onChange={(e) => setV({ ...v, participantCount: e.target.value })} placeholder="Ví dụ: 38" /></Field>
       <Field label="Tiêu đề báo cáo" required error={errors.title}><WrapInput value={v.title} onChange={(e) => setV({ ...v, title: e.target.value })} placeholder="Ví dụ: Báo cáo hoạt động công tác Đoàn tháng 10/2026" /></Field>
       <Field group label="Nội dung" required error={errors.content}><RichEditor value={v.content} onChange={(content) => setV((p) => ({ ...p, content }))} /></Field>
       <Field label="Ảnh minh họa"><ImageUpload folder="activities" value={img} onChange={setImg} /></Field>

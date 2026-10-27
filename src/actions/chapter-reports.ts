@@ -72,6 +72,8 @@ export async function saveReportAction(id: string | null, input: unknown) {
     const departmentId = user.role === "SECRETARY" ? user.departmentId : d.departmentId;
     if (!departmentId) throw user.role === "ADMIN" ? new UserError("Chọn Chi đoàn") : new ForbiddenError();
     if (!(await db.department.findUnique({ where: { id: departmentId } }))) throw new UserError("Chi đoàn không tồn tại");
+    const memberCount = await db.member.count({ where: { departmentId, status: "ACTIVE" } });
+    if (d.participantCount > memberCount) throw new UserError(`Số đoàn viên tham gia không được vượt quá sĩ số Chi đoàn (${memberCount})`);
     if (d.imagePublicId && !isOwnPublicId(d.imagePublicId, "activities")) throw new UserError("Ảnh không hợp lệ");
 
     const periodId = d.periodId?.trim() ? d.periodId.trim() : null;
@@ -87,6 +89,7 @@ export async function saveReportAction(id: string | null, input: unknown) {
       title: d.title,
       content: d.content,
       periodId,
+      participantCount: d.participantCount,
       imageUrl: d.imageUrl ?? null,
       imagePublicId: d.imagePublicId ?? null,
     };

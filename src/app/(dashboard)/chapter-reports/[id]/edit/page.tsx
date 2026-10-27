@@ -29,7 +29,7 @@ export default async function EditReportPage({ params }: { params: Promise<{ id:
         periods={periods}
         fixedDepartment={user.role === "SECRETARY" ? r.department.name : undefined}
         image={r.imageUrl && r.imagePublicId ? { imageUrl: r.imageUrl, publicId: r.imagePublicId } : null}
-        initial={{ departmentId: r.departmentId, title: r.title, content: r.content, periodId: r.periodId }}
+        initial={{ departmentId: r.departmentId, title: r.title, content: r.content, periodId: r.periodId, participantCount: r.participantCount }}
       />
     </>
   );
