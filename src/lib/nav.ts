@@ -26,7 +26,13 @@ export function navFor(role: Role): NavItem[] {
       { href: "/profile", label: "Hồ sơ & thẻ số", icon: IdCard },
       {
         href: "/cms/tin-tuc", label: "Cổng thông tin", icon: Globe, match: "/cms",
-        children: [{ href: "/cms/tin-tuc", label: "Tin tức", icon: Newspaper }, { href: "/cms/ke-hoach", label: "Kế hoạch", icon: ClipboardList }, { href: "/cms/thong-bao", label: "Thông báo", icon: Bell }, { href: "/cms/cau-chuyen-dep", label: "Câu chuyện đẹp", icon: HeartHandshake }],
+        children: [
+          { href: "/cms/tin-tuc", label: "Tin tức", icon: Newspaper },
+          { href: "/cms/ke-hoach", label: "Kế hoạch", icon: ClipboardList },
+          { href: "/cms/thong-bao", label: "Thông báo", icon: Bell },
+          { href: "/cms/dien-dan", label: "Diễn đàn", icon: MessageSquare },
+          { href: "/cms/cau-chuyen-dep", label: "Câu chuyện đẹp", icon: HeartHandshake },
+        ],
       },
     ];
   }
@@ -41,15 +47,27 @@ export function navFor(role: Role): NavItem[] {
     },
     { href: "/emulation", label: "Thi đua", icon: Trophy },
     { href: "/quizzes", label: "Trò chơi", icon: Puzzle },
-    { href: "/confessions", label: "Cộng đồng", icon: Newspaper, children: [{ href: "/confessions", label: "Sơn Hà Confession", icon: Vote }, { href: "/feedback", label: "Góp ý", icon: MessageSquare }] },
+    {
+      href: "/confessions", label: "Cộng đồng", icon: Newspaper,
+      children: [
+        { href: "/confessions", label: "Sơn Hà Confession", icon: Vote },
+        { href: "/counseling", label: "Tư vấn tâm lý", icon: HeartHandshake },
+        { href: "/feedback", label: "Góp ý", icon: MessageSquare },
+      ],
+    },
     { href: "/insights", label: "Thống kê", icon: BarChart3, footer: true },
     { href: "/team-chat", label: "Kênh chat", icon: MessagesSquare },
     { href: "/audit", label: "Nhật ký hệ thống", icon: ScrollText, footer: true },
     {
       href: "/cms/tin-tuc", label: "Cổng thông tin", icon: Globe, match: "/cms", open: true,
       children: [
-        { href: "/cms/tin-tuc", label: "Tin tức", icon: Newspaper }, { href: "/cms/ke-hoach", label: "Kế hoạch", icon: ClipboardList },
-        { href: "/cms/thong-bao", label: "Thông báo", icon: Bell }, { href: "/cms/cau-chuyen-dep", label: "Câu chuyện đẹp", icon: HeartHandshake }, { href: "/cms/dinh-huong-nghe-nghiep", label: "Hướng nghiệp", icon: Compass }, { href: "/cms/tai-lieu-sinh-hoat", label: "Tài liệu sinh hoạt", icon: BookOpen },
+        { href: "/cms/tin-tuc", label: "Tin tức", icon: Newspaper },
+        { href: "/cms/ke-hoach", label: "Kế hoạch", icon: ClipboardList },
+        { href: "/cms/thong-bao", label: "Thông báo", icon: Bell },
+        { href: "/cms/dien-dan", label: "Diễn đàn", icon: MessageSquare },
+        { href: "/cms/cau-chuyen-dep", label: "Câu chuyện đẹp", icon: HeartHandshake },
+        { href: "/cms/dinh-huong-nghe-nghiep", label: "Hướng nghiệp", icon: Compass },
+        { href: "/cms/tai-lieu-sinh-hoat", label: "Tài liệu sinh hoạt", icon: BookOpen },
         { href: "/chapter-reports", label: "Báo cáo Chi đoàn", icon: FileText },
       ],
     },
@@ -87,13 +105,13 @@ export const ROLE_LABEL: Record<Role, string> = { ADMIN: "Ban chấp hành Đoà
 
 export const PAGE_TITLES: Record<string, string> = {
   dashboard: "Tổng quan", members: "Đoàn viên & thanh niên", departments: "Chi đoàn", activities: "Hoạt động", attendance: "Điểm danh",
-  volunteer: "Tình nguyện", games: "Trò chơi", quizzes: "Trò chơi tích điểm", marquee: "Dòng chữ chạy", cms: "Cổng thông tin", "tin-tuc": "Tin tức", "ke-hoach": "Kế hoạch", "su-kien": "Sự kiện", "thong-bao": "Thông báo", "cau-chuyen-dep": "Câu chuyện đẹp", "tro-choi": "Trò chơi", "dinh-huong-nghe-nghiep": "Định hướng nghề nghiệp", "tai-lieu-sinh-hoat": "Tài liệu sinh hoạt Chi đoàn", pages: "Trang giới thiệu", "chapter-reports": "Báo cáo Chi đoàn", emulation: "Thi đua", achievements: "Thành tích", reports: "Báo cáo", audit: "Nhật ký hệ thống", settings: "Cài đặt", profile: "Hồ sơ & thẻ số", checkin: "Quét QR điểm danh",
-  history: "Lịch sử hoạt động", notifications: "Thông báo", confessions: "Sơn Hà Confession", "team-chat": "Kênh chat", feedback: "Góp ý", approvals: "Hàng chờ duyệt", schedule: "Lịch công tác tuần", new: "Tạo mới", edit: "Chỉnh sửa",
+  volunteer: "Tình nguyện", games: "Trò chơi", quizzes: "Trò chơi tích điểm", marquee: "Dòng chữ chạy", cms: "Cổng thông tin", "tin-tuc": "Tin tức", "ke-hoach": "Kế hoạch", "su-kien": "Sự kiện", "thong-bao": "Thông báo", "cau-chuyen-dep": "Câu chuyện đẹp", "tro-choi": "Trò chơi", "dinh-huong-nghe-nghiep": "Hướng nghiệp", "tai-lieu-sinh-hoat": "Tài liệu sinh hoạt Chi đoàn", pages: "Trang giới thiệu", "chapter-reports": "Báo cáo Chi đoàn", emulation: "Thi đua", achievements: "Thành tích", reports: "Báo cáo", audit: "Nhật ký hệ thống", settings: "Cài đặt", profile: "Hồ sơ & thẻ số", checkin: "Quét QR điểm danh",
+  history: "Lịch sử hoạt động", notifications: "Thông báo", confessions: "Sơn Hà Confession", "team-chat": "Kênh chat", feedback: "Góp ý", counseling: "Tư vấn tâm lý", "dien-dan": "Diễn đàn", approvals: "Hàng chờ duyệt", schedule: "Lịch công tác tuần", new: "Tạo mới", edit: "Chỉnh sửa",
 };
 
 /** Tiêu đề riêng cho đường dẫn cụ thể (ưu tiên hơn PAGE_TITLES theo đoạn). */
 export const PATH_TITLES: Record<string, string> = {
-  "/cms/tin-tuc/new": "Đăng tin", "/cms/cau-chuyen-dep/new": "Đăng câu chuyện", "/cms/dinh-huong-nghe-nghiep/new": "Đăng bài hướng nghiệp", "/cms/tai-lieu-sinh-hoat/new": "Đăng tài liệu sinh hoạt", "/cms/ke-hoach/new": "Đăng kế hoạch", "/cms/su-kien/new": "Tạo sự kiện", "/cms/thong-bao/new": "Đăng thông báo", "/chapter-reports/new": "Đăng báo cáo", "/members/new": "Thêm đoàn viên", "/volunteer/new": "Đăng ký tình nguyện", "/activities/new": "Tạo hoạt động",
+  "/cms/tin-tuc/new": "Đăng tin", "/cms/cau-chuyen-dep/new": "Đăng câu chuyện", "/cms/dinh-huong-nghe-nghiep/new": "Đăng bài hướng nghiệp", "/cms/tai-lieu-sinh-hoat/new": "Đăng tài liệu sinh hoạt", "/cms/ke-hoach/new": "Đăng kế hoạch", "/cms/su-kien/new": "Tạo sự kiện", "/cms/thong-bao/new": "Đăng thông báo", "/cms/dien-dan/new": "Tạo chủ đề diễn đàn", "/chapter-reports/new": "Đăng báo cáo", "/members/new": "Thêm đoàn viên", "/volunteer/new": "Đăng ký tình nguyện", "/activities/new": "Tạo hoạt động", "/counseling": "Tư vấn tâm lý học đường",
 };
 
 /** Nhãn vai trò hiển thị cho một người dùng: Admin tối cao, hoặc chức danh của thành viên BCH. */

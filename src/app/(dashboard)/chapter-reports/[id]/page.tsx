@@ -14,11 +14,24 @@ export const metadata = { title: "Báo cáo Chi đoàn" };
 
 export default async function ReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireRole(["ADMIN", "SECRETARY"]);
-  const r = await db.chapterReport.findUnique({ where: { id: (await params).id }, include: { department: { select: { name: true } } } });
+  const r = await db.chapterReport.findUnique({
+    where: { id: (await params).id },
+    include: {
+      department: { select: { name: true } },
+      period: { select: { id: true, title: true } },
+    },
+  });
   if (!r || !canManageDepartment(user, r.departmentId)) notFound();
+  const desc = [
+    `Chi đoàn ${r.department.name}`,
+    r.period ? `Đợt: ${r.period.title}` : null,
+    formatDate(r.createdAt),
+    `${r.viewCount.toLocaleString("vi-VN")} lượt xem`,
+  ].filter(Boolean).join(" · ");
+
   return (
     <>
-      <PageHeader title={r.title} stackActions description={`Chi đoàn ${r.department.name} · ${formatDate(r.createdAt)} · ${r.viewCount.toLocaleString("vi-VN")} lượt xem`}
+      <PageHeader title={r.title} stackActions description={desc}
         actions={<>
           <Link href={`/bao-cao-chi-doan/bao-cao/${r.id}`} target="_blank" className={buttonClass("secondary")}><ExternalLink className="size-4" /><span className="max-sm:hidden">Xem công khai</span></Link>
           <ReportRowActions id={r.id} backToList />

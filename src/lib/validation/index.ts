@@ -159,8 +159,18 @@ export const sitePageSchema = z.object({
   tabs: z.array(z.object({ title: z.string().trim().min(1, "Nhập tên cho mọi tab").max(40, "Tên tab tối đa 40 ký tự"), content: z.string().max(200000), attachments: z.array(fileAttachment).max(10, "Tối đa 10 tệp mỗi tab").default([]) })).max(10, "Tối đa 10 tab").optional(),
 });
 
+export const reportPeriodSchema = z.object({
+  title: z.string().trim().min(3, "Tiêu đề tối thiểu 3 ký tự").max(200),
+  description: z.string().max(2000).optional().nullable(),
+  startDate: z.string().optional().nullable(),
+  endDate: z.string().optional().nullable(),
+  academicYear: z.string().max(50).optional().nullable(),
+  status: z.enum(["OPEN", "CLOSED"]).default("OPEN"),
+});
+
 export const reportSchema = z.object({
   departmentId: z.string().optional(), // bí thư: server tự gán Chi đoàn của mình
+  periodId: z.string().trim().nullish(),
   title: z.string().trim().min(3, "Tiêu đề tối thiểu 3 ký tự").max(200),
   content: z.string().trim().min(1, "Nhập nội dung").max(200000),
   imageUrl: optionalText(500),
