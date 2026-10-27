@@ -240,7 +240,6 @@ export function PeriodDetailTracker({
                 <Th>Bí thư / Phụ trách</Th>
                 <Th>Trạng thái</Th>
                 <Th>Đoàn viên tham gia</Th>
-                <Th>Chi tiết báo cáo</Th>
                 <Th className="text-right">Thao tác</Th>
               </tr>
             </thead>
@@ -297,24 +296,6 @@ export function PeriodDetailTracker({
                       </div>
                     ) : (
                       <span className="italic text-slate-400">{report ? "Chưa ghi nhận" : "—"}</span>
-                    )}
-                  </Td>
-
-                  <Td>
-                    {report ? (
-                      <div>
-                        <Link
-                          href={`/chapter-reports/${report.id}`}
-                          className="font-medium text-sm text-foreground hover:text-primary line-clamp-1"
-                        >
-                          {report.title}
-                        </Link>
-                        <div className="text-[11px] text-muted">
-                          Nộp: {formatDate(report.createdAt)}
-                        </div>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted italic">Chưa nộp cho đợt này</span>
                     )}
                   </Td>
 
