@@ -100,3 +100,14 @@ export const departmentsByGrade = cachedPublic("departmentsByGrade", async () =>
 export const CMS_SLUG: Record<string, ArticleKind> = { "tin-tuc": "NEWS", "ke-hoach": "PLAN", "thong-bao": "ANNOUNCEMENT", "cau-chuyen-dep": "STORY", "dinh-huong-nghe-nghiep": "CAREER", "tai-lieu-sinh-hoat": "DOCUMENT" };
 export { KIND_ACTION } from "./kind";
 
+
+/** Bài được xem nhiều nhất (tab "Xem nhiều" ở trang chủ). */
+export const mostViewedArticles = cachedPublic("mostViewedArticles", async (kind: ArticleKind, take: number) =>
+  db.article.findMany({ where: { kind, ...publishedWhere() }, orderBy: [{ viewCount: "desc" }, { publishedAt: "desc" }], take, select: articleCard }));
+
+/** Đoạn trích tự động từ nội dung (bỏ thẻ HTML) cho bài chưa nhập tóm tắt. */
+export const articleExcerpt = cachedPublic("articleExcerpt", async (id: string) => {
+  const r = await db.article.findUnique({ where: { id }, select: { content: true } });
+  const text = (r?.content ?? "").replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
+  return text.length > 300 ? `${text.slice(0, 300).trimEnd()}…` : text;
+});
