@@ -20,7 +20,6 @@ async function approveRequest(requestId: string, reviewerId: string) {
   if (!req) throw new UserError("Không tìm thấy đăng ký");
   if (req.status !== "PENDING") throw new UserError("Đăng ký này đã được xử lý");
   if (req.department.graduatedAt) throw new UserError("Chi đoàn đã ra trường");
-  if (req.endAt < new Date()) throw new UserError("Buổi tình nguyện này đã kết thúc. Hãy từ chối và nhờ bí thư đăng ký lại ngày khác");
   const members = await db.member.findMany({ where: { departmentId: req.departmentId, status: "ACTIVE", user: { status: "ACTIVE" } }, select: { userId: true } });
   await db.volunteerRequest.update({ where: { id: req.id }, data: { status: "APPROVED", reviewedById: reviewerId, reviewedAt: new Date() } });
   await audit(reviewerId, "volunteer.approve", "Department", req.departmentId, { task: req.task, department: req.department.name });
@@ -42,7 +41,6 @@ export async function registerVolunteerAction(input: unknown) {
     const startAt = fromLocalInput(`${d.date}T${d.startTime}`), endAt = fromLocalInput(`${d.date}T${d.endTime}`);
     if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) throw new UserError("Ngày hoặc giờ không hợp lệ");
     if (endAt <= startAt) throw new UserError("Giờ kết thúc phải sau giờ bắt đầu");
-    if (endAt < new Date()) throw new UserError("Buổi tình nguyện này đã kết thúc, hãy chọn ngày hôm nay hoặc sau đó");
 
     const req = await db.volunteerRequest.create({ data: { departmentId, task: d.task, startAt, endAt, location: d.location, hours: d.hours, points: d.points, note: d.note ?? null, requestedById: user.id } });
     await audit(user.id, "volunteer.request", "Department", departmentId, { task: d.task, department: dept.name });
