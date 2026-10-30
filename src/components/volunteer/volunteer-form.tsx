@@ -46,7 +46,7 @@ export function VolunteerForm({ departments }: { departments?: { id: string; nam
 
   return (
     <div className="w-full space-y-4">
-      <p className="rounded-md bg-primary-light px-3 py-2 text-sm text-primary-dark">Đăng ký tình nguyện cho <b>cả Chi đoàn</b>. Đăng ký được gửi cho <b>Ban chấp hành duyệt</b>; duyệt xong buổi hiện trên lịch tình nguyện và các đoàn viên nhận thông báo. Làm xong, bạn bấm <b>Hoàn thành</b> để hệ thống tự cộng <b>điểm</b> cho từng đoàn viên của Chi đoàn (không cần điểm danh).</p>
+      <p className="rounded-md bg-primary-light px-3 py-2 text-sm text-primary-dark">Đăng ký tình nguyện cho <b>cả Chi đoàn</b>. Đăng ký được gửi cho <b>Ban chấp hành duyệt</b>; duyệt xong buổi hiện trên lịch tình nguyện và các đoàn viên nhận thông báo. Có thể chọn cả ngày đã qua (đăng ký bổ sung). Làm xong, bạn bấm <b>Hoàn thành</b> để hệ thống tự cộng <b>điểm</b> cho từng đoàn viên của Chi đoàn (không cần điểm danh).</p>
       <div className="grid gap-x-8 gap-y-4 lg:grid-cols-2">
         <div className="space-y-4">
           {departments && (

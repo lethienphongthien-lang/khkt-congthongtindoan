@@ -214,9 +214,9 @@ export const volunteerSchema = z.object({
   note: optionalText(500),
   departmentId: z.preprocess(emptyToUndef, z.string().optional()),
 }).superRefine((v, ctx) => {
-  const today = new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
+  const min = new Date(Date.now() + 7 * 3600_000 - 366 * 86400_000).toISOString().slice(0, 10);
   const max = new Date(Date.now() + 7 * 3600_000 + 366 * 86400_000).toISOString().slice(0, 10);
-  if (v.date < today) ctx.addIssue({ code: "custom", path: ["date"], message: "Ngày tình nguyện không được ở quá khứ" });
+  if (v.date < min) ctx.addIssue({ code: "custom", path: ["date"], message: "Chỉ đăng ký lùi trong vòng một năm trước" });
   else if (v.date > max) ctx.addIssue({ code: "custom", path: ["date"], message: "Chỉ đăng ký trong vòng một năm tới" });
   const mins = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
   if (mins(v.endTime) <= mins(v.startTime)) ctx.addIssue({ code: "custom", path: ["endTime"], message: "Giờ kết thúc phải sau giờ bắt đầu" });
