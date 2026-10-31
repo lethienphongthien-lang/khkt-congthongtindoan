@@ -8,7 +8,7 @@ const STATIC: [string, number, MetadataRoute.Sitemap[number]["changeFrequency"]]
   ["/", 1, "daily"], ["/tin-tuc", 0.9, "daily"], ["/ke-hoach", 0.8, "weekly"], ["/thong-bao", 0.8, "daily"],
   ["/lich-cong-tac", 0.6, "weekly"], ["/tinh-nguyen", 0.6, "weekly"], ["/bao-cao-chi-doan", 0.6, "weekly"],
   ["/thi-dua", 0.6, "weekly"], ["/thi-dua/thanh-tich", 0.5, "weekly"], ["/thi-dua/chi-doan-tieu-bieu", 0.5, "weekly"],
-  ["/cau-chuyen-dep", 0.6, "weekly"], ["/tro-choi", 0.5, "weekly"], ["/dinh-huong-nghe-nghiep", 0.6, "weekly"], ["/tai-lieu-sinh-hoat", 0.6, "weekly"], ["/gop-y", 0.3, "yearly"], ["/confession", 0.4, "daily"],
+  ["/cau-chuyen-dep", 0.6, "weekly"], ["/tro-choi", 0.5, "weekly"], ["/on-thi-gplx", 0.6, "monthly"], ["/dinh-huong-nghe-nghiep", 0.6, "weekly"], ["/tai-lieu-sinh-hoat", 0.6, "weekly"], ["/gop-y", 0.3, "yearly"], ["/confession", 0.4, "daily"],
 ];
 
 /** Sơ đồ trang cho Google: các trang công khai cố định, trang giới thiệu và mọi bài viết đang hiển thị. */
