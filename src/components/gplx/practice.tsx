@@ -78,7 +78,7 @@ function Home({ progress, onStart }: { progress: Progress; onStart: (s: Session)
   const flagged = progress.flags.map((n) => BY_NUM.get(n)!).filter(Boolean);
   const doneCount = Object.keys(progress.done).length;
   const rightCount = Object.values(progress.done).filter(Boolean).length;
-  const study = (title: string, icon: LucideIcon, grad: string, qs: Q[], desc: string) => qs.length && onStart({ title, icon, grad, mode: "study", qs, desc });
+  const study = (title: string, icon: LucideIcon, grad: string, qs: Q[], desc: string) => qs.length && onStart({ title, icon, grad, mode: "study", qs: shuffle(qs), desc });
   const examSession = (e: (typeof EXAMS)[number]): Session => ({ title: `Thi thử ${e.label}`, icon: e.icon, grad: e.grad, mode: "exam", qs: buildExam(e.id), desc: `${e.n} câu ngẫu nhiên đúng cấu trúc đề của Cục Cảnh sát giao thông, trong đó có 1 câu điểm liệt.`, retry: () => examSession(e) });
   return (
     <div className="space-y-5">

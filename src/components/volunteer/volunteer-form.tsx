@@ -2,7 +2,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import { registerVolunteerAction } from "@/actions/volunteer";
+import { registerVolunteerAction, updateVolunteerAction } from "@/actions/volunteer";
 import { HeaderActions } from "@/components/ui/header-actions";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/form";
@@ -13,10 +13,12 @@ const SUGGEST = ["Quét sân", "Vệ sinh khu vực lớp", "Nhặt rác", "Chă
 type Errors = Record<string, string>;
 
 /** Biểu mẫu bí thư đăng ký tình nguyện cho cả Chi đoàn: chọn công việc, ngày giờ, khu vực, số giờ và điểm mỗi em. */
-export function VolunteerForm({ departments }: { departments?: { id: string; name: string }[] }) {
+export type VolunteerInitial = { id: string; task: string; date: string; startTime: string; endTime: string; location: string; hours: number; points: number; note: string };
+
+export function VolunteerForm({ departments, initial }: { departments?: { id: string; name: string }[]; initial?: VolunteerInitial }) {
   const router = useRouter();
-  const [v, setV] = useState({ task: "", date: toLocalInput(new Date()).slice(0, 10), startTime: "07:00", endTime: "08:00", location: "", hours: "1", points: "2", note: "", departmentId: "" });
-  const [hoursTouched, setHoursTouched] = useState(false);
+  const [v, setV] = useState(initial ? { ...initial, hours: String(initial.hours), points: String(initial.points), departmentId: "" } : { task: "", date: toLocalInput(new Date()).slice(0, 10), startTime: "07:00", endTime: "08:00", location: "", hours: "1", points: "2", note: "", departmentId: "" });
+  const [hoursTouched, setHoursTouched] = useState(!!initial);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
   const set = (k: keyof typeof v, val: string) => setV((p) => {
@@ -38,7 +40,7 @@ export function VolunteerForm({ departments }: { departments?: { id: string; nam
       setErrors(fe); return void toast.error(chk.error.issues[0].message);
     }
     setBusy(true); setErrors({});
-    const res = await registerVolunteerAction(v);
+    const res = initial ? await updateVolunteerAction(initial.id, v) : await registerVolunteerAction(v);
     setBusy(false);
     if (!res.ok) { toast.error(res.error); setErrors(Object.fromEntries(Object.entries(res.fieldErrors ?? {}).map(([k, m]) => [k, m[0]]))); return; }
     toast.success(res.message); router.push("/volunteer"); router.refresh();
@@ -74,7 +76,7 @@ export function VolunteerForm({ departments }: { departments?: { id: string; nam
         </div>
       </div>
       <HeaderActions>
-        <Button loading={busy} onClick={submit}>Gửi đăng ký</Button>
+        <Button loading={busy} onClick={submit}>{initial ? "Lưu thay đổi" : "Gửi đăng ký"}</Button>
         <Button variant="secondary" onClick={() => router.back()}>Hủy</Button>
       </HeaderActions>
     </div>
