@@ -56,6 +56,30 @@ export async function registerVolunteerAction(input: unknown) {
   });
 }
 
+/** Sửa đăng ký tình nguyện đang chờ duyệt hoặc đã duyệt (chưa hoàn thành). Bí thư chỉ sửa được của Chi đoàn mình; sửa buổi đã duyệt thì báo lại cho đoàn viên. */
+export async function updateVolunteerAction(requestId: string, input: unknown) {
+  return run<{ id: string }>(async () => {
+    const user = await requireRole(["ADMIN", "SECRETARY"]);
+    const d = volunteerSchema.parse(input);
+    const req = await db.volunteerRequest.findUnique({ where: { id: requestId }, include: { department: { select: { name: true } } } });
+    if (!req) throw new UserError("Không tìm thấy đăng ký");
+    if (user.role === "SECRETARY" && req.departmentId !== user.departmentId) throw new ForbiddenError();
+    if (req.status !== "PENDING" && req.status !== "APPROVED") throw new UserError("Chỉ sửa được đăng ký chưa hoàn thành");
+    const startAt = fromLocalInput(`${d.date}T${d.startTime}`), endAt = fromLocalInput(`${d.date}T${d.endTime}`);
+    if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) throw new UserError("Ngày hoặc giờ không hợp lệ");
+    if (endAt <= startAt) throw new UserError("Giờ kết thúc phải sau giờ bắt đầu");
+    const upd = await db.volunteerRequest.updateMany({ where: { id: requestId, status: req.status }, data: { task: d.task, startAt, endAt, location: d.location, hours: d.hours, points: d.points, note: d.note ?? null } });
+    if (!upd.count) throw new UserError("Đăng ký này vừa được xử lý, hãy tải lại trang");
+    await audit(user.id, "volunteer.update", "Department", req.departmentId, { task: d.task, department: req.department.name });
+    if (req.status === "APPROVED") {
+      const members = await db.member.findMany({ where: { departmentId: req.departmentId, status: "ACTIVE", user: { status: "ACTIVE" } }, select: { userId: true } });
+      await notifyUsers(members.map((m) => m.userId).filter((id) => id !== user.id), { type: "SYSTEM", title: "Buổi tình nguyện được cập nhật", body: `${d.task} · ${formatDate(startAt)} · ${d.location}`, link: "/tinh-nguyen" });
+    }
+    refresh();
+    return { data: { id: requestId }, message: "Đã cập nhật đăng ký tình nguyện" };
+  });
+}
+
 /** Admin duyệt đăng ký tình nguyện. */
 export async function approveVolunteerAction(requestId: string) {
   return run(async () => {

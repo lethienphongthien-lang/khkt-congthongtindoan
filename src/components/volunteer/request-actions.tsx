@@ -1,9 +1,10 @@
 "use client";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Check, CircleCheck, X } from "lucide-react";
+import { Check, CircleCheck, Pencil, X } from "lucide-react";
 import { approveVolunteerAction, cancelVolunteerRequestAction, completeVolunteerAction, rejectVolunteerAction } from "@/actions/volunteer";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClass } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/form";
 import { ConfirmButton, Modal } from "@/components/ui/modal";
 import { reportResult } from "@/components/ui/submit";
@@ -32,6 +33,7 @@ export function VolunteerRequestActions({ id, task, admin }: { id: string; task:
           </Modal>
         </>
       )}
+      <Link href={`/volunteer/${id}/edit`} className={buttonClass("ghost", "sm")}><Pencil className="size-4" /><span className="max-sm:hidden">Sửa</span></Link>
       <ConfirmButton triggerVariant="ghost" triggerClassName="text-danger" trigger="Rút đăng ký" title="Rút đăng ký này?" danger confirmLabel="Rút đăng ký" description={`Đăng ký "${task}" sẽ bị xóa.`}
         onConfirm={async () => { reportResult(await cancelVolunteerRequestAction(id)); router.refresh(); }} />
     </div>
@@ -46,6 +48,7 @@ export function VolunteerApprovedActions({ id, task, points }: { id: string; tas
       <ConfirmButton triggerVariant="primary" trigger={<><CircleCheck className="size-4" />Hoàn thành</>} title="Xác nhận buổi tình nguyện đã hoàn thành?" confirmLabel="Hoàn thành"
         description={<>Mỗi đoàn viên của Chi đoàn sẽ được cộng <b>{points} điểm</b> cho buổi <b>{task}</b>. Chỉ làm được một lần.</>}
         onConfirm={async () => { reportResult(await completeVolunteerAction(id)); router.refresh(); }} />
+      <Link href={`/volunteer/${id}/edit`} className={buttonClass("ghost", "sm")}><Pencil className="size-4" /><span className="max-sm:hidden">Sửa</span></Link>
       <ConfirmButton triggerVariant="ghost" triggerClassName="text-danger" trigger="Hủy buổi" title="Hủy buổi tình nguyện này?" danger confirmLabel="Hủy buổi" description={`Buổi "${task}" sẽ bị xóa và không cộng điểm.`}
         onConfirm={async () => { reportResult(await cancelVolunteerRequestAction(id)); router.refresh(); }} />
     </div>
