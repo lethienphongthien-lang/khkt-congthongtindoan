@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   },
 };
 
-const THEME_BOOT = `try{var p=location.pathname;if(!(p==="/"||/^\\/(login|forgot-password|change-password|gioi-thieu|ke-hoach|tin-tuc|thong-bao|cau-chuyen-dep|tro-choi|dinh-huong-nghe-nghiep|tai-lieu-sinh-hoat|tinh-nguyen|lich-hoat-dong|lich-cong-tac|bao-cao-chi-doan|thi-dua|bai-viet|tim-kiem|gop-y|confession)(\\/|$)/.test(p))){var t=localStorage.getItem("theme");if(t?t==="dark":matchMedia("(prefers-color-scheme: dark)").matches)document.documentElement.classList.add("dark")}}catch(e){}`;
+const THEME_BOOT = `try{var p=location.pathname;if(!(p==="/"||/^\\/(login|forgot-password|change-password|gioi-thieu|ke-hoach|tin-tuc|thong-bao|cau-chuyen-dep|tro-choi|on-thi-gplx|dinh-huong-nghe-nghiep|tai-lieu-sinh-hoat|tinh-nguyen|lich-hoat-dong|lich-cong-tac|bao-cao-chi-doan|thi-dua|bai-viet|tim-kiem|gop-y|confession)(\\/|$)/.test(p))){var t=localStorage.getItem("theme");if(t?t==="dark":matchMedia("(prefers-color-scheme: dark)").matches)document.documentElement.classList.add("dark")}}catch(e){}`;
 
 export const viewport: Viewport = { themeColor: "#0b63b8", viewportFit: "cover", width: "device-width", initialScale: 1, maximumScale: 1, userScalable: false };
 

@@ -15,7 +15,7 @@ const CHOICE_COLORS = ["bg-sky-50 border-sky-200 hover:bg-sky-100", "bg-emerald-
 const LETTER_COLORS = ["bg-sky-500", "bg-emerald-500", "bg-amber-500", "bg-rose-500", "bg-violet-500"];
 
 // ---- âm thanh nhỏ bằng WebAudio (không cần tệp), bật/tắt được và nhớ lựa chọn
-function useSound() {
+export function useSound() {
   const [on, setOn] = useState(true);
   const ctx = useRef<AudioContext | null>(null);
   useEffect(() => { try { if (localStorage.getItem("game-sound") === "0") setOn(false); } catch {} }, []);
@@ -33,16 +33,16 @@ function useSound() {
       }
     } catch {}
   }, [on]);
-  return { on, toggle, ok: () => play([[660, 0.1], [880, 0.16]]), bad: () => play([[220, 0.25]], "sawtooth"), win: () => play([[523, 0.12], [659, 0.12], [784, 0.12], [1047, 0.3]]) };
+  return { on, toggle, ok: () => play([[660, 0.1], [880, 0.16]]), bad: () => play([[392, 0.16], [262, 0.34]], "square"), win: () => play([[523, 0.12], [659, 0.12], [784, 0.12], [1047, 0.3]]), tick: () => play([[520, 0.06]], "triangle"), move: () => play([[400, 0.05], [500, 0.05]], "triangle"), lose: () => play([[330, 0.15], [262, 0.15], [196, 0.3]], "sawtooth") };
 }
 
-function Confetti() {
+export function Confetti() {
   const colors = ["#0b63b8", "#ffd400", "#e11d48", "#16a34a", "#8b5cf6", "#f97316"];
   const [pieces] = useState(() => Array.from({ length: 60 }, (_, i) => ({ i, left: Math.random() * 100, d: 2.4 + Math.random() * 2.2, delay: Math.random() * 0.8, c: colors[i % colors.length] })));
   return <>{pieces.map((p) => <span key={p.i} className="g-confetti" style={{ left: `${p.left}vw`, background: p.c, ["--d" as string]: `${p.d}s`, ["--delay" as string]: `${p.delay}s` }} />)}</>;
 }
 
-function TimerRing({ left, total }: { left: number; total: number }) {
+export function TimerRing({ left, total }: { left: number; total: number }) {
   const r = 22, circ = 2 * Math.PI * r, frac = Math.max(0, Math.min(1, left / total));
   const low = left <= 5000;
   return (
