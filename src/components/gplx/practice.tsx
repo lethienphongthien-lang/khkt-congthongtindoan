@@ -149,7 +149,7 @@ function SectionTitle({ icon: Icon, text }: { icon: LucideIcon; text: string }) 
 
 function Quick({ icon: Icon, title, sub, grad, onClick, disabled }: { icon: LucideIcon; title: string; sub: string; grad: string; onClick: () => void; disabled?: boolean }) {
   return (
-    <button onClick={onClick} disabled={disabled} className="flex items-center gap-3 overflow-hidden rounded border border-border bg-white/90 text-left transition-shadow hover:shadow-md disabled:opacity-45 disabled:hover:shadow-none">
+    <button onClick={onClick} disabled={disabled} suppressHydrationWarning className="flex items-center gap-3 overflow-hidden rounded border border-border bg-white/90 text-left transition-shadow hover:shadow-md disabled:opacity-45 disabled:hover:shadow-none">
       <span className={cn("grid size-14 shrink-0 place-items-center bg-gradient-to-br text-white", grad)}><Icon className="size-6" /></span>
       <span className="min-w-0 pr-2"><span className="block text-sm leading-tight font-bold">{title}</span><span className="text-xs text-muted">{sub}</span></span>
     </button>
