@@ -32,6 +32,7 @@ export const DEFAULT_MENU: MenuConfig = {
       l("g-cau-chuyen", "Câu chuyện đẹp", "/cau-chuyen-dep"),
       l("g-tinh-nguyen", "Ngày tình nguyện tại chỗ", "/tinh-nguyen"),
       l("g-confession", "Sơn Hà Confession", "/confession"),
+      l("g-on-thi-gplx", "Ôn thi lái xe", "/on-thi-gplx"),
     ] },
     { id: "lien-ket", title: "Liên kết website", items: [
       l("lk-c3sonha", "Trường THPT Sơn Hà", "https://c3sonha.quangngai.edu.vn/"),

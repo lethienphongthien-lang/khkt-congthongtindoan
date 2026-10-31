@@ -1,4 +1,4 @@
-import { MessagesSquare, FileText, Globe, Settings, Award, BarChart3, CalendarDays, CheckSquare, IdCard, LayoutDashboard, Newspaper, QrCode, Trophy, School, History, Users, Vote, MessageSquare, Inbox, ClipboardList, Bell, BookOpen, Megaphone, HeartHandshake, Gamepad2, Compass, Puzzle, ScrollText, type LucideIcon } from "lucide-react";
+import { MessagesSquare, FileText, Globe, Settings, Award, BarChart3, CalendarDays, CheckSquare, IdCard, LayoutDashboard, Newspaper, QrCode, Trophy, School, History, Users, Vote, MessageSquare, Inbox, ClipboardList, Bell, BookOpen, Megaphone, HeartHandshake, Gamepad2, Compass, Puzzle, ScrollText, CarFront, type LucideIcon } from "lucide-react";
 import type { Role } from "@prisma/client";
 
 export type NavItem = { /** Đứng ngay sau mục Cài đặt (thanh bên máy tính), cuối danh sách. */ footer?: boolean; href: string; label: string; icon: LucideIcon; /** Tiền tố đường dẫn coi là đang ở mục này (mặc định = href). */ match?: string; /** Menu con (hiển thị dạng nhóm mở/đóng). */ children?: { href: string; label: string; icon?: LucideIcon }[]; /** Nhóm mở sẵn (mặc định: chỉ mở khi đang ở một mục bên trong). */ open?: boolean };
@@ -10,6 +10,7 @@ export function navFor(role: Role): NavItem[] {
       { href: "/profile", label: "Hồ sơ & thẻ số", icon: IdCard },
       { href: "/emulation", label: "Thi đua", icon: Trophy },
       { href: "/games", label: "Trò chơi", icon: Gamepad2 },
+      { href: "/driving-test", label: "Ôn thi lái xe", icon: CarFront },
     ];
   }
   if (role === "SECRETARY") {
@@ -20,6 +21,7 @@ export function navFor(role: Role): NavItem[] {
       { href: "/volunteer", label: "Tình nguyện", icon: HeartHandshake },
       { href: "/emulation", label: "Thi đua", icon: Trophy },
       { href: "/games", label: "Trò chơi", icon: Gamepad2 },
+      { href: "/driving-test", label: "Ôn thi lái xe", icon: CarFront },
       { href: "/chapter-reports", label: "Báo cáo Chi đoàn", icon: FileText },
       { href: "/team-chat", label: "Kênh chat", icon: MessagesSquare },
       // Bí thư cũng là đoàn viên: có hồ sơ, quét QR, lịch sử như đoàn viên
@@ -47,6 +49,7 @@ export function navFor(role: Role): NavItem[] {
     },
     { href: "/emulation", label: "Thi đua", icon: Trophy },
     { href: "/quizzes", label: "Trò chơi", icon: Puzzle },
+    { href: "/driving-test", label: "Ôn thi lái xe", icon: CarFront },
     {
       href: "/confessions", label: "Cộng đồng", icon: Newspaper,
       children: [
