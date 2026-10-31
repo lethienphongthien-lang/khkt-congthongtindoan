@@ -326,7 +326,7 @@ function Player({ session, progress, update, onExit, onRetry }: { session: Sessi
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
       <div className="space-y-3">
-      <div key={q.number} className={cn("g-slide rounded-xl border border-border bg-white p-4 shadow-sm lg:flex lg:h-[calc(100dvh-19rem)] lg:min-h-[26rem] lg:flex-col lg:p-6", mode === "study" && answered && !isOk && "g-shake")}>
+      <div key={q.number} className={cn("g-slide rounded-xl border border-border bg-white p-4 shadow-sm lg:p-6", mode === "study" && answered && !isOk && "g-shake")}>
         <div className="mb-2 flex items-center gap-2 text-xs lg:shrink-0">
           <span className="text-muted">Mã câu {q.number}</span>
           {q.critical && <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 font-bold text-red-700"><Flame className="size-3" />Điểm liệt</span>}
@@ -334,12 +334,15 @@ function Player({ session, progress, update, onExit, onRetry }: { session: Sessi
             {flagged(q.number) ? <BookmarkCheck className="size-4" /> : <Bookmark className="size-4" />}{flagged(q.number) ? "Đã đánh dấu" : "Đánh dấu"}
           </button>
         </div>
-        <h3 className="text-lg leading-snug font-semibold lg:shrink-0 lg:text-xl">{q.text}</h3>
+        <h3 className="text-lg leading-snug font-semibold lg:text-xl">{q.text}</h3>
+        <div className={cn("mt-3", q.images.length > 0 && "lg:grid lg:grid-cols-2 lg:items-center lg:gap-6")}>
+        {q.images.length > 0 && <div className="space-y-2">
         {q.images.map((f) => (
           // eslint-disable-next-line @next/next/no-img-element -- ảnh tĩnh webp
-          <img key={f} src={`/gplx/${f}`} alt={`Hình minh họa câu ${q.number}`} className="mx-auto mt-3 max-h-72 w-full rounded-lg object-contain lg:max-h-60 lg:shrink-0" />
+          <img key={f} src={`/gplx/${f}`} alt={`Hình minh họa câu ${q.number}`} className="mx-auto max-h-72 w-full rounded-lg object-contain lg:max-h-80" />
         ))}
-        <div className="mt-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1">
+        </div>}
+        <div className="mt-4 lg:mt-0">
         <div className="space-y-2">
           {q.options.map((o, i) => {
             const picked = ans[q.number] === i;
@@ -367,6 +370,7 @@ function Player({ session, progress, update, onExit, onRetry }: { session: Sessi
           </div>
         )}
         </div>
+        </div>
       </div>
 
       <div className="fixed inset-x-0 bottom-0 z-[61] flex gap-2 border-t border-border bg-background px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] lg:static lg:z-auto lg:mx-0 lg:border-0 lg:bg-transparent lg:p-0">
@@ -379,7 +383,7 @@ function Player({ session, progress, update, onExit, onRetry }: { session: Sessi
       </div>
       <aside className="sticky top-4 hidden rounded-xl border border-border bg-white p-4 shadow-sm lg:block">
         <h3 className="mb-3 text-sm font-bold text-primary-dark">Danh sách câu ({doneCount}/{qs.length} đã làm)</h3>
-        <div className="max-h-[60vh] overflow-y-auto p-1"><Navigator qs={qs} ans={ans} idx={idx} flagged={flagged} showResult={review || mode === "study"} onPick={setIdx} cols="grid-cols-5" /></div>
+        <div className="max-h-[55vh] overflow-y-auto overscroll-contain p-1"><Navigator qs={qs} ans={ans} idx={idx} flagged={flagged} showResult={review || mode === "study"} onPick={setIdx} cols="grid-cols-5" /></div>
         {mode === "exam" && !review && <button onClick={askFinish} className="mt-4 h-11 w-full rounded-lg bg-emerald-600 font-bold text-white hover:bg-emerald-700">Nộp bài</button>}
         {mode === "study" && !review && <button onClick={finish} className="mt-4 h-11 w-full rounded-lg border-2 border-slate-200 font-bold hover:bg-slate-50">Kết thúc và xem kết quả</button>}
       </aside>
