@@ -2,8 +2,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { CalendarSync, Download, Pencil, Plus, Trash2, UserCog, UserPlus } from "lucide-react";
-import { addMembersToDepartmentAction, syncSchoolYearAction, assignSecretaryAction, deleteDepartmentAction, removeSecretaryAction, saveDepartmentAction } from "@/actions/departments";
+import { CalendarSync, Download, Flag, KeyRound, Pencil, Plus, Trash2, UserCog, UserPlus } from "lucide-react";
+import { addMembersToDepartmentAction, syncSchoolYearAction, assignSecretaryAction, assignMonitorAction, removeMonitorAction, createDepartmentAccountAction, resetDepartmentAccountPasswordAction, deleteDepartmentAction, removeSecretaryAction, saveDepartmentAction } from "@/actions/departments";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/form";
 import { PeopleInput } from "@/components/members/people-input";
@@ -128,6 +128,86 @@ export function SecretaryButton({ departmentId, current, candidates }: {
                 if (reportResult(res)) { setOpen(false); setMemberId(""); router.refresh(); }
               }}>Gán bí thư</Button>
             </div>
+          </div>
+        </div>
+      </Modal>
+    </>
+  );
+}
+
+/** Phân công cờ đỏ: có thể gán nhiều đoàn viên cùng lúc cho một Chi đoàn. */
+export function MonitorButton({ departmentId, current, candidates }: {
+  departmentId: string; current: { userId: string; fullName: string }[]; candidates: { id: string; userId: string; label: string }[];
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [memberId, setMemberId] = useState("");
+  const [busy, setBusy] = useState(false);
+  const currentUserIds = new Set(current.map((c) => c.userId));
+  return (
+    <>
+      <Button variant="ghost" size="sm" onClick={() => setOpen(true)}><Flag className="size-3.5" />Cờ đỏ{current.length ? ` (${current.length})` : ""}</Button>
+      <Modal open={open} onClose={() => setOpen(false)} title="Cờ đỏ Chi đoàn" className="max-w-md">
+        <div className="space-y-3">
+          <p className="text-sm text-muted">Chọn một đoàn viên của Chi đoàn để gán thêm vai trò cờ đỏ (có thể có nhiều cờ đỏ cùng lúc). Sau khi được gán, cờ đỏ ghi nhận vi phạm nề nếp cho mọi Chi đoàn trong trường, không chỉ Chi đoàn này.</p>
+          {current.length > 0 && (
+            <ul className="space-y-1.5">
+              {current.map((c) => (
+                <li key={c.userId} className="flex items-center justify-between rounded-md border border-border bg-white/70 px-3 py-1.5 text-sm">
+                  <span>{c.fullName}</span>
+                  <ConfirmButton trigger="Gỡ" triggerVariant="ghost" triggerClassName="text-danger" title={`Gỡ chức cờ đỏ của ${c.fullName}?`} description="Tài khoản vẫn là đoàn viên của Chi đoàn." danger confirmLabel="Gỡ"
+                    onConfirm={async () => { reportResult(await removeMonitorAction(departmentId, c.userId)); router.refresh(); }} />
+                </li>
+              ))}
+            </ul>
+          )}
+          {candidates.length === 0 ? <Alert tone="amber">Chi đoàn chưa có đoàn viên. Hãy thêm đoàn viên trước.</Alert> : (
+            <Field label="Thêm cờ đỏ mới"><Select value={memberId} onChange={(e) => setMemberId(e.target.value)}><option value="">Chọn đoàn viên...</option>{candidates.map((c) => <option key={c.id} value={c.id} disabled={currentUserIds.has(c.userId)}>{c.label}{currentUserIds.has(c.userId) ? " (đã là cờ đỏ)" : ""}</option>)}</Select></Field>
+          )}
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="secondary" onClick={() => setOpen(false)}>Đóng</Button>
+            <Button loading={busy} disabled={!memberId} onClick={async () => {
+              setBusy(true); const res = await assignMonitorAction({ departmentId, memberId }); setBusy(false);
+              if (reportResult(res)) { setMemberId(""); router.refresh(); }
+            }}>Gán cờ đỏ</Button>
+          </div>
+        </div>
+      </Modal>
+    </>
+  );
+}
+
+/** Tài khoản chung của Chi đoàn (Admin cấp đầu năm học): xem thông tin tổng quan, phân công bí thư/cờ đỏ, thêm đoàn viên, xem báo cáo/vi phạm. */
+export function DepartmentAccountButton({ departmentId, account }: { departmentId: string; account: { username: string } | null }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [cred, setCred] = useState<{ username: string; password: string } | null>(null);
+  return (
+    <>
+      <Button variant="ghost" size="sm" onClick={() => setOpen(true)}><KeyRound className="size-3.5" />Tài khoản Chi đoàn</Button>
+      <Modal open={open} onClose={() => { setOpen(false); setCred(null); }} title="Tài khoản Chi đoàn" className="max-w-md">
+        <div className="space-y-3">
+          {cred ? (
+            <Alert tone="green">Tên đăng nhập: <b className="font-mono">{cred.username}</b><br />Mật khẩu tạm: <b className="font-mono">{cred.password}</b><br /><span className="text-xs">Mật khẩu chỉ hiển thị một lần, hãy bàn giao cho Chi đoàn.</span></Alert>
+          ) : account ? (
+            <p className="text-sm">Chi đoàn đã có tài khoản: <b className="font-mono">{account.username}</b>. Tài khoản này xem được thông tin tổng quan, phân công bí thư/cờ đỏ, thêm đoàn viên, xem báo cáo và vi phạm của Chi đoàn.</p>
+          ) : (
+            <p className="text-sm text-muted">Chi đoàn chưa có tài khoản chung. Admin cấp tài khoản này vào đầu năm học để Chi đoàn tự quản lý.</p>
+          )}
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="secondary" onClick={() => { setOpen(false); setCred(null); }}>Đóng</Button>
+            {account ? (
+              <Button loading={busy} onClick={async () => {
+                setBusy(true); const res = await resetDepartmentAccountPasswordAction(departmentId); setBusy(false);
+                if (reportResult(res) && res.data) setCred(res.data);
+              }}>Cấp lại mật khẩu</Button>
+            ) : (
+              <Button loading={busy} onClick={async () => {
+                setBusy(true); const res = await createDepartmentAccountAction(departmentId); setBusy(false);
+                if (reportResult(res) && res.data) { setCred(res.data); router.refresh(); }
+              }}>Cấp tài khoản</Button>
+            )}
           </div>
         </div>
       </Modal>

@@ -3,7 +3,7 @@ import type { Tone } from "@/components/ui/misc";
 /** Nhóm hành động trong nhật ký (bộ lọc) và tiền tố mã hành động thuộc từng nhóm. */
 export const AUDIT_GROUPS: { value: string; label: string; prefixes: string[] }[] = [
   { value: "security", label: "Đăng nhập và tài khoản", prefixes: ["auth.", "account.", "leader.", "passkey."] },
-  { value: "people", label: "Đoàn viên và Chi đoàn", prefixes: ["member.", "points.", "department.", "school_year.", "emulation."] },
+  { value: "people", label: "Đoàn viên và Chi đoàn", prefixes: ["member.", "points.", "department.", "school_year.", "emulation.", "violation."] },
   { value: "activity", label: "Hoạt động và điểm danh", prefixes: ["activity.", "attendance.", "schedule.", "volunteer."] },
   { value: "content", label: "Nội dung và cộng đồng", prefixes: ["article.", "sitepage.", "site.", "marquee.", "category.", "report.", "post.", "poll.", "confession.", "feedback.", "quiz.", "badge."] },
   { value: "system", label: "Hệ thống và AI", prefixes: ["data.", "ai."] },
@@ -20,6 +20,9 @@ const LABELS: Record<string, string> = {
   "member.admit": "Kết nạp đoàn viên", "member.admit_bulk": "Kết nạp nhiều đoàn viên", "points.adjust": "Điều chỉnh điểm của đoàn viên",
   "department.create": "Tạo Chi đoàn", "department.update": "Sửa thông tin Chi đoàn", "department.delete": "Xóa Chi đoàn",
   "department.assign_secretary": "Phân công bí thư Chi đoàn", "department.remove_secretary": "Gỡ bí thư Chi đoàn",
+  "department.assign_monitor": "Phân công cờ đỏ Chi đoàn", "department.remove_monitor": "Gỡ cờ đỏ Chi đoàn",
+  "department.create_account": "Cấp tài khoản Chi đoàn", "department.reset_account_password": "Cấp lại mật khẩu tài khoản Chi đoàn",
+  "violation.create": "Ghi nhận vi phạm", "violation.delete": "Xóa bản ghi vi phạm",
   "school_year.sync": "Cập nhật năm học cho các Chi đoàn", "school_year.save": "Lưu lịch năm học", "school_year.reset": "Đặt lại lịch năm học",
   "emulation.create": "Ghi điểm thi đua cho Chi đoàn", "emulation.createBatch": "Ghi điểm thi đua hàng loạt", "emulation.delete": "Xóa bản ghi điểm thi đua",
   "activity.create": "Tạo hoạt động", "activity.update": "Sửa hoạt động", "activity.delete": "Xóa hoạt động", "activity.cancel": "Hủy hoạt động",
@@ -41,7 +44,7 @@ const LABELS: Record<string, string> = {
 
 /** Tên đối tượng bị tác động. */
 export const TARGET_LABELS: Record<string, string> = {
-  User: "Tài khoản", Member: "Đoàn viên", Activity: "Hoạt động", Article: "Bài viết", Department: "Chi đoàn", Quiz: "Trò chơi", Poll: "Bình chọn", Confession: "Confession",
+  User: "Tài khoản", Member: "Đoàn viên", Activity: "Hoạt động", Article: "Bài viết", Department: "Chi đoàn", Violation: "Vi phạm", Quiz: "Trò chơi", Poll: "Bình chọn", Confession: "Confession",
   ChapterReport: "Báo cáo Chi đoàn", ReportPeriod: "Đợt báo cáo", Badge: "Huy hiệu", MarqueeItem: "Chữ chạy", ArticleCategory: "Danh mục", ActivityCategory: "Loại hoạt động",
   Feedback: "Góp ý", Post: "Bài bảng tin", SitePage: "Trang giới thiệu", SiteSetting: "Cài đặt", SchoolYear: "Năm học", WeeklySchedule: "Lịch công tác", System: "Hệ thống", Chat: "Chatbot",
 };
@@ -50,9 +53,9 @@ export const actionLabel = (a: string) => LABELS[a] ?? a;
 
 /** Màu nhấn theo tính chất: xóa/thu hồi/hủy = đỏ, tạo mới = xanh lá, đổi mật khẩu/đặt lại = vàng, sửa = xanh dương, còn lại = xám. */
 export function actionTone(a: string): Tone {
-  if (/\.(delete|delete_bulk|revoke|cancel|cancel_request|remove|remove_secretary|cleanup|reset|reject)$/.test(a)) return "red";
-  if (/(reset_password|change_password)$/.test(a)) return "amber";
-  if (/\.(create|import|bulk_add|admit|admit_bulk|add|register|assign_secretary|copy_week|approve|request)$/.test(a)) return "green";
+  if (/\.(delete|delete_bulk|revoke|cancel|cancel_request|remove|remove_secretary|remove_monitor|cleanup|reset|reject)$/.test(a)) return "red";
+  if (/(reset_password|change_password|reset_account_password)$/.test(a)) return "amber";
+  if (/\.(create|import|bulk_add|admit|admit_bulk|add|register|assign_secretary|assign_monitor|create_account|copy_week|approve|request)$/.test(a)) return "green";
   if (/\.(update|rename|self_update|adjust|settings|save|sync|cap|rotate_qr)$/.test(a)) return "blue";
   return "gray";
 }

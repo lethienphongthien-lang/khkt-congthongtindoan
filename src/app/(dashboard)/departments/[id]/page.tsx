@@ -14,7 +14,7 @@ import { MEMBER_SORTS, memberOrderBy } from "@/lib/member-sort";
 import { inOrder, memberIdsByName } from "@/lib/services/member-name-sort";
 import { ClickRow } from "@/components/ui/click-row";
 import { MemberTable } from "@/components/members/member-table";
-import { AddMembersButton, DeleteDepartmentButton, DepartmentFormButton, SecretaryButton } from "@/components/members/department-actions";
+import { AddMembersButton, DeleteDepartmentButton, DepartmentAccountButton, DepartmentFormButton, MonitorButton, SecretaryButton } from "@/components/members/department-actions";
 import { Avatar, DataTable, EmptyState, PageHeader, Pagination, Section, Stat, Td, Th } from "@/components/ui/misc";
 
 export const metadata = { title: "Chi đoàn" };
@@ -22,7 +22,7 @@ export const metadata = { title: "Chi đoàn" };
 const PAGE_SIZE = 15;
 
 export default async function DepartmentDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const user = await requireRole(["ADMIN"]);
+  const user = await requireRole(["ADMIN", "DEPARTMENT_ACCOUNT"]);
   const { id } = await params;
   const sp = await searchParams;
   const page = pageParam(sp.page);
@@ -36,7 +36,12 @@ export default async function DepartmentDetailPage({ params, searchParams }: { p
   if (!canManageDepartment(user, id)) notFound(); // bí thư Chi đoàn A mở URL Chi đoàn B -> 404
   const dept = await db.department.findUnique({
     where: { id },
-    include: { secretary: { select: { id: true, fullName: true, username: true } }, _count: { select: { members: true } } },
+    include: {
+      secretary: { select: { id: true, fullName: true, username: true } },
+      account: { select: { username: true } },
+      monitors: { select: { userId: true, user: { select: { fullName: true } } } },
+      _count: { select: { members: true } },
+    },
   });
   if (!dept) notFound();
   const byName = sort === "ten" || sort === "ten_z"; // xếp theo TÊN (từ cuối) theo thứ tự tiếng Việt
@@ -52,13 +57,15 @@ export default async function DepartmentDetailPage({ params, searchParams }: { p
   const members = nameIds ? inOrder(membersRaw, nameIds) : membersRaw;
   return (
     <>
-      <PageHeader title={`Chi đoàn ${dept.name}`} description={`${dept.isTeacher ? "Chi đoàn giáo viên · " : ""}${dept.startYear ? `Niên khóa ${cohortLabel(dept.startYear)} · ` : ""}${dept.graduatedAt ? "Đã ra trường" : `Bí thư: ${dept.secretary?.fullName ?? "chưa phân công"}`}`}
+      <PageHeader title={`Chi đoàn ${dept.name}`} description={`${dept.isTeacher ? "Chi đoàn giáo viên · " : ""}${dept.startYear ? `Niên khóa ${cohortLabel(dept.startYear)} · ` : ""}${dept.graduatedAt ? "Đã ra trường" : `Bí thư: ${dept.secretary?.fullName ?? "chưa phân công"}${dept.monitors.length ? ` · Cờ đỏ: ${dept.monitors.map((m) => m.user.fullName).join(", ")}` : ""}`}`}
         actions={dept.graduatedAt ? undefined : <>
           <a href={`/api/members/export?dept=${dept.id}`} className={buttonClass("secondary")}><Download className="size-4" />Xuất<span className="max-sm:hidden"> Excel</span></a>
           <AddMembersButton departmentId={dept.id} departmentName={dept.name} />
           <SecretaryButton departmentId={dept.id} current={dept.secretary} candidates={candidateRows.map((m) => ({ id: m.id, userId: m.userId, label: `${m.fullName} (${m.code})` }))} />
-          <DepartmentFormButton dept={{ id: dept.id, name: dept.name, description: dept.description, startYear: dept.startYear, isTeacher: dept.isTeacher }} />
-          <DeleteDepartmentButton id={dept.id} name={dept.name} />
+          <MonitorButton departmentId={dept.id} current={dept.monitors.map((m) => ({ userId: m.userId, fullName: m.user.fullName }))} candidates={candidateRows.map((m) => ({ id: m.id, userId: m.userId, label: `${m.fullName} (${m.code})` }))} />
+          {user.role === "ADMIN" && <DepartmentAccountButton departmentId={dept.id} account={dept.account} />}
+          {user.role === "ADMIN" && <DepartmentFormButton dept={{ id: dept.id, name: dept.name, description: dept.description, startYear: dept.startYear, isTeacher: dept.isTeacher }} />}
+          {user.role === "ADMIN" && <DeleteDepartmentButton id={dept.id} name={dept.name} />}
         </>} />
       <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
         <Stat label="Học sinh" value={dept._count.members} />

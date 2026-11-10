@@ -24,7 +24,7 @@ export type SessionUser = {
   /** false: thanh niên (chưa vào Đoàn). Tài khoản không có hồ sơ (Admin) thì true. */
   isDoanVien: boolean;
   avatarUrl: string | null;
-  /** Chi đoàn mà bí thư phụ trách, hoặc chi đoàn của đoàn viên. Admin = null. */
+  /** Chi đoàn mà bí thư/cờ đỏ phụ trách, chi đoàn của đoàn viên, hoặc chi đoàn mà tài khoản chi đoàn quản lý. Admin = null. */
   departmentId: string | null;
   departmentName: string | null;
 };
@@ -80,9 +80,12 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
     include: {
       member: { select: { id: true, code: true, avatarUrl: true, isDoanVien: true, departmentId: true, department: { select: { name: true } } } },
       secretaryOf: { select: { id: true, name: true } },
+      monitorOf: { select: { department: { select: { id: true, name: true } } } },
+      managesDepartment: { select: { id: true, name: true } },
     },
   });
   if (!user || user.status !== "ACTIVE") return null;
+  const dept = user.secretaryOf ?? user.monitorOf?.department ?? user.managesDepartment ?? null;
   return {
     id: user.id,
     username: user.username,
@@ -95,8 +98,8 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
     memberCode: user.member?.code ?? null,
     isDoanVien: user.member?.isDoanVien ?? true,
     avatarUrl: user.member?.avatarUrl ?? user.avatarUrl ?? null,
-    departmentId: user.secretaryOf?.id ?? user.member?.departmentId ?? null,
-    departmentName: user.secretaryOf?.name ?? user.member?.department.name ?? null,
+    departmentId: dept?.id ?? user.member?.departmentId ?? null,
+    departmentName: dept?.name ?? user.member?.department.name ?? null,
   };
 });
 

@@ -8,7 +8,7 @@ import { MemberAdminActions } from "@/components/members/member-admin-actions";
 export const metadata = { title: "Hồ sơ đoàn viên" };
 
 export default async function MemberDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }> }) {
-  const user = await requireRole(["ADMIN", "SECRETARY"]);
+  const user = await requireRole(["ADMIN", "SECRETARY", "DEPARTMENT_ACCOUNT"]);
   const { id } = await params;
   const tab = (await searchParams).tab === "hoat-dong" ? "hoat-dong" : "ho-so";
   // getMemberForUser đã áp phạm vi quyền: bí thư chỉ lấy được đoàn viên Chi đoàn của mình, ngược lại -> 404.

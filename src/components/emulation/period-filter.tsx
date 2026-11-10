@@ -8,6 +8,43 @@ import { currentWeek, schoolYearOf, weekLabel, yearLabel, type SchoolCalendar } 
 const pad = (n: number) => String(n).padStart(2, "0");
 const cell = "w-full sm:w-auto sm:min-w-40";
 
+/** Chọn tuần theo lịch năm học, không có các tab loại kỳ khác (dùng cho các trang chỉ lọc theo tuần, ví dụ Vi phạm). */
+export function WeekFilter({ value, calendars }: { value: string; calendars: SchoolCalendar[] }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const sp = useSearchParams();
+  const [, start] = useTransition();
+  const cur = schoolYearOf();
+  const calOf = (y: number) => calendars.find((c) => c.startYear === y);
+  const yearOptions = (selected: number) => [...new Set([...calendars.map((c) => c.startYear), selected])].sort((a, b) => b - a)
+    .map((y) => <option key={y} value={y}>Năm học {yearLabel(y)}{y === cur ? " (hiện tại)" : ""}</option>);
+  const goWeek = (yy: number, ww: number) => {
+    const next = new URLSearchParams(sp.toString());
+    next.set("value", `${yy}-T${pad(ww)}`); next.delete("page");
+    start(() => router.replace(`${pathname}?${next}`));
+  };
+  const m = value.match(/^(\d{4})-T(\d+)$/);
+  const y = m ? Number(m[1]) : cur;
+  const w = m ? Number(m[2]) : 1;
+  const c = calOf(y);
+  const nowWeek = c ? currentWeek(c) : null;
+  return (
+    <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center">
+      <div className="grid grid-cols-2 gap-2 sm:flex">
+        <Select aria-label="Năm học" value={y} onChange={(e) => goWeek(+e.target.value, Math.min(w, calOf(+e.target.value)?.totalWeeks ?? 35))} className={cell}>{yearOptions(y)}</Select>
+        <Select aria-label="Tuần" value={w} onChange={(e) => goWeek(y, +e.target.value)} className={`${cell} sm:min-w-56`}>
+          {c ? (
+            <>
+              <optgroup label="Học kỳ 1">{Array.from({ length: c.sem1Weeks }, (_, i) => <option key={i} value={i + 1}>{weekLabel(c, i + 1)}{i + 1 === nowWeek ? " · hiện tại" : ""}</option>)}</optgroup>
+              <optgroup label="Học kỳ 2">{Array.from({ length: c.totalWeeks - c.sem1Weeks }, (_, i) => <option key={i} value={c.sem1Weeks + i + 1}>{weekLabel(c, c.sem1Weeks + i + 1)}{c.sem1Weeks + i + 1 === nowWeek ? " · hiện tại" : ""}</option>)}</optgroup>
+            </>
+          ) : <option value={w}>Tuần {w}</option>}
+        </Select>
+      </div>
+    </div>
+  );
+}
+
 /** Chọn kỳ thi đua theo lịch năm học: Tuần → chọn năm học rồi tuần (kèm ngày tháng); Học kỳ / Năm học → chọn năm học; Tháng → lịch dương. */
 export function PeriodFilter({ type, value, calendars }: { type: PeriodType; value: string; calendars: SchoolCalendar[] }) {
   const router = useRouter();

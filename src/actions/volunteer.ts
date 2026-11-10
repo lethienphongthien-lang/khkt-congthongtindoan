@@ -32,10 +32,10 @@ async function approveRequest(requestId: string, reviewerId: string) {
 /** Bí thư đăng ký tình nguyện cho cả Chi đoàn (chờ Admin duyệt); Admin đăng ký thay thì được duyệt luôn. */
 export async function registerVolunteerAction(input: unknown) {
   return run<{ id: string }>(async () => {
-    const user = await requireRole(["ADMIN", "SECRETARY"]);
+    const user = await requireRole(["ADMIN", "SECRETARY", "DEPARTMENT_ACCOUNT"]);
     const d = volunteerSchema.parse(input);
-    const departmentId = user.role === "SECRETARY" ? user.departmentId : d.departmentId;
-    if (!departmentId) { if (user.role === "SECRETARY") throw new ForbiddenError(); throw new UserError("Chọn Chi đoàn"); }
+    const departmentId = user.role !== "ADMIN" ? user.departmentId : d.departmentId;
+    if (!departmentId) { if (user.role !== "ADMIN") throw new ForbiddenError(); throw new UserError("Chọn Chi đoàn"); }
     const dept = await db.department.findUnique({ where: { id: departmentId }, select: { id: true, name: true, graduatedAt: true } });
     if (!dept || dept.graduatedAt) throw new UserError("Chi đoàn không tồn tại hoặc đã ra trường");
     const startAt = fromLocalInput(`${d.date}T${d.startTime}`), endAt = fromLocalInput(`${d.date}T${d.endTime}`);
@@ -59,11 +59,11 @@ export async function registerVolunteerAction(input: unknown) {
 /** Sửa đăng ký tình nguyện đang chờ duyệt hoặc đã duyệt (chưa hoàn thành). Bí thư chỉ sửa được của Chi đoàn mình; sửa buổi đã duyệt thì báo lại cho đoàn viên. */
 export async function updateVolunteerAction(requestId: string, input: unknown) {
   return run<{ id: string }>(async () => {
-    const user = await requireRole(["ADMIN", "SECRETARY"]);
+    const user = await requireRole(["ADMIN", "SECRETARY", "DEPARTMENT_ACCOUNT"]);
     const d = volunteerSchema.parse(input);
     const req = await db.volunteerRequest.findUnique({ where: { id: requestId }, include: { department: { select: { name: true } } } });
     if (!req) throw new UserError("Không tìm thấy đăng ký");
-    if (user.role === "SECRETARY" && req.departmentId !== user.departmentId) throw new ForbiddenError();
+    if (user.role !== "ADMIN" && req.departmentId !== user.departmentId) throw new ForbiddenError();
     if (req.status !== "PENDING" && req.status !== "APPROVED") throw new UserError("Chỉ sửa được đăng ký chưa hoàn thành");
     const startAt = fromLocalInput(`${d.date}T${d.startTime}`), endAt = fromLocalInput(`${d.date}T${d.endTime}`);
     if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) throw new UserError("Ngày hoặc giờ không hợp lệ");
@@ -109,10 +109,10 @@ export async function rejectVolunteerAction(requestId: string, reason: string) {
 /** Rút đăng ký đang chờ duyệt hoặc hủy buổi đã duyệt nhưng chưa hoàn thành (bí thư của Chi đoàn đó, hoặc Admin). */
 export async function cancelVolunteerRequestAction(requestId: string) {
   return run(async () => {
-    const user = await requireRole(["ADMIN", "SECRETARY"]);
+    const user = await requireRole(["ADMIN", "SECRETARY", "DEPARTMENT_ACCOUNT"]);
     const req = await db.volunteerRequest.findUnique({ where: { id: requestId } });
     if (!req) throw new UserError("Không tìm thấy đăng ký");
-    if (user.role === "SECRETARY" && req.departmentId !== user.departmentId) throw new ForbiddenError();
+    if (user.role !== "ADMIN" && req.departmentId !== user.departmentId) throw new ForbiddenError();
     if (req.status !== "PENDING" && req.status !== "APPROVED") throw new UserError("Chỉ rút được đăng ký chưa hoàn thành");
     await db.volunteerRequest.delete({ where: { id: requestId } });
     await audit(user.id, "volunteer.cancel_request", "Department", req.departmentId, { task: req.task });
@@ -127,10 +127,10 @@ export async function cancelVolunteerRequestAction(requestId: string) {
  */
 export async function completeVolunteerAction(requestId: string) {
   return run<{ members: number; points: number }>(async () => {
-    const user = await requireRole(["ADMIN", "SECRETARY"]);
+    const user = await requireRole(["ADMIN", "SECRETARY", "DEPARTMENT_ACCOUNT"]);
     const req = await db.volunteerRequest.findUnique({ where: { id: requestId } });
     if (!req) throw new UserError("Không tìm thấy đăng ký");
-    if (user.role === "SECRETARY" && req.departmentId !== user.departmentId) throw new ForbiddenError();
+    if (user.role !== "ADMIN" && req.departmentId !== user.departmentId) throw new ForbiddenError();
     if (req.status === "COMPLETED") throw new UserError("Buổi này đã được xác nhận hoàn thành");
     if (req.status !== "APPROVED") throw new UserError("Chỉ xác nhận hoàn thành được buổi đã duyệt");
     if (req.startAt > new Date()) throw new UserError("Buổi tình nguyện chưa bắt đầu, hãy xác nhận sau khi làm xong");

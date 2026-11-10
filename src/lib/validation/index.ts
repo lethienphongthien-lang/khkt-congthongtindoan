@@ -56,6 +56,20 @@ export const secretarySchema = z.object({
   memberId: z.string().min(1, "Chọn đoàn viên làm bí thư"),
 });
 
+/** Cờ đỏ là một đoàn viên của Chi đoàn được gán thêm chức vụ (có thể có nhiều cờ đỏ cùng lúc). */
+export const monitorSchema = z.object({
+  departmentId: z.string().min(1),
+  memberId: z.string().min(1, "Chọn đoàn viên làm cờ đỏ"),
+});
+
+export const violationSchema = z.object({
+  departmentId: z.string().min(1, "Chọn Chi đoàn vi phạm"),
+  memberId: z.string().min(1, "Chọn đoàn viên vi phạm"),
+  type: z.string().trim().min(1, "Chọn loại vi phạm").max(100),
+  content: z.string().trim().min(3, "Nhập nội dung vi phạm").max(1000),
+  recordedAt: z.coerce.date({ message: "Chọn ngày vi phạm" }),
+});
+
 export const activitySchema = z
   .object({
     title: z.string().trim().min(3, "Tên hoạt động tối thiểu 3 ký tự").max(150),

@@ -7,7 +7,7 @@ import { run, UserError } from "@/lib/action";
 import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/session";
 import { generateTempPassword, hashPassword } from "@/lib/auth/password";
-import { departmentSchema, secretarySchema } from "@/lib/validation";
+import { departmentSchema, secretarySchema, monitorSchema } from "@/lib/validation";
 import { parseClassName, schoolYearStart, startYearFor } from "@/lib/school-year";
 import { syncSchoolYear } from "@/lib/services/rollover";
 import { createMemberWithAccount, findOrCreateClass, nextMemberCodes } from "@/lib/services/member-account";
@@ -126,6 +126,86 @@ export async function removeSecretaryAction(departmentId: string) {
     await audit(admin.id, "department.remove_secretary", "Department", departmentId);
     revalidatePath("/departments");
     return { message: "Đã gỡ chức bí thư (vẫn là đoàn viên)" };
+  });
+}
+
+/**
+ * Phân công cờ đỏ: chọn một đoàn viên của Chi đoàn, tài khoản đó được gán thêm vai trò cờ đỏ
+ * (vẫn là tài khoản đoàn viên). Một Chi đoàn có thể có nhiều cờ đỏ cùng lúc.
+ */
+export async function assignMonitorAction(input: unknown) {
+  return run(async () => {
+    const admin = await requireRole(["ADMIN"]);
+    const data = monitorSchema.parse(input);
+    const dept = await db.department.findUnique({ where: { id: data.departmentId } });
+    if (!dept || dept.graduatedAt) throw new UserError("Không tìm thấy Chi đoàn");
+    const member = await db.member.findFirst({ where: { id: data.memberId, departmentId: dept.id, status: "ACTIVE" }, include: { user: true } });
+    if (!member) throw new UserError("Đoàn viên này không thuộc Chi đoàn hoặc không còn sinh hoạt");
+    if (member.user.status !== "ACTIVE") throw new UserError("Tài khoản của đoàn viên này đang bị khóa");
+    if (member.user.role === "ADMIN" || member.user.role === "SECRETARY") throw new UserError("Không thể gán cờ đỏ cho tài khoản này");
+    const already = await db.departmentMonitor.findUnique({ where: { userId: member.userId } });
+    if (already) throw new UserError("Đoàn viên này đã là cờ đỏ");
+    await db.$transaction([
+      db.user.update({ where: { id: member.userId }, data: { role: "MONITOR" } }),
+      db.departmentMonitor.create({ data: { userId: member.userId, departmentId: dept.id } }),
+    ]);
+    await audit(admin.id, "department.assign_monitor", "Department", dept.id, { memberId: member.id });
+    revalidatePath(`/departments/${dept.id}`);
+    return { message: `${member.fullName} đã được phân công làm cờ đỏ` };
+  });
+}
+
+export async function removeMonitorAction(departmentId: string, userId: string) {
+  return run(async () => {
+    const admin = await requireRole(["ADMIN"]);
+    const monitor = await db.departmentMonitor.findUnique({ where: { userId } });
+    if (!monitor || monitor.departmentId !== departmentId) throw new UserError("Không tìm thấy cờ đỏ này trong Chi đoàn");
+    await db.$transaction([
+      db.user.updateMany({ where: { id: userId, member: { isNot: null } }, data: { role: "MEMBER" } }),
+      db.departmentMonitor.delete({ where: { userId } }),
+    ]);
+    await audit(admin.id, "department.remove_monitor", "Department", departmentId, { userId });
+    revalidatePath(`/departments/${departmentId}`);
+    return { message: "Đã gỡ chức cờ đỏ (vẫn là đoàn viên)" };
+  });
+}
+
+/**
+ * Cấp tài khoản chi đoàn (dùng chung cho cả chi đoàn, Admin cấp đầu năm học): tạo tài khoản mới
+ * với role DEPARTMENT_ACCOUNT, trả mật khẩu tạm hiển thị một lần. Mỗi Chi đoàn chỉ có một tài khoản.
+ */
+export async function createDepartmentAccountAction(departmentId: string) {
+  return run<{ username: string; password: string }>(async () => {
+    const admin = await requireRole(["ADMIN"]);
+    const dept = await db.department.findUnique({ where: { id: departmentId } });
+    if (!dept || dept.graduatedAt) throw new UserError("Không tìm thấy Chi đoàn đang học");
+    if (dept.accountId) throw new UserError("Chi đoàn này đã có tài khoản");
+    const base = dept.name.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/[^a-z0-9]/g, "");
+    let username = `chidoan.${base}`;
+    for (let i = 0; await db.user.findUnique({ where: { username } }); i++) username = `chidoan.${base}${i + 2}`;
+    const password = generateTempPassword();
+    const passwordHash = await hashPassword(password);
+    await db.$transaction(async (tx) => {
+      const user = await tx.user.create({ data: { username, passwordHash, fullName: `Tài khoản Chi đoàn ${dept.name}`, role: "DEPARTMENT_ACCOUNT", mustChangePassword: true } });
+      await tx.department.update({ where: { id: dept.id }, data: { accountId: user.id } });
+    });
+    await audit(admin.id, "department.create_account", "Department", dept.id, { username });
+    revalidatePath(`/departments/${dept.id}`);
+    return { data: { username, password }, message: `Đã cấp tài khoản ${username} cho Chi đoàn ${dept.name}` };
+  });
+}
+
+export async function resetDepartmentAccountPasswordAction(departmentId: string) {
+  return run<{ username: string; password: string }>(async () => {
+    const admin = await requireRole(["ADMIN"]);
+    const dept = await db.department.findUnique({ where: { id: departmentId }, include: { account: true } });
+    if (!dept?.account) throw new UserError("Chi đoàn chưa có tài khoản");
+    const password = generateTempPassword();
+    const passwordHash = await hashPassword(password);
+    await db.user.update({ where: { id: dept.account.id }, data: { passwordHash, mustChangePassword: true, status: "ACTIVE" } });
+    await audit(admin.id, "department.reset_account_password", "Department", dept.id, { username: dept.account.username });
+    revalidatePath(`/departments/${dept.id}`);
+    return { data: { username: dept.account.username, password }, message: "Đã cấp lại mật khẩu" };
   });
 }
 

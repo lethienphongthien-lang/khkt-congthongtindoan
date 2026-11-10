@@ -19,7 +19,7 @@ export const metadata = { title: "Đoàn viên & thanh niên" };
 const PAGE_SIZE = 15;
 
 export default async function MembersPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const user = await requireRole(["ADMIN", "SECRETARY"]);
+  const user = await requireRole(["ADMIN", "SECRETARY", "DEPARTMENT_ACCOUNT"]);
   const sp = await searchParams;
   const q = str(sp.q), dept = str(sp.dept), cohort = str(sp.cohort), status = str(sp.status), kind = str(sp.kind), khoi = gradeOf(str(sp.khoi)), sort = str(sp.sort), obj = str(sp.obj) === "gv" ? "gv" : str(sp.obj) === "hs" ? "hs" : "";
   const page = pageParam(sp.page);
@@ -57,7 +57,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
     <>
       <PageHeader
         title="Đoàn viên & thanh niên"
-        description={user.role === "SECRETARY" ? `Đoàn viên và thanh niên Chi đoàn ${user.departmentName}` : undefined}
+        description={user.role !== "ADMIN" ? `Đoàn viên và thanh niên Chi đoàn ${user.departmentName}` : undefined}
         actions={user.role === "ADMIN" && (
           <>
             <a href={`/api/members/export${exportQuery}`} className={buttonClass("secondary")}><Download className="size-4" />Xuất<span className="max-sm:hidden"> Excel</span></a>

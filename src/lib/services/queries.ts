@@ -7,7 +7,7 @@ import { ForbiddenError } from "@/lib/permissions";
 /** Điều kiện lọc Member theo phạm vi quyền của người xem. */
 export function memberScope(user: SessionUser): Prisma.MemberWhereInput {
   if (user.role === "ADMIN") return {};
-  if (user.role === "SECRETARY" && user.departmentId) return { departmentId: user.departmentId };
+  if ((user.role === "SECRETARY" || user.role === "DEPARTMENT_ACCOUNT" || user.role === "MONITOR") && user.departmentId) return { departmentId: user.departmentId };
   if (user.role === "MEMBER" && user.memberId) return { id: user.memberId };
   return { id: "__none__" };
 }

@@ -8,7 +8,7 @@ import { ReportForm } from "@/components/cms/forms";
 export const metadata = { title: "Sửa báo cáo" };
 
 export default async function EditReportPage({ params }: { params: Promise<{ id: string }> }) {
-  const user = await requireRole(["ADMIN", "SECRETARY"]);
+  const user = await requireRole(["ADMIN", "SECRETARY", "DEPARTMENT_ACCOUNT"]);
   const r = await db.chapterReport.findUnique({ where: { id: (await params).id }, include: { department: { select: { name: true } } } });
   if (!r || !canManageDepartment(user, r.departmentId)) notFound(); // bí thư không sửa được báo cáo của Chi đoàn khác
 
@@ -27,7 +27,7 @@ export default async function EditReportPage({ params }: { params: Promise<{ id:
         id={r.id}
         departments={departments}
         periods={periods}
-        fixedDepartment={user.role === "SECRETARY" ? r.department.name : undefined}
+        fixedDepartment={user.role !== "ADMIN" ? r.department.name : undefined}
         image={r.imageUrl && r.imagePublicId ? { imageUrl: r.imageUrl, publicId: r.imagePublicId } : null}
         initial={{ departmentId: r.departmentId, title: r.title, content: r.content, periodId: r.periodId, participantCount: r.participantCount }}
       />
