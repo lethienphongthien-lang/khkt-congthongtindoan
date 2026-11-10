@@ -31,6 +31,24 @@ export const METRICS: { key: MetricKey; label: string; unit: string; hint: strin
 
 const ddmm = (day: string) => `${day.slice(8, 10)}/${day.slice(5, 7)}`;
 
+/** Chỉ dùng trong chế độ mô phỏng; không ghi vào các bảng hoạt động thực tế. */
+export async function simulatedInsights(rows: WeekRow[]) {
+  const setting = await db.siteSetting.findUnique({ where: { key: "insights.simulation.v1" } });
+  if (!setting) return { rows, simulatedWeeks: [] as string[] };
+  const parsed = JSON.parse(setting.value) as { version: number; rows: WeekRow[] };
+  if (parsed.version !== 1 || !Array.isArray(parsed.rows)) throw new Error("Bộ dữ liệu mô phỏng không hợp lệ.");
+  const simulatedWeeks: string[] = [];
+  const result = rows.map((row) => {
+    const sample = parsed.rows.find((r) => r.start === row.start);
+    if (!sample) return row;
+    const valid = Object.keys(row).every((key) => key === "start" || key === "label" || (typeof sample[key as MetricKey] === "number" && Number.isFinite(sample[key as MetricKey])));
+    if (!valid) throw new Error("Chỉ số mô phỏng không hợp lệ.");
+    simulatedWeeks.push(row.start);
+    return { ...sample, label: row.label };
+  });
+  return { rows: result, simulatedWeeks };
+}
+
 export async function weeklyInsights(weeks: number) {
   const thisMonday = mondayOf(vnDay());
   const first = addDays(thisMonday, -7 * (weeks - 1));
