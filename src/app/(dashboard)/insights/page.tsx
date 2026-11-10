@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowLeftRight, BarChart3, CalendarDays, Eye, LayoutDashboard, SlidersHorizontal, UserCheck } from "lucide-react";
 import { requireRole } from "@/lib/auth/session";
 import { vnDay } from "@/lib/services/visits";
 import { compareAt, departmentEngagement, yearActivity, METRICS, type MetricKey, topArticles, viewTotals, weeklyInsights } from "@/lib/services/insights";
@@ -52,48 +53,52 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
   const sumYear = (k: "reports" | "registered" | "completed" | "rejected") => yearRows.reduce((s, r) => s + r[k], 0);
   const totalAcc = depts.reduce((s, d) => s + d.total, 0);
   const activatedAcc = depts.reduce((s, d) => s + d.activated, 0);
+  const activatedRate = totalAcc ? Math.round((activatedAcc / totalAcc) * 1000) / 10 : 0;
+  const currentWeek = rows.at(-1)!;
   const cmp = moc ? compareAt(rows, moc) : null;
 
   return (
     <>
-      <PageHeader title="Thống kê" description={`Số liệu theo tuần (thứ Hai đến Chủ nhật, giờ Việt Nam), ${members} đoàn viên đang hoạt động. Dùng để đánh giá hệ thống có làm thay đổi mức tham gia của học sinh hay không.`} />
+      <PageHeader title="Thống kê" description="Theo dõi mức tham gia và đối chiếu hiệu quả hoạt động theo tuần." actions={
+        <span className="inline-flex items-center gap-2 rounded-full border border-border bg-white/90 px-3 py-1.5 text-xs text-muted"><UserCheck className="size-3.5 text-primary" />{fmt(members)} đoàn viên</span>
+      } />
 
-      <form method="get" className="mb-5 grid grid-cols-2 items-end gap-3 rounded-lg border border-border bg-white/85 p-3 text-sm sm:flex sm:flex-wrap">
-        <input type="hidden" name="tab" value={comparison ? "sosanh" : "tongquan"} />
-        <label className="grid gap-1">Số tuần hiển thị
-          <select name="tuan" defaultValue={weeks} className="h-9 w-full rounded border border-border bg-white px-2">
-            {[8, 12, 16, 26, 52].map((w) => <option key={w} value={w}>{w} tuần gần nhất</option>)}
-          </select>
-        </label>
-        <label className="grid gap-1">Năm học
-          <select name="nam" defaultValue={nam} className="h-9 w-full rounded border border-border bg-white px-2">
-            {years.map((y) => <option key={y} value={y}>{yearLabel(y)}</option>)}
-          </select>
-        </label>
-        <label className="grid gap-1"><span className="whitespace-nowrap">Mốc triển khai<span className="max-sm:hidden"> (không bắt buộc)</span></span>
-          <input type="date" name="moc" defaultValue={moc} max={vnDay()} className="h-9 w-full rounded border border-border bg-white px-2" />
-        </label>
-        <button className="h-9 rounded bg-primary px-4 font-medium text-white max-sm:w-full">Xem</button>
-        {moc && <Link href="/insights" className="h-9 self-center text-primary hover:underline">Bỏ mốc</Link>}
-      </form>
-
-      <nav aria-label="Chế độ thống kê" className="mb-5 flex gap-2 border-b border-border pb-2">
-        <Link href={tabHref("tongquan")} aria-current={!comparison ? "page" : undefined} className={`rounded px-4 py-2 text-sm font-medium ${!comparison ? "bg-primary text-white" : "text-primary"}`}>Tổng quan</Link>
-        <Link href={tabHref("sosanh")} aria-current={comparison ? "page" : undefined} className={`rounded px-4 py-2 text-sm font-medium ${comparison ? "bg-primary text-white" : "text-primary"}`}>So sánh các tuần</Link>
-      </nav>
-      {comparison ? <WeekComparison key={weeks} rows={rows} metrics={METRICS} /> : <>
-      <div className="mb-5 rounded-lg border border-border border-l-4 border-l-primary bg-white/90 p-4 shadow-sm">
-        <div className="text-xs text-muted">Tỉ lệ tài khoản đã kích hoạt</div>
-        <div className="mt-0.5 flex items-baseline gap-2">
-          <span className="text-4xl font-bold text-primary tabular-nums">{totalAcc ? Math.round((activatedAcc / totalAcc) * 1000) / 10 : 0}%</span>
-          <span className="text-sm text-muted">{activatedAcc}/{totalAcc} tài khoản đoàn viên đã đăng nhập và đổi mật khẩu lần đầu</span>
+      <div className="mb-5 overflow-hidden rounded-2xl border border-border bg-white/90 shadow-sm">
+        <div className={`flex flex-wrap items-center justify-between gap-3 px-4 py-3 ${comparison ? "" : "border-b border-border"}`}>
+          <nav aria-label="Chế độ thống kê" className="inline-flex max-w-full gap-1 rounded-xl bg-slate-100 p-1">
+            {([{ tab: "tongquan", label: "Tổng quan", icon: LayoutDashboard, active: !comparison }, { tab: "sosanh", label: "So sánh các tuần", icon: ArrowLeftRight, active: comparison }]).map(({ tab, label, icon: Icon, active }) =>
+              <Link key={tab} href={tabHref(tab)} aria-current={active ? "page" : undefined} className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${active ? "bg-white text-primary shadow-sm" : "text-muted hover:text-foreground"}`}><Icon className="size-4 shrink-0" /><span>{label}</span></Link>
+            )}
+          </nav>
+          <span className="flex items-center gap-1.5 text-xs text-muted"><CalendarDays className="size-3.5" />Thứ Hai – Chủ nhật · Giờ Việt Nam</span>
         </div>
-        <div className="mt-2 h-3 overflow-hidden rounded bg-slate-200"><div className="h-full min-w-1 bg-primary" style={{ width: `${totalAcc ? (activatedAcc / totalAcc) * 100 : 0}%` }} /></div>
+        {!comparison && <form method="get" className="grid grid-cols-2 items-end gap-3 p-4 text-sm sm:flex sm:flex-wrap">
+          <input type="hidden" name="tab" value={comparison ? "sosanh" : "tongquan"} />
+          <label className="grid gap-1.5 text-xs font-medium text-muted">Khoảng hiển thị
+            <select name="tuan" defaultValue={weeks} className="h-9 w-full rounded-lg border border-border bg-slate-50 px-3 text-sm text-foreground sm:w-40">
+              {[8, 12, 16, 26, 52].map((w) => <option key={w} value={w}>{w} tuần gần nhất</option>)}
+            </select>
+          </label>
+          <label className="grid gap-1.5 text-xs font-medium text-muted">Năm học
+            <select name="nam" defaultValue={nam} className="h-9 w-full rounded-lg border border-border bg-slate-50 px-3 text-sm text-foreground sm:w-36">
+              {years.map((y) => <option key={y} value={y}>{yearLabel(y)}</option>)}
+            </select>
+          </label>
+          <label className="grid gap-1.5 text-xs font-medium text-muted">Mốc triển khai · tùy chọn
+            <input type="date" name="moc" defaultValue={moc} max={vnDay()} className="h-9 min-w-0 w-full rounded-lg border border-border bg-slate-50 px-3 text-sm text-foreground sm:w-44" />
+          </label>
+          <button className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-opacity hover:opacity-90"><SlidersHorizontal className="size-3.5" />Áp dụng</button>
+          {moc && <Link href={`/insights?${new URLSearchParams({ tuan: String(weeks), nam, tab: comparison ? "sosanh" : "tongquan" })}`} className="flex h-9 items-center text-xs text-muted hover:text-primary">Bỏ mốc</Link>}
+        </form>}
       </div>
-
-      <div className="mb-5 grid gap-3 sm:grid-cols-2">
-        <div className="rounded-lg border border-border border-l-4 border-l-primary bg-white/90 p-4 shadow-sm"><div className="text-xs text-muted">Tổng lượt xem bài viết</div><div className="mt-0.5 text-4xl font-bold text-primary font-semibold tabular-nums">{views.total.toLocaleString("vi-VN")}</div></div>
-        <div className="rounded-lg border border-border border-l-4 border-l-primary bg-white/90 p-4 shadow-sm"><div className="text-xs text-muted">Lượt xem tuần này</div><div className="mt-0.5 text-4xl font-bold text-primary font-semibold tabular-nums">{views.thisWeek.toLocaleString("vi-VN")}</div><div className="text-xs text-muted">Chi tiết theo tuần ở biểu đồ &quot;Lượt xem bài viết&quot;; bài xem nhiều nhất ở cuối trang</div></div>
+      {comparison ? <WeekComparison key={weeks} rows={rows} metrics={METRICS} /> : <>
+      <div className="mb-5 grid gap-3 md:grid-cols-3">
+        <div className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-white/90 p-5 shadow-sm">
+          <div className="min-w-0"><div className="flex items-center gap-2 text-xs font-medium text-muted"><UserCheck className="size-4 text-primary" />Tài khoản đã kích hoạt</div><div className="mt-3 text-3xl font-semibold tracking-tight tabular-nums">{fmt(activatedRate)}<span className="ml-0.5 text-lg text-muted">%</span></div><p className="mt-1 text-xs text-muted">{fmt(activatedAcc)} / {fmt(totalAcc)} đoàn viên</p></div>
+          <svg viewBox="0 0 64 64" className="size-16 shrink-0 -rotate-90" aria-label={`${fmt(activatedRate)}% tài khoản đã kích hoạt`} role="img"><circle cx="32" cy="32" r="26" fill="none" stroke="currentColor" strokeWidth="5" className="text-slate-100" /><circle cx="32" cy="32" r="26" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeDasharray={`${activatedRate * 1.634} 163.4`} className="text-primary" /></svg>
+        </div>
+        <div className="rounded-2xl border border-border bg-white/90 p-5 shadow-sm"><div className="flex items-center justify-between text-xs font-medium text-muted"><span>Tổng lượt xem bài viết</span><span className="rounded-lg bg-primary-light p-2 text-primary"><Eye className="size-4" /></span></div><div className="mt-1 text-3xl font-semibold tracking-tight tabular-nums">{fmt(views.total)}</div><p className="mt-1 text-xs text-muted">Trên các bài viết đã xuất bản</p></div>
+        <div className="rounded-2xl border border-primary/20 bg-primary-light/60 p-5 shadow-sm"><div className="flex items-center justify-between text-xs font-medium text-muted"><span>Lượt xem tuần này</span><span className="rounded-lg bg-white/60 p-2 text-primary"><BarChart3 className="size-4" /></span></div><div className="mt-1 text-3xl font-semibold tracking-tight text-primary tabular-nums">{fmt(views.thisWeek)}</div><p className="mt-1 text-xs text-muted">{ddmm(currentWeek.start)} – {ddmm(addDay(currentWeek.start, 6))} · Đang diễn ra</p></div>
       </div>
 
       {cmp && (
