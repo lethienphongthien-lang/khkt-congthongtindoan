@@ -1,4 +1,5 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import { db } from "@/lib/db";
 
 const VN = 7 * 3600_000;
@@ -16,15 +17,23 @@ const mondayOf = (day: string) => addDays(day, -((new Date(`${day}T00:00:00Z`).g
  */
 export async function recordVisit(memberId: string, now: Date = new Date()): Promise<{ created: boolean }> {
   const day = vnDay(now);
-  if (await db.dailyCheckin.findUnique({ where: { memberId_day: { memberId, day } }, select: { id: true } })) return { created: false };
+  const existing = await db.dailyCheckin.findUnique({ where: { memberId_day: { memberId, day } }, select: { id: true } });
+  // Bản ghi bổ sung thống kê không được chặn điểm cho lần đăng nhập thật đầu tiên.
+  if (existing && !existing.id.startsWith("insights-source-")) return { created: false };
   const [y, m, d] = day.split("-");
   try {
-    await db.$transaction(async (tx) => {
-      await tx.dailyCheckin.create({ data: { memberId, day, streak: 1 } });
+    const created = await db.$transaction(async (tx) => {
+      if (existing) {
+        const claimed = await tx.dailyCheckin.updateMany({ where: { id: existing.id }, data: { id: randomUUID(), createdAt: now, streak: 1 } });
+        if (!claimed.count) return false; // một phiên đăng nhập khác đã nhận điểm
+      } else {
+        await tx.dailyCheckin.create({ data: { memberId, day, streak: 1 } });
+      }
       await tx.pointTransaction.create({ data: { memberId, type: "DAILY", points: 1, reason: `Truy cập hệ thống ngày ${d}/${m}/${y}` } });
       await tx.member.update({ where: { id: memberId }, data: { totalPoints: { increment: 1 } } });
+      return true;
     });
-    return { created: true };
+    return { created };
   } catch (e) {
     if ((e as { code?: string })?.code === "P2002") return { created: false }; // hai thiết bị mở cùng lúc
     throw e;
