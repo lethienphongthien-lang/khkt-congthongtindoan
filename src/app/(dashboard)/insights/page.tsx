@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/session";
 import { vnDay } from "@/lib/services/visits";
-import { simulatedInsights, compareAt, departmentEngagement, yearActivity, METRICS, type MetricKey, topArticles, viewTotals, weeklyInsights } from "@/lib/services/insights";
+import { compareAt, departmentEngagement, yearActivity, METRICS, type MetricKey, topArticles, viewTotals, weeklyInsights } from "@/lib/services/insights";
 import { KIND_LABEL, articleHref } from "@/lib/services/public";
 import { DataTable, PageHeader, Section, Td, Th } from "@/components/ui/misc";
 import { ClassGrid } from "@/components/insights/class-grid";
@@ -40,7 +40,6 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
   await requireRole(["ADMIN"]);
   const sp = await searchParams;
   const weeks = Math.min(52, Math.max(4, Math.floor(Number(str(sp.tuan)) || 8)));
-  const simulation = str(sp.dulieu) === "mophong";
   const comparison = str(sp.tab) === "sosanh";
   const moc = /^\d{4}-\d{2}-\d{2}$/.test(str(sp.moc) ?? "") && str(sp.moc)! <= vnDay() ? str(sp.moc)! : "";
   const cals = await loadCalendars();
@@ -48,9 +47,8 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
   const years = [...new Set([...cals.map((c) => c.startYear), curYear])].sort((a, b) => b - a);
   const nam = years.includes(Number(str(sp.nam))) ? String(Number(str(sp.nam))) : String(curYear);
   const yearRange = rangeFromParams(cals, nam, "");
-  const [{ rows: actualRows, members }, depts, top, views, yearRows] = await Promise.all([weeklyInsights(weeks), departmentEngagement(), topArticles(), viewTotals(), yearActivity(yearRange)]);
-  const { rows, simulatedWeeks } = simulation ? await simulatedInsights(actualRows) : { rows: actualRows, simulatedWeeks: [] as string[] };
-  const tabHref = (tab: string) => `/insights?${new URLSearchParams({ tuan: String(weeks), nam, moc, dulieu: simulation ? "mophong" : "thucte", tab })}`;
+  const [{ rows, members }, depts, top, views, yearRows] = await Promise.all([weeklyInsights(weeks), departmentEngagement(), topArticles(), viewTotals(), yearActivity(yearRange)]);
+  const tabHref = (tab: string) => `/insights?${new URLSearchParams({ tuan: String(weeks), nam, moc, tab })}`;
   const sumYear = (k: "reports" | "registered" | "completed" | "rejected") => yearRows.reduce((s, r) => s + r[k], 0);
   const totalAcc = depts.reduce((s, d) => s + d.total, 0);
   const activatedAcc = depts.reduce((s, d) => s + d.activated, 0);
@@ -62,11 +60,6 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
 
       <form method="get" className="mb-5 grid grid-cols-2 items-end gap-3 rounded-lg border border-border bg-white/85 p-3 text-sm sm:flex sm:flex-wrap">
         <input type="hidden" name="tab" value={comparison ? "sosanh" : "tongquan"} />
-        <label className="grid gap-1">Nguồn số liệu
-          <select name="dulieu" defaultValue={simulation ? "mophong" : "thucte"} className="h-9 w-full rounded border border-border bg-white px-2">
-            <option value="thucte">Thực tế</option><option value="mophong">Có dữ liệu mô phỏng</option>
-          </select>
-        </label>
         <label className="grid gap-1">Số tuần hiển thị
           <select name="tuan" defaultValue={weeks} className="h-9 w-full rounded border border-border bg-white px-2">
             {[8, 12, 16, 26, 52].map((w) => <option key={w} value={w}>{w} tuần gần nhất</option>)}
@@ -88,8 +81,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
         <Link href={tabHref("tongquan")} aria-current={!comparison ? "page" : undefined} className={`rounded px-4 py-2 text-sm font-medium ${!comparison ? "bg-primary text-white" : "text-primary"}`}>Tổng quan</Link>
         <Link href={tabHref("sosanh")} aria-current={comparison ? "page" : undefined} className={`rounded px-4 py-2 text-sm font-medium ${comparison ? "bg-primary text-white" : "text-primary"}`}>So sánh các tuần</Link>
       </nav>
-      {simulation && <p role="status" className="mb-5 rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{simulatedWeeks.length ? `Đang dùng dữ liệu mô phỏng cho các tuần bắt đầu ${simulatedWeeks.map((d) => d.split("-").reverse().join("/")).join(", ")}. Các tuần khác là dữ liệu thực tế. Số liệu mô phỏng không phản ánh hoạt động thực tế.` : "Chưa có dữ liệu mô phỏng trong khoảng đang xem."} Các thống kê ngoài biểu đồ theo tuần vẫn là dữ liệu thực tế.</p>}
-      {comparison ? <WeekComparison key={`${weeks}-${simulation}`} rows={rows} metrics={METRICS} simulatedWeeks={simulatedWeeks} /> : <>
+      {comparison ? <WeekComparison key={weeks} rows={rows} metrics={METRICS} /> : <>
       <div className="mb-5 rounded-lg border border-border border-l-4 border-l-primary bg-white/90 p-4 shadow-sm">
         <div className="text-xs text-muted">Tỉ lệ tài khoản đã kích hoạt</div>
         <div className="mt-0.5 flex items-baseline gap-2">

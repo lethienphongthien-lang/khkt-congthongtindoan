@@ -5,10 +5,9 @@ import type { MetricKey, WeekRow } from "@/lib/services/insights";
 import { BarChart } from "./bar-chart";
 
 const dateLabel = (day: string) => day.split("-").reverse().join("/");
-export function WeekComparison({ rows, metrics, simulatedWeeks }: {
+export function WeekComparison({ rows, metrics }: {
   rows: WeekRow[];
   metrics: { key: MetricKey; label: string; unit: string; hint: string }[];
-  simulatedWeeks: string[];
 }) {
   const [selected, setSelected] = useState(rows.slice(-3).map((r) => r.start));
   const chosen = rows.filter((r) => selected.includes(r.start));
@@ -20,7 +19,7 @@ export function WeekComparison({ rows, metrics, simulatedWeeks }: {
       {rows.map((row) => <label key={row.start} className="flex items-center gap-2 rounded border border-border bg-white/90 px-3 py-2 text-sm">
         <input type="checkbox" checked={selected.includes(row.start)} disabled={!selected.includes(row.start) && selected.length >= 6}
           onChange={() => setSelected((prev) => prev.includes(row.start) ? prev.filter((s) => s !== row.start) : [...prev, row.start])} />
-        {dateLabel(row.start)}{row.label === "Tuần này" ? " (tuần này)" : ""}{simulatedWeeks.includes(row.start) ? " · mô phỏng" : ""}
+        {dateLabel(row.start)}{row.label === "Tuần này" ? " (tuần này)" : ""}
       </label>)}
     </fieldset>
     {chosen.length < 2 ? <p role="status" className="rounded border border-border p-4">Chọn ít nhất 2 tuần để so sánh.</p> : <div className="grid gap-4 lg:grid-cols-2">
@@ -33,7 +32,7 @@ export function WeekComparison({ rows, metrics, simulatedWeeks }: {
           <p className="mb-2 text-xs text-muted">{metric.hint}</p>
           <BarChart labels={chosen.map((r) => `${r.start.slice(8)}/${r.start.slice(5, 7)}`)} values={chosen.map((r) => r[metric.key])} unit={metric.unit} />
           <p className="mt-2 text-xs text-muted">Hai tuần được chọn gần nhất: {difference === null ? "chưa có cơ sở tính % thay đổi" : `${difference >= 0 ? "+" : ""}${difference.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}${metric.unit === "%" ? " điểm %" : "%"}`}.</p>
-          <table className="mt-2 w-full text-sm"><caption className="sr-only">Giá trị {metric.label} theo tuần</caption><thead><tr><th className="text-left">Tuần bắt đầu</th><th className="text-right">Giá trị</th></tr></thead><tbody>{chosen.map((r) => <tr key={r.start}><td>{dateLabel(r.start)}{simulatedWeeks.includes(r.start) ? " (mô phỏng)" : ""}</td><td className="text-right tabular-nums">{r[metric.key].toLocaleString("vi-VN", { maximumFractionDigits: 1 })}{metric.unit ? ` ${metric.unit}` : ""}</td></tr>)}</tbody></table>
+          <table className="mt-2 w-full text-sm"><caption className="sr-only">Giá trị {metric.label} theo tuần</caption><thead><tr><th className="text-left">Tuần bắt đầu</th><th className="text-right">Giá trị</th></tr></thead><tbody>{chosen.map((r) => <tr key={r.start}><td>{dateLabel(r.start)}</td><td className="text-right tabular-nums">{r[metric.key].toLocaleString("vi-VN", { maximumFractionDigits: 1 })}{metric.unit ? ` ${metric.unit}` : ""}</td></tr>)}</tbody></table>
         </div>;
       })}
     </div>}
