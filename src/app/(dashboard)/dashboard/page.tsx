@@ -29,7 +29,7 @@ async function thisWeek() {
 export default async function DashboardPage() {
   const user = await requireUser();
   if (user.role === "ADMIN") return <AdminDashboard />;
-  if (user.role === "SECRETARY") return <SecretaryDashboard userId={user.id} departmentId={user.departmentId} name={user.departmentName} memberId={user.memberId} />;
+  if (user.role === "SECRETARY" || user.role === "DEPARTMENT_ACCOUNT") return <SecretaryDashboard userId={user.id} departmentId={user.departmentId} name={user.departmentName} memberId={user.memberId} isAccount={user.role === "DEPARTMENT_ACCOUNT"} />;
   return <MemberDashboard user={user} />;
 }
 
@@ -37,7 +37,7 @@ async function AdminDashboard() {
   const period = await thisWeek();
   const today = vnDay();
   const days = Array.from({ length: 7 }, (_, i) => vnDay(new Date(Date.now() - (6 - i) * DAY)));
-  const [o, emulation, web, perDay, activated, accounts, views] = await Promise.all([
+  const [o, emulation, web, perDay, activated, accounts, views, violationsThisWeek] = await Promise.all([
     adminOverview(),
     emulationRanking(period),
     webRanking("week", period.value),
@@ -45,6 +45,7 @@ async function AdminDashboard() {
     db.member.count({ where: { status: "ACTIVE", department: { isTeacher: false, graduatedAt: null }, user: { mustChangePassword: false } } }),
     db.member.count({ where: { status: "ACTIVE", department: { isTeacher: false, graduatedAt: null } } }),
     viewTotals(),
+    db.violation.count({ where: { recordedAt: { gte: period.from, lt: period.to } } }),
   ]);
   const pct = o.students ? Math.round((o.doanVien / o.students) * 100) : 0;
   const visitBy = new Map(perDay.map((r) => [r.day, r._count]));
@@ -71,6 +72,7 @@ async function AdminDashboard() {
         <Stat label="Truy cập hôm nay" value={formatNumber(visitsToday)} hint="Số đoàn viên đã vào hệ thống" />
         <Stat label="Tài khoản đã kích hoạt" value={`${formatNumber(activated)}/${formatNumber(accounts)}`} hint="Đã đổi mật khẩu tạm" />
         <Stat label="Lượt xem bài viết" value={formatNumber(views.total)} hint={`${formatNumber(views.thisWeek)} lượt trong tuần này`} />
+        <Stat label="Vi phạm trong tuần" value={formatNumber(violationsThisWeek)} hint="Toàn trường" />
       </div>
 
       <div className="mt-8 grid gap-4 lg:grid-cols-2">
@@ -109,14 +111,14 @@ async function AdminDashboard() {
   );
 }
 
-async function SecretaryDashboard({ userId, departmentId, name, memberId }: { userId: string; departmentId: string | null; name: string | null; memberId: string | null }) {
+async function SecretaryDashboard({ userId, departmentId, name, memberId, isAccount }: { userId: string; departmentId: string | null; name: string | null; memberId: string | null; isAccount?: boolean }) {
   if (!departmentId) {
-    return <><PageHeader title="Tổng quan" /><EmptyState title="Bạn chưa được phân công Chi đoàn" description="Liên hệ quản trị viên để được phân công." /></>;
+    return <><PageHeader title="Tổng quan" /><EmptyState title="Chưa được phân công Chi đoàn" description="Liên hệ quản trị viên để được phân công." /></>;
   }
   const period = await thisWeek();
   const today = vnDay();
   const weekAgo = vnDay(new Date(Date.now() - 6 * DAY));
-  const [members, youth, points, visitsToday, quiet, me, posts] = await Promise.all([
+  const [members, youth, points, visitsToday, quiet, me, posts, violationsThisWeek] = await Promise.all([
     db.member.count({ where: { departmentId, status: "ACTIVE", isDoanVien: true } }),
     db.member.count({ where: { departmentId, status: "ACTIVE", isDoanVien: false } }),
     db.member.aggregate({ where: { departmentId }, _sum: { totalPoints: true } }),
@@ -125,6 +127,7 @@ async function SecretaryDashboard({ userId, departmentId, name, memberId }: { us
     db.member.findMany({ where: { departmentId, status: "ACTIVE", dailyCheckins: { none: { day: { gte: weekAgo } } } }, orderBy: { fullName: "asc" }, take: 10, select: { id: true, code: true, fullName: true } }),
     memberId ? db.member.findUnique({ where: { id: memberId }, select: { avatarUrl: true } }) : Promise.resolve(null),
     db.article.count({ where: { authorId: userId } }),
+    db.violation.count({ where: { departmentId, recordedAt: { gte: period.from, lt: period.to } } }),
   ]);
   const steps = [
     { label: "Cập nhật ảnh đại diện", hint: "Để đoàn viên nhận ra bạn", href: "/profile", done: !!me?.avatarUrl },
@@ -133,13 +136,15 @@ async function SecretaryDashboard({ userId, departmentId, name, memberId }: { us
   ];
   return (
     <>
-      <PageHeader title={`Chi đoàn ${name}`} description={period.label} />
-      <OnboardingChecklist userId={userId} title={`Chào bạn! Bắt đầu với Chi đoàn ${name}`} steps={steps} />
-      <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
+      <PageHeader title={`Chi đoàn ${name}`} description={period.label}
+        actions={isAccount ? <Link href={`/departments/${departmentId}`} className={buttonClass("secondary")}>Quản lý Chi đoàn</Link> : undefined} />
+      {!isAccount && <OnboardingChecklist userId={userId} title={`Chào bạn! Bắt đầu với Chi đoàn ${name}`} steps={steps} />}
+      <div className="grid grid-cols-2 gap-6 sm:grid-cols-5">
         <Stat label="Đoàn viên" value={members} hint={youth ? `Thêm ${youth} thanh niên` : undefined} />
         <Stat label="Truy cập hôm nay" value={visitsToday} hint="Số bạn đã vào hệ thống" />
         <Stat label="Chưa vào 7 ngày" value={quiet.length >= 10 ? "10+" : quiet.length} hint="Bạn cần nhắc" />
         <Stat label="Tổng điểm" value={formatNumber(points._sum.totalPoints ?? 0)} />
+        <Stat label="Vi phạm trong tuần" value={violationsThisWeek} hint="Chi đoàn của bạn" />
       </div>
       <Section title="Bạn chưa vào hệ thống trong 7 ngày qua" className="mt-8">
         {quiet.length === 0 ? <p className="text-sm text-muted">Tất cả đoàn viên đã vào hệ thống trong 7 ngày qua.</p> : (
@@ -155,21 +160,24 @@ async function SecretaryDashboard({ userId, departmentId, name, memberId }: { us
 
 async function MemberDashboard({ user }: { user: Awaited<ReturnType<typeof requireUser>> }) {
   const period = await thisWeek();
-  const [member, visit, weekPoints, history, web] = await Promise.all([
+  const isMonitor = user.role === "MONITOR";
+  const [member, visit, weekPoints, history, web, violationsThisWeek] = await Promise.all([
     db.member.findUniqueOrThrow({ where: { id: user.memberId! } }),
     visitStatus(user.memberId!),
     db.pointTransaction.aggregate({ where: { memberId: user.memberId!, type: { in: ["GAME", "DAILY", "ACTIVITY"] }, createdAt: { gte: period.from, lt: period.to } }, _sum: { points: true } }),
     db.pointTransaction.findMany({ where: { memberId: user.memberId! }, orderBy: { createdAt: "desc" }, take: 6 }),
     webRanking("week", period.value),
+    isMonitor ? db.violation.count({ where: { recordedAt: { gte: period.from, lt: period.to } } }) : Promise.resolve(0),
   ]);
   return (
     <>
       <PageHeader title={`Xin chào, ${user.fullName}`} description={`Chi đoàn ${user.departmentName}`}
-        actions={<Link href="/games" className={buttonClass()}>Chơi trò chơi tích điểm</Link>} />
-      <div className="grid grid-cols-3 gap-3 sm:max-w-xl sm:gap-6">
+        actions={isMonitor ? <Link href="/violations" className={buttonClass()}>Ghi nhận vi phạm</Link> : <Link href="/games" className={buttonClass()}>Chơi trò chơi tích điểm</Link>} />
+      <div className={`grid gap-3 sm:max-w-xl sm:gap-6 ${isMonitor ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
         <Stat label="Tổng điểm" value={member.totalPoints} />
         <Stat label="Điểm tuần này" value={weekPoints._sum.points ?? 0} />
         <Stat label="Ngày truy cập tuần này" value={visit.daysThisWeek} />
+        {isMonitor && <Stat label="Vi phạm trong tuần" value={violationsThisWeek} hint="Toàn trường" />}
       </div>
       <Section title="Điểm gần đây" className="mt-8">
         {history.length === 0 ? <EmptyState title="Chưa có điểm" description="Chơi trò chơi hoặc vào hệ thống mỗi ngày để tích điểm." /> : (

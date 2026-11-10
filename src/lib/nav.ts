@@ -1,4 +1,4 @@
-import { MessagesSquare, FileText, Globe, Settings, Award, BarChart3, CalendarDays, CheckSquare, IdCard, LayoutDashboard, Newspaper, QrCode, Trophy, School, History, Users, Vote, MessageSquare, Inbox, ClipboardList, Bell, BookOpen, Megaphone, HeartHandshake, Gamepad2, Compass, Puzzle, ScrollText, CarFront, type LucideIcon } from "lucide-react";
+import { MessagesSquare, FileText, Flag, Globe, Settings, Award, BarChart3, CalendarDays, CheckSquare, IdCard, LayoutDashboard, Newspaper, QrCode, Trophy, School, History, Users, Vote, MessageSquare, Inbox, ClipboardList, Bell, BookOpen, Megaphone, HeartHandshake, Gamepad2, Compass, Puzzle, ScrollText, CarFront, type LucideIcon } from "lucide-react";
 import type { Role } from "@prisma/client";
 
 export type NavItem = { /** Đứng ngay sau mục Cài đặt (thanh bên máy tính), cuối danh sách. */ footer?: boolean; href: string; label: string; icon: LucideIcon; /** Tiền tố đường dẫn coi là đang ở mục này (mặc định = href). */ match?: string; /** Menu con (hiển thị dạng nhóm mở/đóng). */ children?: { href: string; label: string; icon?: LucideIcon }[]; /** Nhóm mở sẵn (mặc định: chỉ mở khi đang ở một mục bên trong). */ open?: boolean };
@@ -13,6 +13,28 @@ export function navFor(role: Role): NavItem[] {
       { href: "/driving-test", label: "Ôn thi lái xe", icon: CarFront },
     ];
   }
+  if (role === "MONITOR") {
+    // Cờ đỏ: chỉ ghi nhận vi phạm cho Chi đoàn của mình, ngoài ra vẫn là đoàn viên bình thường.
+    return [
+      { href: "/dashboard", label: "Tổng quan", icon: LayoutDashboard },
+      { href: "/violations", label: "Cờ đỏ", icon: Flag },
+      { href: "/profile", label: "Hồ sơ & thẻ số", icon: IdCard },
+      { href: "/emulation", label: "Thi đua", icon: Trophy },
+      { href: "/games", label: "Trò chơi", icon: Gamepad2 },
+      { href: "/driving-test", label: "Ôn thi lái xe", icon: CarFront },
+    ];
+  }
+  if (role === "DEPARTMENT_ACCOUNT") {
+    // Tài khoản chung của Chi đoàn: quản lý trong phạm vi Chi đoàn mình (bí thư, cờ đỏ, đoàn viên, báo cáo, vi phạm).
+    return [
+      { href: "/dashboard", label: "Tổng quan", icon: LayoutDashboard },
+      { href: "/members", label: "Đoàn viên & thanh niên", icon: Users },
+      { href: "/volunteer", label: "Tình nguyện", icon: HeartHandshake },
+      { href: "/emulation", label: "Thi đua", icon: Trophy },
+      { href: "/violations", label: "Vi phạm", icon: Flag },
+      { href: "/chapter-reports", label: "Báo cáo Chi đoàn", icon: FileText },
+    ];
+  }
   if (role === "SECRETARY") {
     // Bí thư: chỉ phạm vi Chi đoàn của mình -> không có quản lý Chi đoàn / Báo cáo toàn trường.
     return [
@@ -20,6 +42,7 @@ export function navFor(role: Role): NavItem[] {
       { href: "/members", label: "Đoàn viên & thanh niên", icon: Users },
       { href: "/volunteer", label: "Tình nguyện", icon: HeartHandshake },
       { href: "/emulation", label: "Thi đua", icon: Trophy },
+      { href: "/violations", label: "Vi phạm", icon: Flag },
       { href: "/games", label: "Trò chơi", icon: Gamepad2 },
       { href: "/driving-test", label: "Ôn thi lái xe", icon: CarFront },
       { href: "/chapter-reports", label: "Báo cáo Chi đoàn", icon: FileText },
@@ -82,6 +105,8 @@ const PRIMARY_MOBILE: Record<Role, string[]> = {
   ADMIN: ["/dashboard", "/departments", "/emulation", "/volunteer"],
   SECRETARY: ["/dashboard", "/members", "/emulation", "/chapter-reports"],
   MEMBER: ["/dashboard", "/games", "/emulation", "/profile"],
+  MONITOR: ["/dashboard", "/violations", "/emulation", "/profile"],
+  DEPARTMENT_ACCOUNT: ["/dashboard", "/members", "/emulation", "/chapter-reports"],
 };
 
 export function mobileNav(role: Role): { main: NavItem[]; more: NavItem[] } {
@@ -104,12 +129,12 @@ export function mobileNav(role: Role): { main: NavItem[]; more: NavItem[] } {
   return { main, more };
 }
 
-export const ROLE_LABEL: Record<Role, string> = { ADMIN: "Ban chấp hành Đoàn trường", SECRETARY: "Bí thư Chi đoàn", MEMBER: "Đoàn viên" };
+export const ROLE_LABEL: Record<Role, string> = { ADMIN: "Ban chấp hành Đoàn trường", SECRETARY: "Bí thư Chi đoàn", MONITOR: "Cờ đỏ", MEMBER: "Đoàn viên", DEPARTMENT_ACCOUNT: "Tài khoản Chi đoàn" };
 
 export const PAGE_TITLES: Record<string, string> = {
   dashboard: "Tổng quan", members: "Đoàn viên & thanh niên", departments: "Chi đoàn", activities: "Hoạt động", attendance: "Điểm danh",
   volunteer: "Tình nguyện", games: "Trò chơi", quizzes: "Trò chơi tích điểm", marquee: "Dòng chữ chạy", cms: "Cổng thông tin", "tin-tuc": "Tin tức", "ke-hoach": "Kế hoạch", "su-kien": "Sự kiện", "thong-bao": "Thông báo", "cau-chuyen-dep": "Câu chuyện đẹp", "tro-choi": "Trò chơi", "dinh-huong-nghe-nghiep": "Hướng nghiệp", "tai-lieu-sinh-hoat": "Tài liệu sinh hoạt Chi đoàn", pages: "Trang giới thiệu", "chapter-reports": "Báo cáo Chi đoàn", emulation: "Thi đua", achievements: "Thành tích", reports: "Báo cáo", audit: "Nhật ký hệ thống", settings: "Cài đặt", profile: "Hồ sơ & thẻ số", checkin: "Quét QR điểm danh",
-  history: "Lịch sử hoạt động", notifications: "Thông báo", confessions: "Sơn Hà Confession", "team-chat": "Kênh chat", feedback: "Góp ý", counseling: "Tư vấn tâm lý", "dien-dan": "Diễn đàn", approvals: "Hàng chờ duyệt", schedule: "Lịch công tác tuần", new: "Tạo mới", edit: "Chỉnh sửa",
+  history: "Lịch sử hoạt động", notifications: "Thông báo", confessions: "Sơn Hà Confession", "team-chat": "Kênh chat", feedback: "Góp ý", counseling: "Tư vấn tâm lý", "dien-dan": "Diễn đàn", approvals: "Hàng chờ duyệt", schedule: "Lịch công tác tuần", new: "Tạo mới", edit: "Chỉnh sửa", violations: "Vi phạm",
 };
 
 /** Tiêu đề riêng cho đường dẫn cụ thể (ưu tiên hơn PAGE_TITLES theo đoạn). */

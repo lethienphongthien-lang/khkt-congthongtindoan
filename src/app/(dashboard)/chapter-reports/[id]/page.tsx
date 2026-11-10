@@ -13,7 +13,7 @@ import { RichText } from "@/components/public/rich-text";
 export const metadata = { title: "Báo cáo Chi đoàn" };
 
 export default async function ReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const user = await requireRole(["ADMIN", "SECRETARY"]);
+  const user = await requireRole(["ADMIN", "SECRETARY", "DEPARTMENT_ACCOUNT"]);
   const r = await db.chapterReport.findUnique({
     where: { id: (await params).id },
     include: {

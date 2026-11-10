@@ -14,7 +14,7 @@ const STATUS: Record<string, { label: string; tone: Tone }> = { PENDING: { label
 
 /** Các đăng ký tình nguyện: bí thư xem của Chi đoàn mình (chờ duyệt, đã duyệt, bị từ chối); Admin xem của mọi Chi đoàn và duyệt ngay tại đây hoặc ở Hàng chờ duyệt. */
 export default async function VolunteerPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
-  const user = await requireRole(["ADMIN", "SECRETARY"]);
+  const user = await requireRole(["ADMIN", "SECRETARY", "DEPARTMENT_ACCOUNT"]);
   const admin = user.role === "ADMIN";
   const page = pageParam((await searchParams).page);
   const where = admin ? {} : { departmentId: user.departmentId ?? "__none__" };

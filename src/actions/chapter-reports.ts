@@ -65,11 +65,11 @@ export async function deletePeriodAction(id: string) {
 
 export async function saveReportAction(id: string | null, input: unknown) {
   return run<{ id: string }>(async () => {
-    const user = await requireRole(["ADMIN", "SECRETARY"]);
+    const user = await requireRole(["ADMIN", "SECRETARY", "DEPARTMENT_ACCOUNT"]);
     const d = reportSchema.parse(input);
     d.content = cleanContent(d.content);
-    // Bí thư luôn đăng cho Chi đoàn của mình, bất kể client gửi gì.
-    const departmentId = user.role === "SECRETARY" ? user.departmentId : d.departmentId;
+    // Bí thư / tài khoản Chi đoàn luôn đăng cho Chi đoàn của mình, bất kể client gửi gì.
+    const departmentId = user.role !== "ADMIN" ? user.departmentId : d.departmentId;
     if (!departmentId) throw user.role === "ADMIN" ? new UserError("Chọn Chi đoàn") : new ForbiddenError();
     if (!(await db.department.findUnique({ where: { id: departmentId } }))) throw new UserError("Chi đoàn không tồn tại");
     const memberCount = await db.member.count({ where: { departmentId, status: "ACTIVE" } });
@@ -137,7 +137,7 @@ export async function saveReportAction(id: string | null, input: unknown) {
 
 export async function deleteReportAction(id: string) {
   return run(async () => {
-    const user = await requireRole(["ADMIN", "SECRETARY"]);
+    const user = await requireRole(["ADMIN", "SECRETARY", "DEPARTMENT_ACCOUNT"]);
     const cur = await db.chapterReport.findUnique({ where: { id } });
     if (!cur) throw new UserError("Không tìm thấy báo cáo");
     assertManageDepartment(user, cur.departmentId);

@@ -8,9 +8,9 @@ import { toLocalInput } from "@/utils";
 export const metadata = { title: "Sửa đăng ký tình nguyện" };
 
 export default async function EditVolunteerPage({ params }: { params: Promise<{ id: string }> }) {
-  const user = await requireRole(["ADMIN", "SECRETARY"]);
+  const user = await requireRole(["ADMIN", "SECRETARY", "DEPARTMENT_ACCOUNT"]);
   const req = await db.volunteerRequest.findUnique({ where: { id: (await params).id }, include: { department: { select: { name: true } } } });
-  if (!req || (user.role === "SECRETARY" && req.departmentId !== user.departmentId)) notFound();
+  if (!req || (user.role !== "ADMIN" && req.departmentId !== user.departmentId)) notFound();
   if (req.status !== "PENDING" && req.status !== "APPROVED") redirect("/volunteer");
   const s = toLocalInput(req.startAt), e = toLocalInput(req.endAt);
   return (

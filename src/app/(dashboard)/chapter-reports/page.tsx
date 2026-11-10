@@ -18,7 +18,7 @@ export default async function ChapterReportsPage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
-  const user = await requireRole(["ADMIN", "SECRETARY"]);
+  const user = await requireRole(["ADMIN", "SECRETARY", "DEPARTMENT_ACCOUNT"]);
   const page = pageParam((await searchParams).page);
 
   // Lấy danh sách các đợt báo cáo và năm học
@@ -35,7 +35,7 @@ export default async function ChapterReportsPage({
 
   const schoolYears = schoolYearRows.map((s) => `${s.startYear}-${s.startYear + 1}`);
 
-  if (user.role === "SECRETARY") {
+  if (user.role !== "ADMIN") {
     const deptId = user.departmentId ?? "__none__";
 
     // Lấy danh sách báo cáo mà Chi đoàn này đã nộp cho các đợt

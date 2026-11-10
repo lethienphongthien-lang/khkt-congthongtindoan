@@ -15,7 +15,7 @@ const hm = (d: Date) => new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minu
 /** Lịch tình nguyện do các Chi đoàn tự đăng ký (bí thư đăng ký cho cả Chi đoàn, ví dụ "quét sân"). Người xem thấy ngày nào lớp nào làm việc gì; bí thư có nút đăng ký. */
 export default async function VolunteerPage() {
   const [user, items] = await Promise.all([getCurrentUser(), volunteerSchedule()]);
-  const canRegister = user?.role === "SECRETARY" || user?.role === "ADMIN";
+  const canRegister = user?.role === "SECRETARY" || user?.role === "DEPARTMENT_ACCOUNT" || user?.role === "ADMIN";
   const today = dayKey(new Date());
   const groups = new Map<string, typeof items>();
   for (const a of items) { const k = dayKey(a.startAt); groups.set(k, [...(groups.get(k) ?? []), a]); }
@@ -45,7 +45,7 @@ export default async function VolunteerPage() {
   return (
     <>
       <PageTitle title="Ngày tình nguyện tại chỗ" description="Các lớp tự đăng ký tình nguyện (quét sân, vệ sinh khu vực…). Khi bí thư xác nhận hoàn thành, điểm được tự động cộng cho cả lớp."
-        actions={canRegister ? <Link href="/volunteer/new" className={buttonClass()}>{user?.role === "SECRETARY" ? "Đăng ký cho Chi đoàn" : "Đăng ký tình nguyện"}</Link> : undefined} />
+        actions={canRegister ? <Link href="/volunteer/new" className={buttonClass()}>{user?.role === "SECRETARY" || user?.role === "DEPARTMENT_ACCOUNT" ? "Đăng ký cho Chi đoàn" : "Đăng ký tình nguyện"}</Link> : undefined} />
       {!user && <p className="mb-4 rounded bg-primary-light px-3 py-2 text-sm text-primary-dark">Bí thư Chi đoàn <Link href="/login?next=/tinh-nguyen" className="font-semibold underline">đăng nhập</Link> để đăng ký tình nguyện cho cả lớp.</p>}
       {days.length === 0 ? <div className="rounded border border-border bg-white/85"><EmptyPublic text="Chưa có lớp nào đăng ký tình nguyện. Bí thư Chi đoàn có thể đăng ký ngay sau khi đăng nhập." /></div> : (
         <div className="space-y-5">

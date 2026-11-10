@@ -7,7 +7,7 @@ import { FilterBar } from "@/components/ui/filter-bar";
 import { AUDIT_GROUPS, TARGET_LABELS, actionLabel, actionTone, metaSummary } from "@/lib/audit-labels";
 
 const PAGE_SIZE = 20;
-const ROLE: Record<string, string> = { ADMIN: "Quản trị", SECRETARY: "Bí thư", MEMBER: "Đoàn viên" };
+const ROLE: Record<string, string> = { ADMIN: "Quản trị", SECRETARY: "Bí thư", MONITOR: "Cờ đỏ", MEMBER: "Đoàn viên", DEPARTMENT_ACCOUNT: "Tài khoản Chi đoàn" };
 const RANGES = [{ value: "today", label: "Hôm nay" }, { value: "7", label: "7 ngày qua" }, { value: "30", label: "30 ngày qua" }];
 
 const ago = (d: Date) => {

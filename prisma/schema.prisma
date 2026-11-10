@@ -12,7 +12,9 @@ datasource db {
 enum Role {
   ADMIN
   SECRETARY
+  MONITOR // Cờ đỏ: đoàn viên được gán thêm vai trò theo dõi nề nếp, báo cáo vi phạm của Chi đoàn
   MEMBER
+  DEPARTMENT_ACCOUNT // Tài khoản chung của một Chi đoàn (Admin cấp đầu năm học, không gắn hồ sơ đoàn viên)
 }
 
 enum AccountStatus {
@@ -80,6 +82,7 @@ enum NotificationType {
   POLL
   SYSTEM
   CERTIFICATE
+  VIOLATION
 }
 
 model User {
@@ -98,25 +101,28 @@ model User {
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
-  member            Member?
-  secretaryOf       Department?
-  notifications     Notification[]
-  auditLogs         AuditLog[]
-  createdActivities Activity[]         @relation("ActivityCreator")
-  pointTransactions PointTransaction[] @relation("PointCreator")
-  manualCheckins    Attendance[]       @relation("CheckedInBy")
-  posts             Post[]
-  postLikes         PostLike[]
-  postComments      PostComment[]
-  emulationRecords  EmulationRecord[]
-  pushSubscriptions PushSubscription[]
-  passkeys          Passkey[]
-  teamMessages      TeamMessage[]
-  teamChatRead      TeamChatRead?
-  articles          Article[]
-  quizzes           Quiz[]
-  chapterReports    ChapterReport[]
-  reportPeriods     ReportPeriod[]
+  member             Member?
+  secretaryOf        Department?
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+  createdActivities  Activity[]         @relation("ActivityCreator")
+  pointTransactions  PointTransaction[] @relation("PointCreator")
+  manualCheckins     Attendance[]       @relation("CheckedInBy")
+  posts              Post[]
+  postLikes          PostLike[]
+  postComments       PostComment[]
+  emulationRecords   EmulationRecord[]
+  pushSubscriptions  PushSubscription[]
+  passkeys           Passkey[]
+  teamMessages       TeamMessage[]
+  teamChatRead       TeamChatRead?
+  articles           Article[]
+  quizzes            Quiz[]
+  chapterReports     ChapterReport[]
+  reportPeriods      ReportPeriod[]
+  monitorOf          DepartmentMonitor?
+  recordedViolations Violation[]        @relation("ViolationRecorder")
+  managesDepartment  Department?        @relation("DepartmentAccount")
 
   @@index([role, status])
 }
@@ -129,10 +135,12 @@ model Department {
   graduatedAt DateTime? // đã ra trường (tài khoản bị khóa, không còn trong thi đua)
   isTeacher   Boolean   @default(false) // Chi đoàn giáo viên: không có khối/khóa, không lên lớp, không tính vào thống kê và thi đua của học sinh
   secretaryId String?   @unique
+  accountId   String?   @unique // tài khoản chung của Chi đoàn (role DEPARTMENT_ACCOUNT), Admin cấp đầu năm học
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  secretary         User?              @relation(fields: [secretaryId], references: [id], onDelete: SetNull)
+  secretary         User?               @relation(fields: [secretaryId], references: [id], onDelete: SetNull)
+  account           User?               @relation("DepartmentAccount", fields: [accountId], references: [id], onDelete: SetNull)
   classes           Class[]
   members           Member[]
   activities        Activity[]
@@ -141,6 +149,8 @@ model Department {
   emulationRecords  EmulationRecord[]
   chapterReports    ChapterReport[]
   articles          Article[]
+  monitors          DepartmentMonitor[]
+  violations        Violation[]
 
   @@unique([name, startYear])
   @@index([graduatedAt])
@@ -192,11 +202,49 @@ model Member {
   dailyCheckins DailyCheckin[]
   certificates  Certificate[]
   detail        MemberDetail?
+  violations    Violation[]
 
   @@index([departmentId, status])
   @@index([classId])
   @@index([cohort])
   @@index([fullName])
+}
+
+/**
+ * Cờ đỏ: một đoàn viên được gán thêm vai trò theo dõi nề nếp cho Chi đoàn của mình. Một Chi đoàn có thể có nhiều cờ đỏ.
+ */
+model DepartmentMonitor {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  departmentId String
+  createdAt    DateTime @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@index([departmentId])
+}
+
+/**
+ * Vi phạm do cờ đỏ ghi nhận cho một đoàn viên của Chi đoàn mình.
+ */
+model Violation {
+  id           String   @id @default(cuid())
+  departmentId String
+  memberId     String
+  type         String // loại vi phạm (vd: đồng phục, tác phong, vệ sinh, giờ giấc...)
+  content      String // nội dung chi tiết
+  recordedAt   DateTime @default(now())
+  recordedById String
+  createdAt    DateTime @default(now())
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  member     Member     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  recordedBy User       @relation("ViolationRecorder", fields: [recordedById], references: [id], onDelete: Restrict)
+
+  @@index([departmentId, recordedAt])
+  @@index([memberId])
+  @@index([recordedAt])
 }
 
 model ActivityCategory {
@@ -536,26 +584,26 @@ model ReportPeriod {
 
 /// Báo cáo của từng Chi đoàn (bí thư đăng, hiển thị công khai theo Khối/Lớp).
 model ChapterReport {
-  id            String   @id @default(cuid())
-  viewCount     Int      @default(0) // số lượt xem trang công khai
-  departmentId  String
-  periodId      String?
-  title         String
-  content       String
-  imageUrl      String?
-  imagePublicId String?
+  id               String   @id @default(cuid())
+  viewCount        Int      @default(0) // số lượt xem trang công khai
+  departmentId     String
+  periodId         String?
+  title            String
+  content          String
+  imageUrl         String?
+  imagePublicId    String?
   participantCount Int? // số đoàn viên tham gia hoạt động nêu trong báo cáo (trống ở báo cáo cũ)
-  createdById   String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdById      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   department Department    @relation(fields: [departmentId], references: [id], onDelete: Cascade)
   period     ReportPeriod? @relation(fields: [periodId], references: [id], onDelete: SetNull)
   createdBy  User?         @relation(fields: [createdById], references: [id], onDelete: SetNull)
 
+  @@unique([departmentId, periodId])
   @@index([departmentId, createdAt])
   @@index([periodId])
-  @@unique([departmentId, periodId])
 }
 
 /// Thông tin chung của website công khai (tiêu đề banner, địa chỉ, liên hệ...). Dạng key/value.
