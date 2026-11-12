@@ -78,7 +78,7 @@ export async function setSchedulePublishedAction(input: { startYear: number; wee
     if (!s || s._count.items === 0) throw new UserError("Tuần này chưa có công việc nào để công bố");
     await db.weeklySchedule.update({ where: { id: s.id }, data: { published: input.published, publishedAt: input.published ? s.publishedAt ?? new Date() : s.publishedAt } });
     if (input.published && input.notify) {
-      const users = await db.user.findMany({ where: { status: "ACTIVE", id: { not: admin.id } }, select: { id: true } });
+      const users = await db.user.findMany({ where: { status: "ACTIVE", role: { not: "EXTERNAL" }, id: { not: admin.id } }, select: { id: true } });
       await notifyUsers(users.map((u) => u.id), { type: "SYSTEM", title: `Lịch công tác ${weekLabel(cal, input.week)}`, body: `Năm học ${yearLabel(input.startYear)}`, link: `/lich-cong-tac?nh=${input.startYear}&tuan=${input.week}` });
     }
     await audit(admin.id, input.published ? "schedule.publish" : "schedule.unpublish", "WeeklySchedule", s.id, { week: input.week });

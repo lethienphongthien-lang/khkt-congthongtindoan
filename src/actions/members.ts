@@ -138,7 +138,13 @@ export async function deleteMemberAction(id: string) {
     const admin = await requireRole(["ADMIN"]);
     const m = await db.member.findUnique({ where: { id } });
     if (!m) throw new UserError("Không tìm thấy đoàn viên");
-    await db.user.delete({ where: { id: m.userId } }); // cascade -> Member, Attendance, Points...
+    try {
+      await db.user.delete({ where: { id: m.userId } }); // cascade -> Member, Attendance, Points...
+    } catch (e) {
+      // P2003: còn dữ liệu của hệ thống khác (EduConnect: điểm, đăng ký thi...) tham chiếu tới tài khoản này.
+      if ((e as { code?: string }).code === "P2003") throw new UserError("Không xóa được: tài khoản còn dữ liệu học tập ở EduConnect. Hãy khóa tài khoản hoặc xử lý bên EduConnect trước.");
+      throw e;
+    }
     await deleteImage(m.avatarPublicId);
     await audit(admin.id, "member.delete", "Member", id, { code: m.code, fullName: m.fullName });
     revalidatePath("/members");

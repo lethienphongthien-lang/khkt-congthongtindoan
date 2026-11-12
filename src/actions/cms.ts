@@ -76,7 +76,7 @@ export async function saveArticleAction(id: string | null, input: unknown) {
     const a = await db.article.create({ data: { ...base, slug: uniqueSlug(d.title), publishedAt: d.publishedAt ?? (d.published ? new Date() : null), authorId: admin.id, attachments: { create: d.attachments } } });
     const live = !a.publishedAt || a.publishedAt <= new Date(); // bài hẹn giờ chưa tới lúc thì chưa gửi thông báo, chưa báo công cụ tìm kiếm
     if (d.published && live && d.kind === "ANNOUNCEMENT") {
-      const users = await db.user.findMany({ where: { status: "ACTIVE", id: { not: admin.id } }, select: { id: true } });
+      const users = await db.user.findMany({ where: { status: "ACTIVE", role: { not: "EXTERNAL" }, id: { not: admin.id } }, select: { id: true } });
       await notifyUsers(users.map((u) => u.id), { type: "SYSTEM", title: "Thông báo mới từ Đoàn trường", body: d.title, link: `/bai-viet/${a.slug}` });
     }
     await audit(admin.id, "article.create", "Article", a.id, { title: d.title, kind: d.kind });
