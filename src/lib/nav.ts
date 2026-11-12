@@ -107,6 +107,7 @@ const PRIMARY_MOBILE: Record<Role, string[]> = {
   MEMBER: ["/dashboard", "/games", "/emulation", "/profile"],
   MONITOR: ["/dashboard", "/violations", "/emulation", "/profile"],
   DEPARTMENT_ACCOUNT: ["/dashboard", "/members", "/emulation", "/chapter-reports"],
+  EXTERNAL: [],
 };
 
 export function mobileNav(role: Role): { main: NavItem[]; more: NavItem[] } {
@@ -129,7 +130,7 @@ export function mobileNav(role: Role): { main: NavItem[]; more: NavItem[] } {
   return { main, more };
 }
 
-export const ROLE_LABEL: Record<Role, string> = { ADMIN: "Ban chấp hành Đoàn trường", SECRETARY: "Bí thư Chi đoàn", MONITOR: "Cờ đỏ", MEMBER: "Đoàn viên", DEPARTMENT_ACCOUNT: "Tài khoản Chi đoàn" };
+export const ROLE_LABEL: Record<Role, string> = { ADMIN: "Ban chấp hành Đoàn trường", SECRETARY: "Bí thư Chi đoàn", MONITOR: "Cờ đỏ", MEMBER: "Đoàn viên", DEPARTMENT_ACCOUNT: "Tài khoản Chi đoàn", EXTERNAL: "Tài khoản hệ thống khác" };
 
 export const PAGE_TITLES: Record<string, string> = {
   dashboard: "Tổng quan", members: "Đoàn viên & thanh niên", departments: "Chi đoàn", activities: "Hoạt động", attendance: "Điểm danh",

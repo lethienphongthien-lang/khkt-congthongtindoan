@@ -15,6 +15,7 @@ enum Role {
   MONITOR // Cờ đỏ: đoàn viên được gán thêm vai trò theo dõi nề nếp, báo cáo vi phạm của Chi đoàn
   MEMBER
   DEPARTMENT_ACCOUNT // Tài khoản chung của một Chi đoàn (Admin cấp đầu năm học, không gắn hồ sơ đoàn viên)
+  EXTERNAL // Tài khoản dùng chung với hệ thống khác (EduConnect) nhưng KHÔNG có quyền vào Cổng thông tin Đoàn: không đăng nhập được, không nhận thông báo
 }
 
 enum AccountStatus {
