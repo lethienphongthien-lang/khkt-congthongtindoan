@@ -84,7 +84,7 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
       managesDepartment: { select: { id: true, name: true } },
     },
   });
-  if (!user || user.status !== "ACTIVE") return null;
+  if (!user || user.status !== "ACTIVE" || user.role === "EXTERNAL") return null;
   const dept = user.secretaryOf ?? user.monitorOf?.department ?? user.managesDepartment ?? null;
   return {
     id: user.id,
