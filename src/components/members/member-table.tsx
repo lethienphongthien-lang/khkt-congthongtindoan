@@ -37,7 +37,7 @@ export type MemberRow = {
 };
 
 /** Bảng đoàn viên/thanh niên có ô chọn nhiều người; Admin có thể kết nạp hoặc xóa hàng loạt. */
-export function MemberTable({ rows, canManage, showDepartment, showPoints, allItems }: { rows: MemberRow[]; canManage?: boolean; showDepartment?: boolean; showPoints?: boolean; /** Mọi người khớp bộ lọc (mọi trang), để chọn tất cả nhiều trang cùng lúc. */ allItems?: { id: string; isDoanVien: boolean }[] }) {
+export function MemberTable({ rows, canManage, canDelete = true, showDepartment, showPoints, allItems }: { rows: MemberRow[]; canManage?: boolean; /** false khi hồ sơ học sinh do EduConnect quản lý. */ canDelete?: boolean; showDepartment?: boolean; showPoints?: boolean; /** Mọi người khớp bộ lọc (mọi trang), để chọn tất cả nhiều trang cùng lúc. */ allItems?: { id: string; isDoanVien: boolean }[] }) {
   const router = useRouter();
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [admit, setAdmit] = useState(false);
@@ -81,7 +81,7 @@ export function MemberTable({ rows, canManage, showDepartment, showPoints, allIt
               <span className="font-semibold text-primary-dark">Đã chọn {sel.size} người{youth.length > 0 && <span className="font-normal text-slate-600"> · {youth.length} thanh niên</span>}{everyOn && <span className="font-normal text-slate-600"> (toàn bộ danh sách)</span>}</span>
               <span className="ml-auto flex flex-wrap items-center gap-2">
                 <Button size="sm" disabled={youth.length === 0} title={youth.length === 0 ? "Chỉ kết nạp được thanh niên (chưa vào Đoàn)" : undefined} onClick={() => setAdmit(true)}><UserCheck className="size-3.5" />Kết nạp vào Đoàn{youth.length > 0 && ` (${youth.length})`}</Button>
-                <Button size="sm" variant="danger" onClick={() => setDel(true)}><Trash2 className="size-3.5" />Xóa ({sel.size})</Button>
+                {canDelete && <Button size="sm" variant="danger" onClick={() => setDel(true)}><Trash2 className="size-3.5" />Xóa ({sel.size})</Button>}
                 <Button size="sm" variant="ghost" onClick={() => setSel(new Set())}><X className="size-3.5" />Bỏ chọn</Button>
               </span>
             </div>

@@ -21,7 +21,7 @@ import { Alert } from "@/components/ui/misc";
 type In = z.input<typeof memberSchema>;
 type Initial = Partial<Record<keyof In, string | number | boolean>> & { avatar?: UploadedImage };
 
-export function MemberForm({ id, departments, initial, detail }: { id?: string; departments: { id: string; name: string }[]; initial?: Initial; /** Hồ sơ chi tiết (Sổ đoàn viên điện tử) đã có của đoàn viên khi sửa. */ detail?: DetailValues }) {
+export function MemberForm({ id, departments, initial, detail, lock }: { id?: string; /** Nhóm dữ liệu dùng chung đang do EduConnect quản lý (chỉ xem). */ lock?: { profile?: boolean; placement?: boolean }; departments: { id: string; name: string }[]; initial?: Initial; /** Hồ sơ chi tiết (Sổ đoàn viên điện tử) đã có của đoàn viên khi sửa. */ detail?: DetailValues }) {
   const router = useRouter();
   const [avatar, setAvatar] = useState<UploadedImage>(initial?.avatar ?? null);
   const [d, setD] = useState<DetailValues>(() => detail ?? Object.fromEntries(ALL_DETAIL_FIELDS.map((f) => [f.key, f.type === "bool" ? false : ""])));
@@ -60,6 +60,7 @@ export function MemberForm({ id, departments, initial, detail }: { id?: string; 
   return (
     <>
       <form id="member-form" onSubmit={onSubmit} className="w-full space-y-5" noValidate>
+        {(lock?.profile || lock?.placement) && <Alert tone="amber">Do EduConnect quản lý: {[lock?.profile && "họ tên, ngày sinh, giới tính", lock?.placement && "chi đoàn"].filter(Boolean).join(", ")} (chỉ xem). Các thông tin riêng của Đoàn vẫn sửa được.</Alert>}
         <div className="flex flex-col gap-5 sm:flex-row">
           <Field label="Ảnh đại diện" group className="shrink-0"><ImageUpload folder="members" shape="square" value={avatar} onChange={setAvatar} /></Field>
           <div className="min-w-0 flex-1 space-y-3">
@@ -71,13 +72,13 @@ export function MemberForm({ id, departments, initial, detail }: { id?: string; 
               </div>
             </Field>
             <div className="grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-4">
-              <Field label="Họ và tên" required error={errors.fullName?.message} className="col-span-2"><Input maxLength={100} autoComplete="name" {...register("fullName", { onChange: (e) => { e.target.value = nameOnly(e.target.value); } })} /></Field>
-              <Field label="Ngày sinh" error={errors.dateOfBirth?.message}><Input type="date" min={MIN_BIRTH} max={todayVN()} {...register("dateOfBirth")} /></Field>
+              <Field label="Họ và tên" required error={errors.fullName?.message} className="col-span-2"><Input maxLength={100} autoComplete="name" readOnly={lock?.profile} {...register("fullName", { onChange: (e) => { e.target.value = nameOnly(e.target.value); } })} /></Field>
+              <Field label="Ngày sinh" error={errors.dateOfBirth?.message}><Input type="date" min={MIN_BIRTH} max={todayVN()} readOnly={lock?.profile} className={lock?.profile ? "pointer-events-none opacity-60" : undefined} {...register("dateOfBirth")} /></Field>
               <Field label="Giới tính">
-                <Select {...register("gender")}><option value="">—</option><option>Nam</option><option>Nữ</option><option>Khác</option></Select>
+                <Select {...register("gender")} tabIndex={lock?.profile ? -1 : undefined} className={lock?.profile ? "pointer-events-none opacity-60" : undefined}><option value="">—</option><option>Nam</option><option>Nữ</option><option>Khác</option></Select>
               </Field>
               <Field label="Chi đoàn" required error={errors.departmentId?.message}>
-                <Select {...register("departmentId")}><option value="">Chọn Chi đoàn</option>{departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</Select>
+                <Select {...register("departmentId")} tabIndex={lock?.placement ? -1 : undefined} className={lock?.placement ? "pointer-events-none opacity-60" : undefined}><option value="">Chọn Chi đoàn</option>{departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</Select>
               </Field>
               <Field label="Khóa (năm nhập học)" error={errors.cohort?.message}><Input type="number" inputMode="numeric" min={2000} max={2100} {...register("cohort")} /></Field>
               {doanVien && <Field label="Ngày vào Đoàn" error={errors.joinedAt?.message}><Input type="date" min="1990-01-01" max={todayVN()} {...register("joinedAt")} /></Field>}

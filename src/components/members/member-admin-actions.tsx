@@ -13,7 +13,7 @@ import { Alert } from "@/components/ui/misc";
 import { reportResult } from "@/components/ui/submit";
 import { downloadAccounts } from "@/components/members/credentials";
 
-export function MemberAdminActions({ id, locked, isAdmin, code, fullName, doanVien = true }: { id: string; locked: boolean; isAdmin: boolean; code: string; fullName: string; doanVien?: boolean }) {
+export function MemberAdminActions({ id, locked, isAdmin, code, fullName, doanVien = true, canDelete = true }: { id: string; canDelete?: boolean; locked: boolean; isAdmin: boolean; code: string; fullName: string; doanVien?: boolean }) {
   const router = useRouter();
   const [pw, setPw] = useState<string | null>(null);
   const [adjust, setAdjust] = useState(false);
@@ -38,9 +38,9 @@ export function MemberAdminActions({ id, locked, isAdmin, code, fullName, doanVi
             description={locked ? "Đoàn viên có thể đăng nhập trở lại." : "Đoàn viên sẽ không thể đăng nhập cho đến khi được kích hoạt lại."}
             danger={!locked} confirmLabel={locked ? "Kích hoạt" : "Khóa"}
             onConfirm={async () => { reportResult(await setMemberAccountStatusAction(id, locked ? "ACTIVE" : "LOCKED")); router.refresh(); }} />
-          <ConfirmButton triggerLabel="Xóa đoàn viên" trigger={<><Trash2 className="size-3.5" /><span className="max-sm:hidden">Xóa</span></>} triggerClassName="text-danger" title="Xóa đoàn viên?" danger confirmLabel="Xóa vĩnh viễn"
+          {canDelete && <ConfirmButton triggerLabel="Xóa đoàn viên" trigger={<><Trash2 className="size-3.5" /><span className="max-sm:hidden">Xóa</span></>} triggerClassName="text-danger" title="Xóa đoàn viên?" danger confirmLabel="Xóa vĩnh viễn"
             description="Toàn bộ hồ sơ, tài khoản, lịch sử điểm danh và điểm của đoàn viên này sẽ bị xóa và không thể khôi phục."
-            onConfirm={async () => { if (reportResult(await deleteMemberAction(id))) { router.push("/members"); router.refresh(); } }} />
+            onConfirm={async () => { if (reportResult(await deleteMemberAction(id))) { router.push("/members"); router.refresh(); } }} />}
         </>
       )}
 

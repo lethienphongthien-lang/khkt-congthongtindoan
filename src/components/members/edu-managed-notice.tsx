@@ -1,5 +1,5 @@
 import { Alert } from "@/components/ui/misc";
-import { eduLockedLabels, type EduPolicy } from "@/lib/services/edu-policy";
+import { eduLockedLabels, type EduPolicy } from "@/lib/edu-policy-types";
 
 /** Báo cho admin Đoàn biết nhóm dữ liệu nào đang do EduConnect quản lý (chỉ xem). */
 export function EduManagedNotice({ policy }: { policy: EduPolicy }) {

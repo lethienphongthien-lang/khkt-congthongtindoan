@@ -1,3 +1,4 @@
+import { getEduPolicy } from "@/lib/services/edu-policy";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth/session";
@@ -19,10 +20,11 @@ export default async function EditMemberPage({ params }: { params: Promise<{ id:
   const rec = (m.detail ?? {}) as Record<string, unknown>;
   const detail: Record<string, string | boolean> = {};
   for (const f of ALL_DETAIL_FIELDS) { const v = rec[f.key]; detail[f.key] = f.type === "bool" ? !!v : v instanceof Date ? toDateInput(v) : (v as string | null | undefined) ?? ""; }
+  const policy = await getEduPolicy();
   return (
     <>
       <PageHeader title={`Sửa: ${m.fullName}`} description={`${m.isDoanVien ? "Mã đoàn viên" : "Mã thành viên"} ${m.code}`} />
-      <MemberForm id={id} departments={departments} detail={detail} initial={{
+      <MemberForm id={id} departments={departments} detail={detail} lock={{ profile: !policy.profiles, placement: !policy.placement }} initial={{
         fullName: m.fullName, gender: m.gender ?? "", dateOfBirth: toDateInput(m.dateOfBirth), joinedAt: toDateInput(m.joinedAt),
         cohort: m.cohort ?? "", isDoanVien: m.isDoanVien, departmentId: m.departmentId, status: m.status,
         avatar: m.avatarUrl && m.avatarPublicId ? { imageUrl: m.avatarUrl, publicId: m.avatarPublicId } : null,
