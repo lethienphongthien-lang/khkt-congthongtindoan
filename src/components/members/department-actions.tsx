@@ -219,7 +219,7 @@ export function SyncSchoolYearButton() {
   const router = useRouter();
   return (
     <ConfirmButton triggerVariant="secondary" trigger={<><CalendarSync className="size-4" /><span className="max-sm:hidden">Cập nhật năm học</span></>} triggerLabel="Cập nhật năm học"
-      title="Cập nhật năm học?" description="Đổi tên khối theo năm học (10A1 → 11A1 → 12A1). Chi đoàn đã quá lớp 12 sẽ chuyển sang ra trường và khóa tài khoản đoàn viên, bí thư (dữ liệu được giữ). Hệ thống cũng tự làm việc này mỗi ngày."
+      title="Cập nhật năm học?" description="Đổi tên khối theo năm học (10A1 → 11A1 → 12A1). Chi đoàn đã quá lớp 12 sẽ chuyển sang ra trường và khóa tài khoản đoàn viên, bí thư (dữ liệu được giữ). Hệ thống không tự chạy việc này: cần bấm nút này sau khi EduConnect đã tạo lớp và chạy lên lớp cho năm học mới. Có thể bấm lại nhiều lần, không gây hại."
       confirmLabel="Cập nhật" onConfirm={async () => { reportResult(await syncSchoolYearAction()); router.refresh(); }} />
   );
 }

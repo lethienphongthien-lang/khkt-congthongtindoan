@@ -190,12 +190,13 @@ export async function resetDepartmentAccountPasswordAction(departmentId: string)
   });
 }
 
-/** Chuyển năm học thủ công (cron cũng tự chạy mỗi ngày): đổi tên khối, cho khóa lớp 12 ra trường. */
+/** Chuyển năm học: chỉ chạy khi admin bấm (không có cron). Theo EduConnect nếu đã có lớp năm mới, nếu không thì đổi tên khối và cho khóa lớp 12 ra trường. */
 export async function syncSchoolYearAction() {
   return run(async () => {
     const admin = await requireRole(["ADMIN"]);
     const r = await syncSchoolYear(admin.id);
     invalidatePublic();
+    if (r.source === "educonnect") return { message: r.linked || r.movedToDoan || r.retired || r.graduated ? `Năm học ${r.schoolYear}–${r.schoolYear + 1} theo EduConnect: ${r.linked} chi đoàn mới, chuyển ${r.movedToDoan} đoàn viên, đóng ${r.retired} chi đoàn cũ, ${r.graduated} chi đoàn ra trường${r.unplaced ? `, ${r.unplaced} đoàn viên chưa được xếp lớp` : ""}` : `Năm học ${r.schoolYear}–${r.schoolYear + 1}: đã khớp với EduConnect, không có thay đổi` };
     return { message: r.renamed || r.graduated ? `Năm học ${r.schoolYear}–${r.schoolYear + 1}: đổi tên ${r.renamed} Chi đoàn, ${r.graduated} Chi đoàn ra trường` : `Năm học ${r.schoolYear}–${r.schoolYear + 1}: không có thay đổi` };
   });
 }

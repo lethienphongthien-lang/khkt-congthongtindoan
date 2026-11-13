@@ -321,7 +321,7 @@ Mỗi thành viên của Chi đoàn thuộc một trong hai loại: **đoàn vi�
 - **Tự đổi tên khối:** từ 01/09, Chi đoàn khóa lên lớp được đổi tên (10A1 → 11A1 → 12A1; 12/1 → 11/1...) kể cả tên lớp bên trong.
 - **Ra trường:** khóa quá lớp 12 chuyển sang trạng thái **"Đã ra trường"**: đoàn viên đổi trạng thái "Đã ra trường", **tài khoản đoàn viên và bí thư bị khóa**, bí thư được gỡ; **toàn bộ dữ liệu được giữ** để tra cứu. Chi đoàn đã ra trường không còn trong danh sách chọn, bảng thi đua, thanh bên công khai.
 - Chi đoàn có tên không bắt đầu bằng số khối thì không tự đổi khối.
-- Chạy **tự động mỗi ngày** (cron) và Admin có nút **"Cập nhật năm học"**. Chạy lặp lại không gây hại. Chưa có nút khôi phục Chi đoàn đã ra trường.
+- Chạy **bằng tay**: Admin bấm nút **"Cập nhật năm học"** (không còn cron). Khi đã liên kết EduConnect và EduConnect có lớp năm mới thì Cổng Đoàn đi theo EduConnect (lớp năm mới = chi đoàn mới, đoàn viên và ban cán sự chuyển theo xếp lớp); nếu không thì đổi tên khối theo khóa. Chạy lặp lại không gây hại. Chưa có nút khôi phục Chi đoàn đã ra trường.
 
 ---
 
@@ -596,14 +596,14 @@ Các bảng chính và trường quan trọng (mọi bảng đều có mã đị
 
 ## 15. Tác vụ tự động, dọn dữ liệu và dung lượng
 
-### 15.1 Ba tác vụ hằng ngày (Vercel Cron, bảo vệ bằng `CRON_SECRET`)
+### 15.1 Các tác vụ hằng ngày (Vercel Cron, bảo vệ bằng `CRON_SECRET`)
 | Tác vụ | Giờ chạy (giờ Việt Nam) | Việc làm |
 |---|---|---|
 | Nhắc lịch (`/api/cron/reminders`) | 07:00 | Gửi thông báo và đẩy cho người đã đăng ký hoạt động bắt đầu trong 24 giờ tới (mỗi hoạt động một lần) |
-| Chuyển năm học (`/api/cron/rollover`) | 07:10 | Bổ sung khóa cho Chi đoàn cũ; đổi tên khối theo năm học; cho khóa quá lớp 12 ra trường và khóa tài khoản |
+| Chuyển năm học (`/api/cron/rollover`) | _không có lịch_ | Chạy bằng tay qua nút "Cập nhật năm học"; không còn chạy theo lịch hằng ngày |
 | Dọn dữ liệu (`/api/cron/cleanup`) | 01:30 | Xóa thông báo cũ và nhật ký cũ (mục 15.2) |
 
-Cả ba chạy lặp lại không gây hại. Gói Vercel miễn phí chỉ cho cron chạy tối đa mỗi ngày một lần.
+Các tác vụ chạy lặp lại không gây hại. Gói Vercel miễn phí chỉ cho cron chạy tối đa mỗi ngày một lần.
 
 ### 15.2 Chính sách giữ dữ liệu
 | Loại | Thời gian giữ |
