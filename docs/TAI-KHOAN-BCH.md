@@ -21,3 +21,5 @@ Test đầu cần database public-only đã db:push/cài trigger, test sau cần
 Giao diện BCH dùng DataTable, trạng thái và nút biểu tượng giống các màn hình cài đặt khác. Bấm Thêm BCH/Sửa để mở hộp thoại; không hiển thị biểu mẫu thường trực. Trang Năm học và lịch tuần chỉ hiển thị năm đã cấu hình; lịch mặc định tự tính dành cho bộ lọc không được coi là năm đã tạo. Đặt lại mặc định cập nhật bản ghi hiện có để đồng bộ qua EduConnect và giữ liên kết.
 
 Sidebar có Tài khoản & Nhân sự (ba tab Tài khoản/Nhân sự & BCH/Bảo mật) và Cấu hình & Cài đặt (năm tab Năm học/Danh mục/Quy chế/Giao diện/Hệ thống). Không còn cột cài đặt bên trái. Cấp lại mật khẩu theo lớp đã chuyển sang tab Bảo mật. Các liên kết settings?tab=leaders/classpw/plancats/gamecap cũ được chuyển tới nơi mới. Tài khoản cá nhân, mật khẩu, passkey và thông báo nằm tại /settings/profile; quyền truy cập chức năng giữ nguyên.
+
+Mục Giao diện giữ một hàng tab cấu hình chính. Các trang Thông tin website, Menu, Dòng chữ chạy và Trang giới thiệu được chọn qua ô Mục giao diện, không dựng thêm hàng tab thứ hai. URL cũ không đổi.
