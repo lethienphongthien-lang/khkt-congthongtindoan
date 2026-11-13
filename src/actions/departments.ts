@@ -1,4 +1,5 @@
 "use server";
+import { assertEduWrite } from "@/lib/services/edu-policy";
 import { setDeputy } from "@/lib/services/class-deputies";
 import { assignClassOfficer } from "@/lib/services/class-officers";
 import { z } from "zod";
@@ -38,6 +39,7 @@ export async function saveDepartmentAction(id: string | null, input: unknown) {
     const current = id ? await db.department.findUnique({ where: { id }, select: { startYear: true, graduatedAt: true, isTeacher: true } }) : null;
     if (id && !current) throw new UserError("Không tìm thấy Chi đoàn");
     const isTeacher = current ? current.isTeacher : wantTeacher; // loại Chi đoàn chỉ chọn lúc tạo
+    if (!isTeacher) await assertEduWrite("classes"); // chi đoàn học sinh chính là lớp của EduConnect
     if (current?.graduatedAt) throw new UserError("Chi đoàn đã ra trường, không thể chỉnh sửa");
     // Khóa (năm vào lớp 10): nhập tay, hoặc giữ khóa cũ, hoặc suy ra từ tên khối (10A1 -> năm học hiện tại).
     const p = parseClassName(data.name);
@@ -81,6 +83,7 @@ export async function saveDepartmentAction(id: string | null, input: unknown) {
 export async function deleteDepartmentAction(id: string) {
   return run(async () => {
     const admin = await requireRole(["ADMIN"]);
+    if (!(await db.department.findUnique({ where: { id }, select: { isTeacher: true } }))?.isTeacher) await assertEduWrite("classes");
     const dept = await db.department.findUnique({ where: { id }, include: { _count: { select: { members: true } } } });
     if (!dept) throw new UserError("Không tìm thấy Chi đoàn");
     if (dept._count.members > 0) throw new UserError("Chi đoàn còn đoàn viên, hãy chuyển đoàn viên sang Chi đoàn khác trước khi xóa");
@@ -194,6 +197,7 @@ export async function resetDepartmentAccountPasswordAction(departmentId: string)
 export async function syncSchoolYearAction() {
   return run(async () => {
     const admin = await requireRole(["ADMIN"]);
+    await assertEduWrite("placement");
     const r = await syncSchoolYear(admin.id);
     invalidatePublic();
     if (r.source === "educonnect") return { message: r.linked || r.movedToDoan || r.retired || r.graduated ? `Năm học ${r.schoolYear}–${r.schoolYear + 1} theo EduConnect: ${r.linked} chi đoàn mới, chuyển ${r.movedToDoan} đoàn viên, đóng ${r.retired} chi đoàn cũ, ${r.graduated} chi đoàn ra trường${r.unplaced ? `, ${r.unplaced} đoàn viên chưa được xếp lớp` : ""}` : `Năm học ${r.schoolYear}–${r.schoolYear + 1}: đã khớp với EduConnect, không có thay đổi` };
@@ -204,6 +208,7 @@ export async function syncSchoolYearAction() {
 /** Thêm nhiều đoàn viên vào một Chi đoàn đang học bằng danh sách họ tên (mỗi dòng một người): tự tạo hồ sơ + tài khoản, trả mật khẩu tạm một lần. */
 export async function addMembersToDepartmentAction(departmentId: string, namesText: string, youthText = "") {
   return run<{ created: Credential[] }>(async () => {
+    await assertEduWrite("profiles", "placement");
     const admin = await requireRole(["ADMIN"]);
     const dept = await db.department.findUnique({ where: { id: departmentId } });
     if (!dept || dept.graduatedAt) throw new UserError("Không tìm thấy Chi đoàn đang học");

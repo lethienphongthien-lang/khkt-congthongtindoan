@@ -1,3 +1,5 @@
+import { getEduPolicy } from "@/lib/services/edu-policy";
+import { EduManagedNotice } from "@/components/members/edu-managed-notice";
 import { deputiesAvailable, listDeputies } from "@/lib/services/class-deputies";
 import { ActionsMenu } from "@/components/ui/actions-menu";
 import { DepartmentPersonnel } from "@/components/members/department-personnel";
@@ -63,12 +65,13 @@ export default async function DepartmentDetailPage({ params, searchParams }: { p
   const presidentCandidates = await db.member.findMany({ where: { departmentId: id, status: "ACTIVE", user: { status: "ACTIVE" } }, select: { id: true, fullName: true }, orderBy: { fullName: "asc" } });
   const [deputies, deputiesEnabled] = tab === "personnel" ? await Promise.all([listDeputies(id), deputiesAvailable()]) : [[], false];
   const members = nameIds ? inOrder(membersRaw, nameIds) : membersRaw;
+  const policy = await getEduPolicy();
   const actionItems = <>
     <a href={`/api/members/export?dept=${dept.id}`} className={buttonClass("secondary")}><Download className="size-4" />Xuất<span className="max-sm:hidden"> Excel</span></a>
-    <AddMembersButton departmentId={dept.id} departmentName={dept.name} />
+    {policy.profiles && policy.placement && <AddMembersButton departmentId={dept.id} departmentName={dept.name} />}
     {user.role === "ADMIN" && <DepartmentAccountButton departmentId={dept.id} account={dept.account} />}
-    {user.role === "ADMIN" && <DepartmentFormButton dept={{ id: dept.id, name: dept.name, description: dept.description, startYear: dept.startYear, isTeacher: dept.isTeacher }} />}
-    {user.role === "ADMIN" && <DeleteDepartmentButton id={dept.id} name={dept.name} />}
+    {user.role === "ADMIN" && (dept.isTeacher || policy.classes) && <DepartmentFormButton dept={{ id: dept.id, name: dept.name, description: dept.description, startYear: dept.startYear, isTeacher: dept.isTeacher }} />}
+    {user.role === "ADMIN" && (dept.isTeacher || policy.classes) && <DeleteDepartmentButton id={dept.id} name={dept.name} />}
   </>;
   return (
     <>
@@ -76,6 +79,7 @@ export default async function DepartmentDetailPage({ params, searchParams }: { p
         actions={dept.graduatedAt ? undefined : <>
           <ActionsMenu>{actionItems}</ActionsMenu>
         </>} />
+      {user.role === "ADMIN" && <EduManagedNotice policy={policy} />}
       {!dept.graduatedAt && <Tabs current={`?tab=${tab}`} items={[["?tab=overview", "Tổng quan"], ["?tab=personnel", "Nhân sự"]]} />}
       {tab === "personnel" && !dept.graduatedAt ? <DepartmentPersonnel departmentId={id} deputies={deputies} deputiesEnabled={deputiesEnabled} president={president ? { id: president.member?.id ?? null, name: president.fullName } : null}
         secretary={dept.secretary ? { id: dept.secretary.id, fullName: dept.secretary.fullName } : null} monitors={dept.monitors.map((m) => ({ userId: m.userId, fullName: m.user.fullName }))}

@@ -1,5 +1,6 @@
 "use server";
 
+import { assertEduWrite } from "@/lib/services/edu-policy";
 import { revalidatePath } from "next/cache";
 import { invalidatePublic } from "@/lib/public-cache";
 import ExcelJS from "exceljs";
@@ -41,6 +42,7 @@ async function saveDetail(memberId: string, data: z.infer<typeof memberDetailSch
 export async function createMemberAction(input: unknown) {
   return run<Credential>(async () => {
     const admin = await requireRole(["ADMIN"]);
+    await assertEduWrite("profiles", "placement");
     const data = memberSchema.parse(input);
     const detail = detailOf(input);
     if (!data.isDoanVien) data.joinedAt = undefined; // thanh niên chưa có ngày vào Đoàn
@@ -68,6 +70,10 @@ export async function updateMemberAction(id: string, input: unknown) {
     const detail = detailOf(input);
     const current = await db.member.findUnique({ where: { id } });
     if (!current) throw new UserError("Không tìm thấy đoàn viên");
+    // Họ tên, giới tính, ngày sinh là dữ liệu dùng chung; đổi chi đoàn là xếp lớp. Các trường riêng của Đoàn luôn được sửa.
+    const sameDob = (current.dateOfBirth?.getTime() ?? null) === (data.dateOfBirth?.getTime() ?? null);
+    if (data.fullName !== current.fullName || (data.gender ?? null) !== (current.gender ?? null) || !sameDob) await assertEduWrite("profiles");
+    if (data.departmentId !== current.departmentId) await assertEduWrite("placement");
     if (data.avatarPublicId && data.avatarPublicId !== current.avatarPublicId && !isOwnPublicId(data.avatarPublicId, "members")) {
       throw new UserError("Ảnh không hợp lệ");
     }
@@ -136,6 +142,7 @@ export async function resetDepartmentPasswordsAction(departmentId: string) {
 export async function deleteMemberAction(id: string) {
   return run(async () => {
     const admin = await requireRole(["ADMIN"]);
+    await assertEduWrite("profiles");
     const m = await db.member.findUnique({ where: { id } });
     if (!m) throw new UserError("Không tìm thấy đoàn viên");
     try {
@@ -213,6 +220,7 @@ export async function admitMembersAction(ids: unknown, joinedAt: string) {
 export async function deleteMembersAction(ids: unknown) {
   return run<{ deleted: number; failed: string[] }>(async () => {
     const admin = await requireRole(["ADMIN"]);
+    await assertEduWrite("profiles");
     const list = idsSchema.parse(ids);
     const members = await db.member.findMany({ where: { id: { in: list } }, select: { id: true, userId: true, code: true, fullName: true, avatarPublicId: true } });
     let deleted = 0; const failed: string[] = [];
@@ -302,6 +310,7 @@ function parseDate(v: ExcelJS.CellValue): Date | undefined {
 export async function importMembersAction(formData: FormData) {
   return run<ImportResult>(async () => {
     const admin = await requireRole(["ADMIN"]);
+    await assertEduWrite("profiles", "placement");
     const file = formData.get("file");
     if (!(file instanceof File) || file.size === 0) throw new UserError("Vui lòng chọn file Excel (.xlsx)");
     if (!file.name.toLowerCase().endsWith(".xlsx")) throw new UserError("Chỉ hỗ trợ file .xlsx");
