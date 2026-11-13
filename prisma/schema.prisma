@@ -186,6 +186,8 @@ model Member {
   isDoanVien       Boolean      @default(true) // true: đoàn viên; false: thanh niên (học sinh chưa vào Đoàn)
   cohort           Int? // Khóa (năm nhập học)
   status           MemberStatus @default(ACTIVE)
+  deletedAt        DateTime? // xóa mềm: học sinh bị xóa ở EduConnect (đoàn viên bị ẩn khỏi mọi danh sách và không đăng nhập được); khôi phục học sinh thì khôi phục đoàn viên
+  deletedFromStatus MemberStatus? // trạng thái trước khi xóa mềm, để khôi phục đúng
   classId          String
   departmentId     String
   avatarUrl        String?

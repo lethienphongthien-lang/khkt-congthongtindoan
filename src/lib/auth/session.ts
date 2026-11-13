@@ -78,13 +78,13 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
   const user = await db.user.findUnique({
     where: { id: userId },
     include: {
-      member: { select: { id: true, code: true, avatarUrl: true, isDoanVien: true, departmentId: true, department: { select: { name: true } } } },
+      member: { select: { id: true, code: true, avatarUrl: true, isDoanVien: true, deletedAt: true, departmentId: true, department: { select: { name: true } } } },
       secretaryOf: { select: { id: true, name: true } },
       monitorOf: { select: { department: { select: { id: true, name: true } } } },
       managesDepartment: { select: { id: true, name: true } },
     },
   });
-  if (!user || user.status !== "ACTIVE" || user.role === "EXTERNAL") return null;
+  if (!user || user.status !== "ACTIVE" || user.role === "EXTERNAL" || user.member?.deletedAt) return null; // đoàn viên bị xóa mềm không còn phiên đăng nhập
   const dept = user.secretaryOf ?? user.monitorOf?.department ?? user.managesDepartment ?? null;
   return {
     id: user.id,

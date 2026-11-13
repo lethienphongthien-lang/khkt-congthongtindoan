@@ -54,6 +54,7 @@ export async function loginAction(input: unknown) {
       throw new UserError("Tên đăng nhập hoặc mật khẩu không đúng");
     }
     if (user.status !== "ACTIVE") throw new UserError("Tài khoản đã bị khóa. Vui lòng liên hệ Ban chấp hành Đoàn trường");
+    if (await db.member.count({ where: { userId: user.id, deletedAt: { not: null } } })) throw new UserError("Tài khoản không còn tồn tại. Vui lòng liên hệ nhà trường");
     // Tài khoản dùng chung với EduConnect nhưng không thuộc Cổng thông tin Đoàn: mật khẩu đúng nhưng không được vào.
     if (user.role === "EXTERNAL") throw new UserError("Tài khoản này không có quyền truy cập Cổng thông tin Đoàn");
 

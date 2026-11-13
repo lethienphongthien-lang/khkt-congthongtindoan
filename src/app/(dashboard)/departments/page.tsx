@@ -29,7 +29,7 @@ export default async function DepartmentsPage({ searchParams }: { searchParams: 
   const [allDepts, memberRows] = await Promise.all([
     db.department.findMany({
       where, orderBy: { name: "asc" },
-      include: { secretary: { select: { id: true, fullName: true, username: true } }, _count: { select: { members: true } } },
+      include: { secretary: { select: { id: true, fullName: true, username: true } }, _count: { select: { members: { where: { deletedAt: null } } } } },
     }),
     isAdmin
       ? db.member.findMany({ where: { status: "ACTIVE", isDoanVien: true, department: { graduatedAt: null } }, orderBy: { fullName: "asc" }, select: { id: true, userId: true, fullName: true, code: true, departmentId: true } })

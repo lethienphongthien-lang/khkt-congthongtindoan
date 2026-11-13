@@ -86,7 +86,7 @@ export async function deleteDepartmentAction(id: string) {
   return run(async () => {
     const admin = await requireRole(["ADMIN"]);
     if (!(await db.department.findUnique({ where: { id }, select: { isTeacher: true } }))?.isTeacher) await assertEduWrite("classes");
-    const dept = await db.department.findUnique({ where: { id }, include: { _count: { select: { members: true } } } });
+    const dept = await db.department.findUnique({ where: { id }, include: { _count: { select: { members: { where: { deletedAt: null } } } } } });
     if (!dept) throw new UserError("Không tìm thấy Chi đoàn");
     if (dept._count.members > 0) throw new UserError("Chi đoàn còn đoàn viên, hãy chuyển đoàn viên sang Chi đoàn khác trước khi xóa");
     // Chi đoàn gắn liền với lớp: chi đoàn chỉ bị xóa (mềm) khi xóa lớp ở EduConnect.
