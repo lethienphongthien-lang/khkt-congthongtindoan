@@ -103,6 +103,7 @@ model User {
   updatedAt          DateTime      @updatedAt
 
   member             Member?
+  presidentOf        Department? @relation("DepartmentPresident")
   secretaryOf        Department?
   notifications      Notification[]
   auditLogs          AuditLog[]
@@ -135,6 +136,8 @@ model Department {
   startYear   Int? // năm vào lớp 10 (khóa): 2026 => niên khóa 2026–2029
   graduatedAt DateTime? // đã ra trường (tài khoản bị khóa, không còn trong thi đua)
   isTeacher   Boolean   @default(false) // Chi đoàn giáo viên: không có khối/khóa, không lên lớp, không tính vào thống kê và thi đua của học sinh
+  presidentId String?   @unique
+  president User? @relation("DepartmentPresident", fields: [presidentId], references: [id], onDelete: SetNull)
   secretaryId String?   @unique
   accountId   String?   @unique // tài khoản chung của Chi đoàn (role DEPARTMENT_ACCOUNT), Admin cấp đầu năm học
   createdAt   DateTime  @default(now())

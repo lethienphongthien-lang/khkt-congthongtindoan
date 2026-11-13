@@ -1,3 +1,4 @@
+import { ClassPresident } from "@/components/members/class-president";
 import Link from "next/link";
 import { CompactList } from "@/components/ui/compact-list";
 import { notFound } from "next/navigation";
@@ -54,6 +55,8 @@ export default async function DepartmentDetailPage({ params, searchParams }: { p
     db.member.findMany({ where: mwhere, select: { id: true, isDoanVien: true }, take: 1000 }),
     db.member.count({ where: mwhere }),
   ]);
+  const president = dept.presidentId ? await db.user.findUnique({ where: { id: dept.presidentId }, select: { fullName: true, member: { select: { id: true } } } }) : null;
+  const presidentCandidates = await db.member.findMany({ where: { departmentId: id, status: "ACTIVE", user: { status: "ACTIVE" } }, select: { id: true, fullName: true }, orderBy: { fullName: "asc" } });
   const members = nameIds ? inOrder(membersRaw, nameIds) : membersRaw;
   return (
     <>
@@ -67,6 +70,7 @@ export default async function DepartmentDetailPage({ params, searchParams }: { p
           {user.role === "ADMIN" && <DepartmentFormButton dept={{ id: dept.id, name: dept.name, description: dept.description, startYear: dept.startYear, isTeacher: dept.isTeacher }} />}
           {user.role === "ADMIN" && <DeleteDepartmentButton id={dept.id} name={dept.name} />}
         </>} />
+      {!dept.isTeacher && !dept.graduatedAt && <ClassPresident departmentId={id} current={president?.fullName ?? null} currentMemberId={president?.member?.id ?? null} candidates={presidentCandidates} canEdit={user.role === "ADMIN"} />}
       <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
         <Stat label="Học sinh" value={dept._count.members} />
         <Stat label="Đoàn viên" value={doanVienCount} />

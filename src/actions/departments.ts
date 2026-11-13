@@ -1,4 +1,6 @@
 "use server";
+import { assignClassOfficer } from "@/lib/services/class-officers";
+import { z } from "zod";
 
 import { revalidatePath } from "next/cache";
 import { invalidatePublic } from "@/lib/public-cache";
@@ -92,81 +94,50 @@ export async function deleteDepartmentAction(id: string) {
  * Phân công bí thư: chọn một đoàn viên của Chi đoàn, tài khoản đó được gán thêm vai trò bí thư
  * (vẫn là tài khoản đoàn viên, giữ quyền đoàn viên). Bí thư cũ trở lại là đoàn viên thường.
  */
+// Shared offices: execute one transactional command for both application entry points.
 export async function assignSecretaryAction(input: unknown) {
   return run(async () => {
     const admin = await requireRole(["ADMIN"]);
-    const data = secretarySchema.parse(input);
-    const dept = await db.department.findUnique({ where: { id: data.departmentId } });
-    if (!dept || dept.graduatedAt) throw new UserError("Không tìm thấy Chi đoàn");
-    const member = await db.member.findFirst({ where: { id: data.memberId, departmentId: dept.id, status: "ACTIVE" }, include: { user: true } });
-    if (!member) throw new UserError("Đoàn viên này không thuộc Chi đoàn hoặc không còn sinh hoạt");
-    if (member.user.status !== "ACTIVE") throw new UserError("Tài khoản của đoàn viên này đang bị khóa");
-    if (member.user.role === "ADMIN") throw new UserError("Không thể gán bí thư cho tài khoản quản trị");
-    if (!member.isDoanVien) throw new UserError("Chỉ đoàn viên mới được bầu làm bí thư. Hãy kết nạp thanh niên này vào Đoàn trước");
-    await db.$transaction([
-      ...(dept.secretaryId && dept.secretaryId !== member.userId ? [db.user.updateMany({ where: { id: dept.secretaryId, member: { isNot: null } }, data: { role: "MEMBER" } })] : []),
-      db.user.update({ where: { id: member.userId }, data: { role: "SECRETARY" } }),
-      db.department.update({ where: { id: dept.id }, data: { secretaryId: member.userId } }),
-    ]);
-    await audit(admin.id, "department.assign_secretary", "Department", dept.id, { secretaryId: member.userId, memberId: member.id });
-    revalidatePath("/departments");
-    return { message: `${member.fullName} đã được bầu làm bí thư` };
+    const d = secretarySchema.parse(input);
+    await assignClassOfficer(admin.id, d.departmentId, "SECRETARY", d.memberId);
+    revalidatePath("/departments"); revalidatePath(`/departments/${d.departmentId}`);
+    return { message: "Đã phân công bí thư" };
   });
 }
-
 export async function removeSecretaryAction(departmentId: string) {
   return run(async () => {
     const admin = await requireRole(["ADMIN"]);
-    const dept = await db.department.findUnique({ where: { id: departmentId } });
-    if (!dept) throw new UserError("Không tìm thấy Chi đoàn");
-    await db.$transaction([
-      ...(dept.secretaryId ? [db.user.updateMany({ where: { id: dept.secretaryId, member: { isNot: null } }, data: { role: "MEMBER" } })] : []),
-      db.department.update({ where: { id: departmentId }, data: { secretaryId: null } }),
-    ]);
-    await audit(admin.id, "department.remove_secretary", "Department", departmentId);
-    revalidatePath("/departments");
-    return { message: "Đã gỡ chức bí thư (vẫn là đoàn viên)" };
+    await assignClassOfficer(admin.id, departmentId, "SECRETARY", null, true);
+    revalidatePath("/departments"); revalidatePath(`/departments/${departmentId}`);
+    return { message: "Đã gỡ chức bí thư" };
   });
 }
-
-/**
- * Phân công cờ đỏ: chọn một đoàn viên của Chi đoàn, tài khoản đó được gán thêm vai trò cờ đỏ
- * (vẫn là tài khoản đoàn viên). Một Chi đoàn có thể có nhiều cờ đỏ cùng lúc.
- */
 export async function assignMonitorAction(input: unknown) {
   return run(async () => {
     const admin = await requireRole(["ADMIN"]);
-    const data = monitorSchema.parse(input);
-    const dept = await db.department.findUnique({ where: { id: data.departmentId } });
-    if (!dept || dept.graduatedAt) throw new UserError("Không tìm thấy Chi đoàn");
-    const member = await db.member.findFirst({ where: { id: data.memberId, departmentId: dept.id, status: "ACTIVE" }, include: { user: true } });
-    if (!member) throw new UserError("Đoàn viên này không thuộc Chi đoàn hoặc không còn sinh hoạt");
-    if (member.user.status !== "ACTIVE") throw new UserError("Tài khoản của đoàn viên này đang bị khóa");
-    if (member.user.role === "ADMIN" || member.user.role === "SECRETARY") throw new UserError("Không thể gán cờ đỏ cho tài khoản này");
-    const already = await db.departmentMonitor.findUnique({ where: { userId: member.userId } });
-    if (already) throw new UserError("Đoàn viên này đã là cờ đỏ");
-    await db.$transaction([
-      db.user.update({ where: { id: member.userId }, data: { role: "MONITOR" } }),
-      db.departmentMonitor.create({ data: { userId: member.userId, departmentId: dept.id } }),
-    ]);
-    await audit(admin.id, "department.assign_monitor", "Department", dept.id, { memberId: member.id });
-    revalidatePath(`/departments/${dept.id}`);
-    return { message: `${member.fullName} đã được phân công làm cờ đỏ` };
+    const d = monitorSchema.parse(input);
+    await assignClassOfficer(admin.id, d.departmentId, "RED_MONITOR", d.memberId);
+    revalidatePath(`/departments/${d.departmentId}`);
+    return { message: "Đã phân công cờ đỏ" };
   });
 }
-
 export async function removeMonitorAction(departmentId: string, userId: string) {
   return run(async () => {
     const admin = await requireRole(["ADMIN"]);
-    const monitor = await db.departmentMonitor.findUnique({ where: { userId } });
-    if (!monitor || monitor.departmentId !== departmentId) throw new UserError("Không tìm thấy cờ đỏ này trong Chi đoàn");
-    await db.$transaction([
-      db.user.updateMany({ where: { id: userId, member: { isNot: null } }, data: { role: "MEMBER" } }),
-      db.departmentMonitor.delete({ where: { userId } }),
-    ]);
-    await audit(admin.id, "department.remove_monitor", "Department", departmentId, { userId });
+    const member = await db.member.findUnique({ where: { userId }, select: { id: true } });
+    if (!member) throw new UserError("Không tìm thấy học sinh");
+    await assignClassOfficer(admin.id, departmentId, "RED_MONITOR", member.id, true);
     revalidatePath(`/departments/${departmentId}`);
-    return { message: "Đã gỡ chức cờ đỏ (vẫn là đoàn viên)" };
+    return { message: "Đã gỡ chức cờ đỏ" };
+  });
+}
+export async function setClassPresidentAction(input: unknown) {
+  return run(async () => {
+    const admin = await requireRole(["ADMIN"]);
+    const d = z.object({ departmentId: z.string().min(1), memberId: z.string().nullable() }).parse(input);
+    await assignClassOfficer(admin.id, d.departmentId, "PRESIDENT", d.memberId, d.memberId === null);
+    revalidatePath(`/departments/${d.departmentId}`);
+    return { message: "Đã cập nhật lớp trưởng" };
   });
 }
 
