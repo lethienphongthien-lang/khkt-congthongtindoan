@@ -1,6 +1,7 @@
 "use server";
 
 import { assertEduWrite } from "@/lib/services/edu-policy";
+import { LINKED_STUDENT_HINT, linkedStudentMemberIds } from "@/lib/services/edu-integration";
 import { revalidatePath } from "next/cache";
 import { invalidatePublic } from "@/lib/public-cache";
 import ExcelJS from "exceljs";
@@ -145,6 +146,7 @@ export async function deleteMemberAction(id: string) {
     await assertEduWrite("profiles");
     const m = await db.member.findUnique({ where: { id } });
     if (!m) throw new UserError("Không tìm thấy đoàn viên");
+    if ((await linkedStudentMemberIds([id])).has(id)) throw new UserError(`Đoàn viên ${m.fullName} ${LINKED_STUDENT_HINT}`);
     try {
       await db.user.delete({ where: { id: m.userId } }); // cascade -> Member, Attendance, Points...
     } catch (e) {
@@ -222,8 +224,12 @@ export async function deleteMembersAction(ids: unknown) {
     const admin = await requireRole(["ADMIN"]);
     await assertEduWrite("profiles");
     const list = idsSchema.parse(ids);
-    const members = await db.member.findMany({ where: { id: { in: list } }, select: { id: true, userId: true, code: true, fullName: true, avatarPublicId: true } });
-    let deleted = 0; const failed: string[] = [];
+    const found = await db.member.findMany({ where: { id: { in: list } }, select: { id: true, userId: true, code: true, fullName: true, avatarPublicId: true } });
+    // Đoàn viên đang là học sinh EduConnect không xóa ở đây (chi đoàn chính là lớp, đoàn viên chính là học sinh).
+    const linked = await linkedStudentMemberIds(found.map((m) => m.id));
+    const members = found.filter((m) => !linked.has(m.id));
+    let deleted = 0; const failed: string[] = found.filter((m) => linked.has(m.id)).map((m) => m.fullName);
+    if (!members.length && failed.length) throw new UserError(`${failed.slice(0, 3).join(", ")}${failed.length > 3 ? "…" : ""} ${LINKED_STUDENT_HINT}`);
     try {
       // cách nhanh: xóa cả lô một lượt (cascade -> hồ sơ, điểm danh, điểm...)
       await db.user.deleteMany({ where: { id: { in: members.map((m) => m.userId) } } });

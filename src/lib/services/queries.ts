@@ -6,9 +6,10 @@ import { ForbiddenError } from "@/lib/permissions";
 
 /** Điều kiện lọc Member theo phạm vi quyền của người xem. */
 export function memberScope(user: SessionUser): Prisma.MemberWhereInput {
-  if (user.role === "ADMIN") return {};
-  if ((user.role === "SECRETARY" || user.role === "DEPARTMENT_ACCOUNT" || user.role === "MONITOR") && user.departmentId) return { departmentId: user.departmentId };
-  if (user.role === "MEMBER" && user.memberId) return { id: user.memberId };
+  // deletedAt: null — đoàn viên bị xóa mềm (học sinh bị xóa ở EduConnect) không còn xuất hiện ở đâu.
+  if (user.role === "ADMIN") return { deletedAt: null };
+  if ((user.role === "SECRETARY" || user.role === "DEPARTMENT_ACCOUNT" || user.role === "MONITOR") && user.departmentId) return { departmentId: user.departmentId, deletedAt: null };
+  if (user.role === "MEMBER" && user.memberId) return { id: user.memberId, deletedAt: null };
   return { id: "__none__" };
 }
 

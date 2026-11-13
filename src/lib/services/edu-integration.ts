@@ -29,3 +29,11 @@ export async function hasLinkedClass(departmentId: string, client: Client = db):
   const [r] = await client.$queryRaw<{ yes: boolean }[]>`SELECT EXISTS(SELECT 1 FROM edu."SchoolClass" WHERE "departmentId" = ${departmentId}) AS yes`;
   return r.yes;
 }
+
+/** Các đoàn viên đang là học sinh của EduConnect (đoàn viên chính là học sinh: chỉ xóa được bằng cách xóa học sinh ở EduConnect). */
+export async function linkedStudentMemberIds(memberIds: string[], client: Client = db): Promise<Set<string>> {
+  if (!memberIds.length || !await hasEduIntegration(client)) return new Set();
+  const rows = await client.$queryRaw<{ id: string }[]>`SELECT "memberId" AS id FROM edu."Student" WHERE "memberId" = ANY(${memberIds})`;
+  return new Set(rows.map((r) => r.id));
+}
+export const LINKED_STUDENT_HINT = "là học sinh của EduConnect. Hãy xóa học sinh ở EduConnect trước (đoàn viên sẽ bị xóa theo).";

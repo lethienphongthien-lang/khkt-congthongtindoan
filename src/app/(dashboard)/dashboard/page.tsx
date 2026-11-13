@@ -121,7 +121,7 @@ async function SecretaryDashboard({ userId, departmentId, name, memberId, isAcco
   const [members, youth, points, visitsToday, quiet, me, posts, violationsThisWeek] = await Promise.all([
     db.member.count({ where: { departmentId, status: "ACTIVE", isDoanVien: true } }),
     db.member.count({ where: { departmentId, status: "ACTIVE", isDoanVien: false } }),
-    db.member.aggregate({ where: { departmentId }, _sum: { totalPoints: true } }),
+    db.member.aggregate({ where: { departmentId, deletedAt: null }, _sum: { totalPoints: true } }),
     db.dailyCheckin.count({ where: { day: today, member: { departmentId } } }),
     // Đoàn viên chưa vào hệ thống trong 7 ngày gần nhất (để Bí thư nhắc)
     db.member.findMany({ where: { departmentId, status: "ACTIVE", dailyCheckins: { none: { day: { gte: weekAgo } } } }, orderBy: { fullName: "asc" }, take: 10, select: { id: true, code: true, fullName: true } }),

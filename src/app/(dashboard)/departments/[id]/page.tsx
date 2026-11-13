@@ -35,6 +35,7 @@ export default async function DepartmentDetailPage({ params, searchParams }: { p
     const q = str(sp.q), kind = str(sp.kind), status = str(sp.status), sort = str(sp.sort);
   const mwhere: Prisma.MemberWhereInput = {
     departmentId: id,
+    deletedAt: null,
     ...(q ? { OR: [{ fullName: { contains: q, mode: "insensitive" } }, { code: { contains: q, mode: "insensitive" } }] } : {}),
     ...(kind === "doanvien" ? { isDoanVien: true } : kind === "thanhnien" ? { isDoanVien: false } : {}),
     ...(status === "LOCKED" ? { user: { status: "LOCKED" } } : status ? { status: status as "ACTIVE" } : {}),
@@ -46,17 +47,17 @@ export default async function DepartmentDetailPage({ params, searchParams }: { p
       secretary: { select: { id: true, fullName: true, username: true } },
       account: { select: { username: true } },
       monitors: { select: { userId: true, user: { select: { fullName: true } } } },
-      _count: { select: { members: true } },
+      _count: { select: { members: { where: { deletedAt: null } } } },
     },
   });
   if (!dept) notFound();
   const byName = sort === "ten" || sort === "ten_z"; // xếp theo TÊN (từ cuối) theo thứ tự tiếng Việt
   const nameIds = byName ? (await memberIdsByName(mwhere, sort === "ten_z")).slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : null;
   const [points, membersRaw, candidateRows, doanVienCount, allItems, filteredTotal] = await Promise.all([
-    db.member.aggregate({ where: { departmentId: id }, _sum: { totalPoints: true } }),
+    db.member.aggregate({ where: { departmentId: id, deletedAt: null }, _sum: { totalPoints: true } }),
     db.member.findMany({ where: nameIds ? { id: { in: nameIds } } : mwhere, orderBy: memberOrderBy(sort, [{ totalPoints: "desc" }, { fullName: "asc" }]), skip: nameIds ? undefined : (page - 1) * PAGE_SIZE, take: nameIds ? undefined : PAGE_SIZE, include: { user: { select: { status: true, mustChangePassword: true } } } }),
     db.member.findMany({ where: { departmentId: id, status: "ACTIVE", isDoanVien: true }, orderBy: { fullName: "asc" }, select: { id: true, userId: true, fullName: true, code: true } }),
-    db.member.count({ where: { departmentId: id, isDoanVien: true } }),
+    db.member.count({ where: { departmentId: id, isDoanVien: true, deletedAt: null } }),
     db.member.findMany({ where: mwhere, select: { id: true, isDoanVien: true }, take: 1000 }),
     db.member.count({ where: mwhere }),
   ]);
