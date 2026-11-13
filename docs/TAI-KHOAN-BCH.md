@@ -17,3 +17,5 @@ RUN_SHARED_TEACHER_TESTS=1 node --conditions=react-server --import tsx --test te
 ```
 
 Test đầu cần database public-only đã db:push/cài trigger, test sau cần database cục bộ đầy đủ schema edu/public. Cả hai đều kiểm tra hostname local trước khi ghi fixture. Cần đặt DATABASE_URL/DIRECT_URL trỏ đúng DB dùng tạm và bỏ DATABASE_POOLED_URL production khỏi môi trường kiểm thử.
+
+Giao diện BCH dùng DataTable, trạng thái và nút biểu tượng giống các màn hình cài đặt khác. Bấm Thêm BCH/Sửa để mở hộp thoại; không hiển thị biểu mẫu thường trực. Trang Năm học và lịch tuần chỉ hiển thị năm đã cấu hình; lịch mặc định tự tính dành cho bộ lọc không được coi là năm đã tạo. Đặt lại mặc định cập nhật bản ghi hiện có để đồng bộ qua EduConnect và giữ liên kết.

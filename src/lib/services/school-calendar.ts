@@ -11,3 +11,7 @@ export const loadCalendars = cache(async (): Promise<SchoolCalendar[]> => {
   for (const y of [sy + 1, sy, sy - 1]) if (!map.has(y)) map.set(y, defaultCalendar(y));
   return [...map.values()].sort((a, b) => b.startYear - a.startYear);
 });
+
+/** Settings must show persisted years only, matching EduConnect rather than synthetic fallback choices. */
+export const loadConfiguredCalendars = cache(async (): Promise<SchoolCalendar[]> =>
+  db.schoolYear.findMany({ orderBy: { startYear: "desc" } }));
