@@ -1,3 +1,5 @@
+import { getEduPolicy } from "@/lib/services/edu-policy";
+import { EduManagedNotice } from "@/components/members/edu-managed-notice";
 import Link from "next/link";
 import { ClickRow } from "@/components/ui/click-row";
 import { CompactList } from "@/components/ui/compact-list";
@@ -54,6 +56,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   ]);
 
   const members = nameIds ? inOrder(membersRaw, nameIds) : membersRaw;
+  const policy = await getEduPolicy();
   return (
     <>
       <PageHeader
@@ -62,11 +65,12 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
         actions={user.role === "ADMIN" && (
           <ActionsMenu>
             <a href={`/api/members/export${exportQuery}`} className={buttonClass("secondary")}><Download className="size-4" />Xuất<span className="max-sm:hidden"> Excel</span></a>
-            <ImportMembersButton />
-            <Link href="/members/new" className={buttonClass()}><Plus className="size-4" />Thêm<span className="max-sm:hidden"> thành viên</span></Link>
+            {policy.profiles && policy.placement && <ImportMembersButton />}
+            {policy.profiles && policy.placement && <Link href="/members/new" className={buttonClass()}><Plus className="size-4" />Thêm<span className="max-sm:hidden"> thành viên</span></Link>}
           </ActionsMenu>
         )}
       />
+      {user.role === "ADMIN" && <EduManagedNotice policy={policy} />}
       <div className="mb-4 grid max-w-md grid-cols-3 gap-6">
         <Stat label={obj === "gv" ? "Giáo viên" : "Học sinh"} value={scopeTotal.toLocaleString("vi-VN")} />
         <Stat label="Đoàn viên" value={scopeDoanVien.toLocaleString("vi-VN")} />

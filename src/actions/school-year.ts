@@ -1,5 +1,6 @@
 "use server";
 
+import { assertEduWrite } from "@/lib/services/edu-policy";
 import { invalidatePublic } from "@/lib/public-cache";
 import { z } from "zod";
 import { resetConfiguredCalendar } from "@/lib/services/calendar-settings";
@@ -20,6 +21,7 @@ const schema = z.object({
 export async function saveSchoolYearAction(input: unknown) {
   return run(async () => {
     const admin = await requireRole(["ADMIN"]);
+    await assertEduWrite("years");
     const d = schema.parse(input);
     await db.schoolYear.upsert({ where: { startYear: d.startYear }, update: d, create: d });
     await audit(admin.id, "school_year.save", "SchoolYear", String(d.startYear), d);
@@ -32,6 +34,7 @@ export async function saveSchoolYearAction(input: unknown) {
 export async function resetSchoolYearAction(startYear: number) {
   return run(async () => {
     const admin = await requireRole(["ADMIN"]);
+    await assertEduWrite("years");
     const year = z.number().int().min(2000).max(2100).parse(startYear);
     await resetConfiguredCalendar(year);
     await audit(admin.id, "school_year.reset", "SchoolYear", String(startYear));
