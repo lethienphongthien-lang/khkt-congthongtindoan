@@ -1,5 +1,4 @@
 import { getEduPolicy } from "@/lib/services/edu-policy";
-import { EduManagedNotice } from "@/components/members/edu-managed-notice";
 import { deputiesAvailable, listDeputies } from "@/lib/services/class-deputies";
 import { ActionsMenu } from "@/components/ui/actions-menu";
 import { DepartmentPersonnel } from "@/components/members/department-personnel";
@@ -79,7 +78,6 @@ export default async function DepartmentDetailPage({ params, searchParams }: { p
         actions={dept.graduatedAt ? undefined : <>
           <ActionsMenu>{actionItems}</ActionsMenu>
         </>} />
-      {user.role === "ADMIN" && <EduManagedNotice policy={policy} />}
       {!dept.graduatedAt && <Tabs current={`?tab=${tab}`} items={[["?tab=overview", "Tổng quan"], ["?tab=personnel", "Nhân sự"]]} />}
       {tab === "personnel" && !dept.graduatedAt ? <DepartmentPersonnel departmentId={id} deputies={deputies} deputiesEnabled={deputiesEnabled} president={president ? { id: president.member?.id ?? null, name: president.fullName } : null}
         secretary={dept.secretary ? { id: dept.secretary.id, fullName: dept.secretary.fullName } : null} monitors={dept.monitors.map((m) => ({ userId: m.userId, fullName: m.user.fullName }))}

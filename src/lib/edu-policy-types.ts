@@ -8,4 +8,3 @@ export const EDU_LABEL: Record<EduDomain, string> = {
   profiles: "Hồ sơ học sinh",
 };
 export const EDU_OPEN: EduPolicy = { years: true, classes: true, placement: true, profiles: true, managed: false };
-export const eduLockedLabels = (p: EduPolicy) => (Object.keys(EDU_LABEL) as EduDomain[]).filter((d) => !p[d]).map((d) => EDU_LABEL[d]);
