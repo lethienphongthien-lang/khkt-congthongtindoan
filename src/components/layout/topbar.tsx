@@ -148,7 +148,7 @@ export function Topbar({ user, roleLabel, notifications, unread, canChat }: {
           </button>
           {open && (
             <div className="absolute right-0 mt-2 w-52 rounded-lg border border-border bg-white py-1 shadow-lg">
-              <Link href="/settings" onClick={() => setOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-50"><KeyRound className="size-4 text-muted" />Tài khoản & mật khẩu</Link>
+              <Link href="/settings/profile" onClick={() => setOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-50"><KeyRound className="size-4 text-muted" />Tài khoản & mật khẩu</Link>
               <div className="md:hidden"><ThemeMenuItem onDone={() => setOpen(false)} /></div>
               <LogoutForm variant="menu" />
             </div>
