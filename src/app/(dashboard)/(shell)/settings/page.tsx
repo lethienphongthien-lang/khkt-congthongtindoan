@@ -1,3 +1,5 @@
+import { getEduPolicy } from "@/lib/services/edu-policy";
+import { EduManagedNotice } from "@/components/members/edu-managed-notice";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth/session";
@@ -23,7 +25,8 @@ export default async function SettingsPage({searchParams}:{searchParams:Promise<
   const tab=["schoolyear","catalogs","rules","data"].includes(requested??"")?requested!:"schoolyear";
   if(tab==="schoolyear") {
     const rows=await loadConfiguredCalendars();
-    return <SchoolYearManager rows={rows.map(r=>({...r,custom:true}))} />;
+    const policy=await getEduPolicy();
+    return <><EduManagedNotice policy={policy} /><SchoolYearManager rows={rows.map(r=>({...r,custom:true}))} canEdit={policy.years} /></>;
   }
   if(tab==="catalogs") {
     const cats=await db.articleCategory.findMany({where:{kind:"PLAN"},orderBy:[{sortOrder:"asc"},{createdAt:"asc"}],include:{_count:{select:{articles:true}}}});

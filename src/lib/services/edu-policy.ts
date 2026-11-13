@@ -3,18 +3,12 @@ import { cache } from "react";
 import { db } from "@/lib/db";
 import { UserError } from "@/lib/action";
 import { hasEduIntegration } from "./edu-integration";
+import { EDU_LABEL, EDU_OPEN, type EduDomain, type EduPolicy } from "@/lib/edu-policy-types";
 
-/** Nhóm dữ liệu dùng chung mà admin EduConnect có thể khóa (edu."DoanWritePolicy"). */
-export type EduDomain = "years" | "classes" | "placement" | "profiles";
-export type EduPolicy = Record<EduDomain, boolean> & { managed: boolean };
-
-const LABEL: Record<EduDomain, string> = {
-  years: "Năm học và học kỳ",
-  classes: "Lớp (chi đoàn)",
-  placement: "Xếp lớp và chuyển năm học",
-  profiles: "Hồ sơ học sinh",
-};
-const OPEN: EduPolicy = { years: true, classes: true, placement: true, profiles: true, managed: false };
+export type { EduDomain, EduPolicy } from "@/lib/edu-policy-types";
+export { eduLockedLabels } from "@/lib/edu-policy-types";
+const LABEL = EDU_LABEL;
+const OPEN = EDU_OPEN;
 
 /**
  * Quyền ghi của Cổng Đoàn với dữ liệu dùng chung. Chỉ có hiệu lực khi đồng bộ với EduConnect đang bật và bảng chính sách đã cài;
@@ -41,4 +35,3 @@ export async function assertEduWrite(...domains: EduDomain[]) {
   if (locked.length) throw new UserError(`${locked.map((d) => LABEL[d]).join(", ")} do EduConnect quản lý. Nhờ quản trị viên EduConnect thực hiện, hoặc cấp quyền cho Cổng Đoàn ở Cấu hình → Cổng Đoàn.`);
 }
 
-export const eduLockedLabels = (p: EduPolicy) => (Object.keys(LABEL) as EduDomain[]).filter((d) => !p[d]).map((d) => LABEL[d]);

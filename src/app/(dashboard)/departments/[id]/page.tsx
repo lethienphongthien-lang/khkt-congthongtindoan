@@ -104,7 +104,7 @@ export default async function DepartmentDetailPage({ params, searchParams }: { p
           <CompactList items={members.map((m) => ({ id: m.id, title: m.fullName, subtitle: m.code, leading: <Avatar name={m.fullName} src={m.avatarUrl} size={28} />, value: m.totalPoints,
             href: `/members/${m.id}`, hrefLabel: "Xem hồ sơ", details: [["Mã đoàn viên", m.code], ["Ngày vào Đoàn", m.isDoanVien ? formatDate(m.joinedAt) : "Chưa vào Đoàn"], ["Điểm", m.totalPoints]] }))} />
           <div className="max-sm:hidden">
-          <MemberTable canManage showPoints allItems={allItems} rows={members.map((m) => ({
+          <MemberTable canManage canDelete={policy.profiles} showPoints allItems={allItems} rows={members.map((m) => ({
             id: m.id, code: m.code, fullName: m.fullName, avatarUrl: m.avatarUrl, isDoanVien: m.isDoanVien, joinedAt: m.joinedAt?.toISOString() ?? null,
             status: m.status, locked: m.user.status === "LOCKED", activated: !m.user.mustChangePassword, points: m.totalPoints,
           }))} />

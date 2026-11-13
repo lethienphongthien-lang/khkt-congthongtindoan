@@ -55,13 +55,13 @@ function FormButton({ row }: { row?: Row }) {
   );
 }
 
-export function SchoolYearManager({ rows }: { rows: Row[] }) {
+export function SchoolYearManager({ rows, canEdit = true }: { rows: Row[]; canEdit?: boolean }) {
   const router = useRouter();
   return (
     <>
       <div className="mb-3 flex items-center justify-between gap-3">
         <p className="text-sm text-muted">Lịch giáo dục tính theo tuần: Tuần 1 bắt đầu từ ngày bạn đặt. Các bộ lọc "Năm học → Tuần" trong hệ thống dùng lịch này.</p>
-        <FormButton />
+        {canEdit && <FormButton />}
       </div>
       <DataTable>
         <thead><tr><Th>Năm học</Th><Th>Tuần 1 bắt đầu</Th><Th className="text-right">HK1</Th><Th className="text-right">Tổng tuần</Th><Th>Nguồn</Th><Th /></tr></thead>
@@ -73,8 +73,8 @@ export function SchoolYearManager({ rows }: { rows: Row[] }) {
             <Td className="text-right tabular-nums">{r.totalWeeks} tuần</Td>
             <Td><StatusBadge tone={r.custom ? "green" : "gray"}>{r.custom ? "Đã đặt" : "Mặc định"}</StatusBadge></Td>
             <Td className="text-right whitespace-nowrap">
-              <FormButton row={r} />
-              {r.custom && <ConfirmButton triggerVariant="ghost" triggerLabel="Đặt lại mặc định" trigger={<RotateCcw className="size-3.5" />} title="Đặt lại mặc định?" description="Quay về Tuần 1 bắt đầu 05/09, 18 tuần học kỳ 1, 35 tuần cả năm." confirmLabel="Đặt lại"
+              {canEdit && <FormButton row={r} />}
+              {canEdit && r.custom && <ConfirmButton triggerVariant="ghost" triggerLabel="Đặt lại mặc định" trigger={<RotateCcw className="size-3.5" />} title="Đặt lại mặc định?" description="Quay về Tuần 1 bắt đầu 05/09, 18 tuần học kỳ 1, 35 tuần cả năm." confirmLabel="Đặt lại"
                 onConfirm={async () => { reportResult(await resetSchoolYearAction(r.startYear)); router.refresh(); }} />}
             </Td>
           </tr>

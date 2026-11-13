@@ -1,3 +1,4 @@
+import { getEduPolicy } from "@/lib/services/edu-policy";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth/session";
 import { getMemberForUser } from "@/lib/services/queries";
@@ -14,10 +15,11 @@ export default async function MemberDetailPage({ params, searchParams }: { param
   // getMemberForUser đã áp phạm vi quyền: bí thư chỉ lấy được đoàn viên Chi đoàn của mình, ngược lại -> 404.
   const member = await getMemberForUser(user, id);
   if (!member) notFound();
+  const policy = await getEduPolicy();
   return (
     <>
       <PageHeader title="Hồ sơ đoàn viên"
-        actions={user.role === "ADMIN" && <MemberAdminActions id={member.id} locked={member.user.status === "LOCKED"} isAdmin code={member.code} fullName={member.fullName} doanVien={member.isDoanVien} />} />
+        actions={user.role === "ADMIN" && <MemberAdminActions canDelete={policy.profiles} id={member.id} locked={member.user.status === "LOCKED"} isAdmin code={member.code} fullName={member.fullName} doanVien={member.isDoanVien} />} />
       <MemberProfile member={member} showAudit detail={user.role === "ADMIN"} tab={tab} basePath={`/members/${id}`} />
     </>
   );

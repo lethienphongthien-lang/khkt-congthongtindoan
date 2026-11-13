@@ -90,8 +90,8 @@ export default async function DepartmentsPage({ searchParams }: { searchParams: 
                 {isAdmin && (
                   <Td className="text-right whitespace-nowrap">
                     <SecretaryButton departmentId={d.id} current={d.secretary} candidates={memberRows.filter((m) => m.departmentId === d.id).map((m) => ({ id: m.id, userId: m.userId, label: `${m.fullName} (${m.code})` }))} />
-                    <DepartmentFormButton dept={{ id: d.id, name: d.name, description: d.description, startYear: d.startYear, isTeacher: d.isTeacher }} />
-                    <DeleteDepartmentButton id={d.id} name={d.name} />
+                    {(d.isTeacher || policy.classes) && <DepartmentFormButton dept={{ id: d.id, name: d.name, description: d.description, startYear: d.startYear, isTeacher: d.isTeacher }} />}
+                    {(d.isTeacher || policy.classes) && <DeleteDepartmentButton id={d.id} name={d.name} />}
                   </Td>
                 )}
               </ClickRow>

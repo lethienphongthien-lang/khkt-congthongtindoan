@@ -99,7 +99,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
           details: [["Mã đoàn viên", m.code], ["Chi đoàn", m.department.name], ["Ngày vào Đoàn", m.isDoanVien ? formatDate(m.joinedAt) : "Chưa vào Đoàn"]],
         }))} />
         <div className="max-sm:hidden">
-        <MemberTable canManage={user.role === "ADMIN"} showDepartment allItems={allItems} rows={members.map((m) => ({
+        <MemberTable canManage={user.role === "ADMIN"} canDelete={policy.profiles} showDepartment allItems={allItems} rows={members.map((m) => ({
           id: m.id, code: m.code, fullName: m.fullName, avatarUrl: m.avatarUrl, isDoanVien: m.isDoanVien, joinedAt: m.joinedAt?.toISOString() ?? null,
           status: m.status, locked: m.user.status === "LOCKED", activated: !m.user.mustChangePassword, department: m.department.name,
         }))} />
