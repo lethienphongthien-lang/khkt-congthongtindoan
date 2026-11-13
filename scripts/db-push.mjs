@@ -19,7 +19,10 @@ for (let i = 1; i <= MAX; i++) {
   const r = spawnSync("npx", ["prisma", "db", "push", "--skip-generate"], { encoding: "utf8", env, shell: process.platform === "win32" });
   process.stdout.write(r.stdout ?? "");
   process.stderr.write(r.stderr ?? "");
-  if (r.status === 0) process.exit(0);
+  if (r.status === 0) {
+    const install = spawnSync(process.execPath, ["scripts/install-officers.mjs"], { stdio: "inherit", env });
+    process.exit(install.status ?? 1);
+  }
   const busy = /too many connections|Schema engine error|timed out/i.test((r.stdout ?? "") + (r.stderr ?? ""));
   if (!busy || i === MAX) process.exit(r.status ?? 1);
   console.log(`[db-push] DB bận, thử lại lần ${i + 1}/${MAX} sau 15 giây...`);

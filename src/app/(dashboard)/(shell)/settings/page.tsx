@@ -1,3 +1,4 @@
+import { sharedTeachers } from "@/lib/services/edu-integration";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth/session";
 import { roleLabelOf } from "@/lib/nav";
@@ -39,6 +40,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const calendars = admin && tab === "schoolyear" ? await loadCalendars() : [];
   const passkeys = tab === "passkey" ? await db.passkey.findMany({ where: { userId: user.id }, orderBy: { createdAt: "asc" }, select: { id: true, deviceName: true, createdAt: true, lastUsedAt: true } }) : [];
   const leaders = user.superAdmin && tab === "leaders" ? await db.user.findMany({ where: { role: "ADMIN", superAdmin: false }, orderBy: { createdAt: "asc" }, select: { id: true, fullName: true, username: true, position: true, status: true, lastLoginAt: true } }) : [];
+  const staff = user.superAdmin && tab === "leaders" ? await sharedTeachers() : [];
   const classes = admin && tab === "classpw" ? await db.department.findMany({ where: { graduatedAt: null }, select: { id: true, name: true, _count: { select: { members: { where: { status: "ACTIVE", user: { status: "ACTIVE" } } } } } } }) : [];
   const [storage, cloud] = admin && tab === "data" ? await Promise.all([storageStats(), cloudinaryUsage()]) : [null, null];
 
@@ -70,7 +72,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
       {tab === "password" && <div className="max-w-sm"><ChangePasswordForm /></div>}
 
-      {tab === "leaders" && user.superAdmin && <LeaderManager leaders={leaders.map((l) => ({ ...l, lastLoginAt: l.lastLoginAt?.toISOString() ?? null }))} />}
+      {tab === "leaders" && user.superAdmin && <LeaderManager staff={staff} leaders={leaders.map((l) => ({ ...l, lastLoginAt: l.lastLoginAt?.toISOString() ?? null }))} />}
 
       {tab === "passkey" && <PasskeyManager items={passkeys.map((p) => ({ id: p.id, deviceName: p.deviceName, createdAt: p.createdAt.toISOString(), lastUsedAt: p.lastUsedAt?.toISOString() ?? null }))} />}
 

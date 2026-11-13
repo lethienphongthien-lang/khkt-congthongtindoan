@@ -1,0 +1,52 @@
+import assert from "node:assert/strict";
+import { after, test } from "node:test";
+import { db } from "../src/lib/db";
+import { sharedTeachers } from "../src/lib/services/edu-integration";
+import * as leaders from "../src/lib/services/union-leaders";
+import { assignClassOfficer } from "../src/lib/services/class-officers";
+const run = process.env.RUN_STANDALONE_TESTS === "1";
+after(async () => db.$disconnect());
+test("public-only Cổng Đoàn: separate student/BCH identities, full leader lifecycle and class offices without EduConnect", { skip: !run }, async () => {
+  const url = new URL(process.env.DATABASE_URL!);
+  assert.ok(["localhost", "127.0.0.1"].includes(url.hostname), "Only run on disposable local DB");
+  const [{ absent }] = await db.$queryRaw<{ absent: boolean }[]>`SELECT to_regclass('edu."User"') IS NULL AS absent`;
+  assert.equal(absent, true); assert.deepEqual(await sharedTeachers(), []);
+  const suffix = crypto.randomUUID().replaceAll("-", "");
+  const admin = await db.user.create({ data: { username: `admin${suffix}`, fullName: "Admin", passwordHash: "x", role: "ADMIN", superAdmin: true } });
+  const pupil = await db.user.create({ data: { username: `pupil${suffix}`, fullName: "Học sinh kiểm thử", passwordHash: "student-unchanged", role: "MEMBER" } });
+  const y = new Date().getMonth() >= 8 ? new Date().getFullYear() : new Date().getFullYear()-1;
+  const dept = await db.department.create({ data: { name: `11${suffix}`, startYear: y-1 } });
+  const cls = await db.class.create({ data: { name: dept.name, departmentId: dept.id } });
+  const member = await db.member.create({ data: { userId: pupil.id, fullName: pupil.fullName, code: `test${suffix}`, departmentId: dept.id, classId: cls.id, isDoanVien: true } });
+  let bchId: string | undefined;
+  try {
+    const bch = await leaders.createStandaloneLeader(admin.id, { username: `bch${suffix}`, fullName: pupil.fullName, position: "Ủy viên BCH", passwordHash: "bch-original" }); bchId=bch.id;
+    assert.notEqual(bch.id, pupil.id); assert.equal(bch.role, "ADMIN");
+    assert.equal((await db.user.findUniqueOrThrow({ where: { id: pupil.id } })).role, "MEMBER");
+    await leaders.editLeader(admin.id, bch.id, { position: "Bí thư", fullName: "BCH riêng" });
+    await leaders.changeLeaderStatus(admin.id, bch.id, "LOCKED");
+    assert.equal((await db.user.findUniqueOrThrow({ where: { id: bch.id } })).status, "LOCKED");
+    await leaders.changeLeaderStatus(admin.id, bch.id, "ACTIVE");
+    await leaders.resetLeaderPassword(admin.id, bch.id, "bch-reset");
+    assert.equal((await db.user.findUniqueOrThrow({ where: { id: pupil.id } })).passwordHash, "student-unchanged");
+    await assert.rejects(leaders.createStandaloneLeader(pupil.id, { username: "forbidden", fullName: "No", position: "BCH", passwordHash: "x" }));
+    await assert.rejects(leaders.appointTeacher(admin.id, pupil.id, "BCH"));
+    await assignClassOfficer(admin.id, dept.id, "SECRETARY", member.id);
+    assert.equal((await db.user.findUniqueOrThrow({ where: { id: pupil.id } })).role, "SECRETARY");
+    await assert.rejects(assignClassOfficer(admin.id, dept.id, "RED_MONITOR", member.id));
+    await assignClassOfficer(admin.id, dept.id, "SECRETARY", null, true);
+    await assignClassOfficer(admin.id, dept.id, "RED_MONITOR", member.id);
+    await assignClassOfficer(admin.id, dept.id, "PRESIDENT", member.id);
+    assert.equal((await db.department.findUniqueOrThrow({ where: { id: dept.id } })).presidentId, pupil.id);
+    await assert.rejects(assignClassOfficer(pupil.id, dept.id, "PRESIDENT", member.id));
+    await db.member.update({ where: { id: member.id }, data: { status: "TRANSFERRED" } });
+    assert.equal((await db.department.findUniqueOrThrow({ where: { id: dept.id } })).presidentId, null);
+    assert.equal(await db.departmentMonitor.count({ where: { userId: pupil.id } }), 0);
+    assert.equal((await db.user.findUniqueOrThrow({ where: { id: pupil.id } })).role, "MEMBER");
+  } finally {
+    await db.member.delete({ where: { id: member.id } }); await db.class.delete({ where: { id: cls.id } }); await db.department.delete({ where: { id: dept.id } });
+    const ids=[admin.id,pupil.id,...(bchId?[bchId]:[])];
+    await db.auditLog.deleteMany({ where: { OR: [{ userId: { in: ids } }, { targetId: { in: ids } }] } });
+    await db.user.deleteMany({ where: { id: { in: ids } } });
+  }
+});
