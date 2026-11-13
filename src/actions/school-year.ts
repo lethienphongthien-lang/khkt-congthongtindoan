@@ -1,8 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { invalidatePublic } from "@/lib/public-cache";
 import { z } from "zod";
+import { resetConfiguredCalendar } from "@/lib/services/calendar-settings";
 import { db } from "@/lib/db";
 import { run } from "@/lib/action";
 import { audit } from "@/lib/audit";
@@ -32,9 +32,10 @@ export async function saveSchoolYearAction(input: unknown) {
 export async function resetSchoolYearAction(startYear: number) {
   return run(async () => {
     const admin = await requireRole(["ADMIN"]);
-    await db.schoolYear.deleteMany({ where: { startYear } });
+    const year = z.number().int().min(2000).max(2100).parse(startYear);
+    await resetConfiguredCalendar(year);
     await audit(admin.id, "school_year.reset", "SchoolYear", String(startYear));
     invalidatePublic();
-    return { message: "Đã đặt lại mặc định" };
+    return { message: "Đã đặt lại lịch mặc định của năm học" };
   });
 }

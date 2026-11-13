@@ -12,7 +12,7 @@ import { Award, BookOpen, Globe, Megaphone, Puzzle, Bell, CalendarRange, Databas
 import { RETENTION, storageStats } from "@/lib/services/cleanup";
 import { cloudinaryUsage } from "@/lib/cloudinary";
 import { DataManager } from "@/components/settings/data-manager";
-import { loadCalendars } from "@/lib/services/school-calendar";
+import { loadConfiguredCalendars } from "@/lib/services/school-calendar";
 import { LeaderManager } from "@/components/settings/leader-manager";
 import { PasskeyManager } from "@/components/settings/passkey-manager";
 import { ClassPasswordManager } from "@/components/settings/class-password-manager";
@@ -37,7 +37,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const planCats = admin && tab === "plancats" ? await db.articleCategory.findMany({ where: { kind: "PLAN" }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }], include: { _count: { select: { articles: true } } } }) : [];
   const gameCap = admin && tab === "gamecap" ? await getGameCap() : 10;
   const customYears = admin && tab === "schoolyear" ? new Set((await db.schoolYear.findMany({ select: { startYear: true } })).map((r) => r.startYear)) : new Set<number>();
-  const calendars = admin && tab === "schoolyear" ? await loadCalendars() : [];
+  const calendars = admin && tab === "schoolyear" ? await loadConfiguredCalendars() : [];
   const passkeys = tab === "passkey" ? await db.passkey.findMany({ where: { userId: user.id }, orderBy: { createdAt: "asc" }, select: { id: true, deviceName: true, createdAt: true, lastUsedAt: true } }) : [];
   const leaders = user.superAdmin && tab === "leaders" ? await db.user.findMany({ where: { role: "ADMIN", superAdmin: false }, orderBy: { createdAt: "asc" }, select: { id: true, fullName: true, username: true, position: true, status: true, lastLoginAt: true } }) : [];
   const staff = user.superAdmin && tab === "leaders" ? await sharedTeachers() : [];
