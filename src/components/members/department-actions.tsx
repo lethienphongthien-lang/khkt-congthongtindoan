@@ -31,7 +31,7 @@ export function DepartmentFormButton({ dept }: { dept?: Dept }) {
   return (
     <>
       <Button variant={dept ? "ghost" : "primary"} size={dept ? "sm" : "md"} onClick={() => setOpen(true)} aria-label={dept ? "Sửa" : "Tạo Chi đoàn"}>
-        {dept ? <Pencil className="size-3.5" /> : <><Plus className="size-4" />Tạo Chi đoàn</>}
+        {dept ? <><Pencil className="size-3.5" /><span className="hidden in-menu">Sửa Chi đoàn</span></> : <><Plus className="size-4" />Tạo Chi đoàn</>}
       </Button>
       <Modal open={open} onClose={() => { setOpen(false); setCreated(null); }} title={dept ? "Sửa Chi đoàn" : "Tạo Chi đoàn"} className={dept ? "max-w-md" : "max-w-6xl"}>
         {created ? (
@@ -95,7 +95,7 @@ export function DepartmentFormButton({ dept }: { dept?: Dept }) {
 export function DeleteDepartmentButton({ id, name }: { id: string; name: string }) {
   const router = useRouter();
   return (
-    <ConfirmButton trigger={<Trash2 className="size-3.5" />} triggerVariant="ghost" triggerClassName="text-danger" title={`Xóa Chi đoàn ${name}?`} danger confirmLabel="Xóa"
+    <ConfirmButton trigger={<><Trash2 className="size-3.5" /><span className="hidden in-menu">Xóa Chi đoàn</span></>} triggerVariant="ghost" triggerClassName="text-danger" title={`Xóa Chi đoàn ${name}?`} danger confirmLabel="Xóa"
       description="Chỉ xóa được Chi đoàn không còn đoàn viên. Các hoạt động của Chi đoàn cũng sẽ bị xóa."
       onConfirm={async () => { reportResult(await deleteDepartmentAction(id)); router.refresh(); }} />
   );
@@ -185,7 +185,7 @@ export function DepartmentAccountButton({ departmentId, account }: { departmentI
   const [cred, setCred] = useState<{ username: string; password: string } | null>(null);
   return (
     <>
-      <Button variant="ghost" size="sm" onClick={() => setOpen(true)}><KeyRound className="size-3.5" />Tài khoản Chi đoàn</Button>
+      <Button variant="ghost" size="sm" onClick={() => setOpen(true)}><KeyRound className="size-3.5" /><span className="max-sm:hidden">Tài khoản Chi đoàn</span></Button>
       <Modal open={open} onClose={() => { setOpen(false); setCred(null); }} title="Tài khoản Chi đoàn" className="max-w-md">
         <div className="space-y-3">
           {cred ? (

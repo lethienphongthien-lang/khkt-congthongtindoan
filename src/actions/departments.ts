@@ -1,4 +1,5 @@
 "use server";
+import { setDeputy } from "@/lib/services/class-deputies";
 import { assignClassOfficer } from "@/lib/services/class-officers";
 import { z } from "zod";
 
@@ -129,6 +130,15 @@ export async function removeMonitorAction(departmentId: string, userId: string) 
     await assignClassOfficer(admin.id, departmentId, "RED_MONITOR", member.id, true);
     revalidatePath(`/departments/${departmentId}`);
     return { message: "Đã gỡ chức cờ đỏ" };
+  });
+}
+export async function setDeputyAction(departmentId: string, memberId: string, remove = false) {
+  return run(async () => {
+    const admin = await requireRole(["ADMIN"]);
+    await setDeputy(departmentId, memberId, remove);
+    await db.auditLog.create({ data: { userId: admin.id, action: `department.DEPUTY.${remove ? "remove" : "assign"}`, target: "Department", targetId: departmentId, metadata: { memberId } } });
+    revalidatePath(`/departments/${departmentId}`);
+    return { message: remove ? "Đã gỡ lớp phó học tập" : "Đã thêm lớp phó học tập" };
   });
 }
 export async function setClassPresidentAction(input: unknown) {
