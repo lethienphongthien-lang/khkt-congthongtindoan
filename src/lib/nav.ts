@@ -1,7 +1,7 @@
 import { MessagesSquare, FileText, Flag, Globe, Settings, Award, BarChart3, CalendarDays, CheckSquare, IdCard, LayoutDashboard, Newspaper, QrCode, Trophy, School, History, Users, Vote, MessageSquare, Inbox, ClipboardList, Bell, BookOpen, Megaphone, HeartHandshake, Gamepad2, Compass, Puzzle, ScrollText, CarFront, type LucideIcon } from "lucide-react";
 import type { Role } from "@prisma/client";
 
-export type NavItem = { /** Đứng ngay sau mục Cài đặt (thanh bên máy tính), cuối danh sách. */ footer?: boolean; href: string; label: string; icon: LucideIcon; /** Tiền tố đường dẫn coi là đang ở mục này (mặc định = href). */ match?: string; /** Menu con (hiển thị dạng nhóm mở/đóng). */ children?: { href: string; label: string; icon?: LucideIcon }[]; /** Nhóm mở sẵn (mặc định: chỉ mở khi đang ở một mục bên trong). */ open?: boolean };
+export type NavItem = { /** Thuộc nhóm quản trị phía cuối thanh bên. */ footer?: boolean; href: string; label: string; icon: LucideIcon; /** Tiền tố đường dẫn coi là đang ở mục này (mặc định = href). */ match?: string; /** Menu con (hiển thị dạng nhóm mở/đóng). */ children?: { href: string; label: string; icon?: LucideIcon }[]; /** Nhóm mở sẵn (mặc định: chỉ mở khi đang ở một mục bên trong). */ open?: boolean };
 
 export const CONFIG_WEBSITE_PATHS = ["/cms/settings", "/cms/menu", "/cms/marquee", "/cms/pages"] as const;
 export const isConfigWebsitePath = (path: string) => CONFIG_WEBSITE_PATHS.some((prefix) => path === prefix || path.startsWith(prefix + "/"));
@@ -67,7 +67,6 @@ export function navFor(role: Role): NavItem[] {
   // Admin: gom nhóm cho gọn (nhóm tự mở khi đang ở một mục bên trong; "Cổng thông tin" luôn mở sẵn)
   return [
     { href: "/dashboard", label: "Tổng quan", icon: LayoutDashboard },
-    { href: "/accounts", label: "Tài khoản & Nhân sự", icon: Users },
     { href: "/approvals", label: "Hàng chờ duyệt", icon: Inbox },
     { href: "/members", label: "Tổ chức", icon: Users, children: [{ href: "/members", label: "Đoàn viên & thanh niên", icon: Users }, { href: "/departments", label: "Chi đoàn", icon: School }] },
     {
@@ -101,6 +100,7 @@ export function navFor(role: Role): NavItem[] {
         { href: "/chapter-reports", label: "Báo cáo Chi đoàn", icon: FileText },
       ],
     },
+    { href: "/accounts", label: "Tài khoản & Nhân sự", icon: Users, footer: true },
   ];
 }
 

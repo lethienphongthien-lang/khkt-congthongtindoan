@@ -70,7 +70,7 @@ function SidebarBody({ role, items, labels, onNavigate, badges }: { role: Role; 
         </div>
       </div>
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-3" aria-label="Điều hướng chính">
-        <NavLinks items={[...items.filter((i) => !i.footer), settingsNavItem(role), ...items.filter((i) => i.footer)]} labels={labels} onNavigate={onNavigate} badges={badges} />
+        <NavLinks items={[...items.filter((i) => !i.footer), ...items.filter((i) => i.footer && i.href === "/accounts"), settingsNavItem(role), ...items.filter((i) => i.footer && i.href !== "/accounts")]} labels={labels} onNavigate={onNavigate} badges={badges} />
       </nav>
       <div className="space-y-0.5 border-t border-white/15 p-3">
         <LogoutForm variant="sidebar" labelClass={labels} />
