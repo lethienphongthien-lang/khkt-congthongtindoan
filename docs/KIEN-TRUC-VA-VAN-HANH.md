@@ -170,7 +170,7 @@ Khai báo trong `vercel.json`, gọi các đường dẫn có kiểm tra `CRON_S
 | Đường dẫn | Giờ (UTC → giờ VN) | Việc làm |
 |---|---|---|
 | `/api/cron/reminders` | 00:00 → 07:00 | Nhắc lịch cho người đã đăng ký hoạt động bắt đầu trong 24 giờ tới (thông báo + đẩy) |
-| `/api/cron/rollover` | 00:10 → 07:10 | Chuyển năm học tự động |
+| `/api/cron/rollover` | _không có lịch_ | Chuyển năm học chạy bằng tay (nút "Cập nhật năm học"); đường dẫn chỉ để gọi tay có `CRON_SECRET` |
 | `/api/cron/cleanup` | 18:30 → 01:30 | Xóa thông báo đã đọc quá 90 ngày, thông báo quá 120 ngày, nhật ký quá 120 ngày (`src/lib/services/cleanup.ts`). Điểm danh, điểm, huy hiệu, báo cáo **không bị xóa** |
 
 ## 9. Sao lưu và khôi phục
