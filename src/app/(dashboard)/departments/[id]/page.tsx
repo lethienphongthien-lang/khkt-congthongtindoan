@@ -1,4 +1,7 @@
-import { ClassPresident } from "@/components/members/class-president";
+import { deputiesAvailable, listDeputies } from "@/lib/services/class-deputies";
+import { ActionsMenu } from "@/components/ui/actions-menu";
+import { DepartmentPersonnel } from "@/components/members/department-personnel";
+import { Tabs } from "@/components/ui/tabs";
 import Link from "next/link";
 import { CompactList } from "@/components/ui/compact-list";
 import { notFound } from "next/navigation";
@@ -15,7 +18,7 @@ import { MEMBER_SORTS, memberOrderBy } from "@/lib/member-sort";
 import { inOrder, memberIdsByName } from "@/lib/services/member-name-sort";
 import { ClickRow } from "@/components/ui/click-row";
 import { MemberTable } from "@/components/members/member-table";
-import { AddMembersButton, DeleteDepartmentButton, DepartmentAccountButton, DepartmentFormButton, MonitorButton, SecretaryButton } from "@/components/members/department-actions";
+import { AddMembersButton, DeleteDepartmentButton, DepartmentAccountButton, DepartmentFormButton } from "@/components/members/department-actions";
 import { Avatar, DataTable, EmptyState, PageHeader, Pagination, Section, Stat, Td, Th } from "@/components/ui/misc";
 
 export const metadata = { title: "Chi đoàn" };
@@ -27,6 +30,7 @@ export default async function DepartmentDetailPage({ params, searchParams }: { p
   const { id } = await params;
   const sp = await searchParams;
   const page = pageParam(sp.page);
+  const tab = str(sp.tab) === "personnel" ? "personnel" : "overview";
     const q = str(sp.q), kind = str(sp.kind), status = str(sp.status), sort = str(sp.sort);
   const mwhere: Prisma.MemberWhereInput = {
     departmentId: id,
@@ -57,20 +61,26 @@ export default async function DepartmentDetailPage({ params, searchParams }: { p
   ]);
   const president = dept.presidentId ? await db.user.findUnique({ where: { id: dept.presidentId }, select: { fullName: true, member: { select: { id: true } } } }) : null;
   const presidentCandidates = await db.member.findMany({ where: { departmentId: id, status: "ACTIVE", user: { status: "ACTIVE" } }, select: { id: true, fullName: true }, orderBy: { fullName: "asc" } });
+  const [deputies, deputiesEnabled] = tab === "personnel" ? await Promise.all([listDeputies(id), deputiesAvailable()]) : [[], false];
   const members = nameIds ? inOrder(membersRaw, nameIds) : membersRaw;
+  const actionItems = <>
+    <a href={`/api/members/export?dept=${dept.id}`} className={buttonClass("secondary")}><Download className="size-4" />Xuất<span className="max-sm:hidden"> Excel</span></a>
+    <AddMembersButton departmentId={dept.id} departmentName={dept.name} />
+    {user.role === "ADMIN" && <DepartmentAccountButton departmentId={dept.id} account={dept.account} />}
+    {user.role === "ADMIN" && <DepartmentFormButton dept={{ id: dept.id, name: dept.name, description: dept.description, startYear: dept.startYear, isTeacher: dept.isTeacher }} />}
+    {user.role === "ADMIN" && <DeleteDepartmentButton id={dept.id} name={dept.name} />}
+  </>;
   return (
     <>
-      <PageHeader title={`Chi đoàn ${dept.name}`} description={`${dept.isTeacher ? "Chi đoàn giáo viên · " : ""}${dept.startYear ? `Niên khóa ${cohortLabel(dept.startYear)} · ` : ""}${dept.graduatedAt ? "Đã ra trường" : `Bí thư: ${dept.secretary?.fullName ?? "chưa phân công"}${dept.monitors.length ? ` · Cờ đỏ: ${dept.monitors.map((m) => m.user.fullName).join(", ")}` : ""}`}`}
+      <PageHeader title={`Chi đoàn ${dept.name}`} description={`${dept.isTeacher ? "Chi đoàn giáo viên · " : ""}${dept.startYear ? `Niên khóa ${cohortLabel(dept.startYear)}` : ""}${dept.graduatedAt ? " · Đã ra trường" : ""}`}
         actions={dept.graduatedAt ? undefined : <>
-          <a href={`/api/members/export?dept=${dept.id}`} className={buttonClass("secondary")}><Download className="size-4" />Xuất<span className="max-sm:hidden"> Excel</span></a>
-          <AddMembersButton departmentId={dept.id} departmentName={dept.name} />
-          <SecretaryButton departmentId={dept.id} current={dept.secretary} candidates={candidateRows.map((m) => ({ id: m.id, userId: m.userId, label: `${m.fullName} (${m.code})` }))} />
-          <MonitorButton departmentId={dept.id} current={dept.monitors.map((m) => ({ userId: m.userId, fullName: m.user.fullName }))} candidates={candidateRows.map((m) => ({ id: m.id, userId: m.userId, label: `${m.fullName} (${m.code})` }))} />
-          {user.role === "ADMIN" && <DepartmentAccountButton departmentId={dept.id} account={dept.account} />}
-          {user.role === "ADMIN" && <DepartmentFormButton dept={{ id: dept.id, name: dept.name, description: dept.description, startYear: dept.startYear, isTeacher: dept.isTeacher }} />}
-          {user.role === "ADMIN" && <DeleteDepartmentButton id={dept.id} name={dept.name} />}
+          <ActionsMenu>{actionItems}</ActionsMenu>
         </>} />
-      {!dept.isTeacher && !dept.graduatedAt && <ClassPresident departmentId={id} current={president?.fullName ?? null} currentMemberId={president?.member?.id ?? null} candidates={presidentCandidates} canEdit={user.role === "ADMIN"} />}
+      {!dept.graduatedAt && <Tabs current={`?tab=${tab}`} items={[["?tab=overview", "Tổng quan"], ["?tab=personnel", "Nhân sự"]]} />}
+      {tab === "personnel" && !dept.graduatedAt ? <DepartmentPersonnel departmentId={id} deputies={deputies} deputiesEnabled={deputiesEnabled} president={president ? { id: president.member?.id ?? null, name: president.fullName } : null}
+        secretary={dept.secretary ? { id: dept.secretary.id, fullName: dept.secretary.fullName } : null} monitors={dept.monitors.map((m) => ({ userId: m.userId, fullName: m.user.fullName }))}
+        candidates={candidateRows.map((m) => ({ id: m.id, userId: m.userId, label: `${m.fullName} (${m.code})` }))} presidentCandidates={presidentCandidates.map((m) => ({ id: m.id, userId: m.id, label: m.fullName }))}
+        showPresident={!dept.isTeacher} canEditPresident={user.role === "ADMIN"} canEdit /> : <>
       <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
         <Stat label="Học sinh" value={dept._count.members} />
         <Stat label="Đoàn viên" value={doanVienCount} />
@@ -100,6 +110,7 @@ export default async function DepartmentDetailPage({ params, searchParams }: { p
         <Pagination page={page} pageSize={PAGE_SIZE} total={filteredTotal} basePath={`/departments/${id}`} params={{ q, kind, status, sort }} />
       </>
       </div>
+      </>}
     </>
   );
 }

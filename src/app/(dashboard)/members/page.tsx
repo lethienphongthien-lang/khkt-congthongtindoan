@@ -9,6 +9,7 @@ import { memberScope } from "@/lib/services/queries";
 import { formatDate, pageParam, str } from "@/utils";
 import { buttonClass } from "@/components/ui/button";
 import { Avatar, DataTable, EmptyState, PageHeader, Pagination, Stat, Td, Th } from "@/components/ui/misc";
+import { ActionsMenu } from "@/components/ui/actions-menu";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { MemberTable } from "@/components/members/member-table";
 import { GRADE_OPTIONS, MEMBER_SORTS, gradeOf, memberOrderBy } from "@/lib/member-sort";
@@ -59,11 +60,11 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
         title="Đoàn viên & thanh niên"
         description={user.role !== "ADMIN" ? `Đoàn viên và thanh niên Chi đoàn ${user.departmentName}` : undefined}
         actions={user.role === "ADMIN" && (
-          <>
+          <ActionsMenu>
             <a href={`/api/members/export${exportQuery}`} className={buttonClass("secondary")}><Download className="size-4" />Xuất<span className="max-sm:hidden"> Excel</span></a>
             <ImportMembersButton />
             <Link href="/members/new" className={buttonClass()}><Plus className="size-4" />Thêm<span className="max-sm:hidden"> thành viên</span></Link>
-          </>
+          </ActionsMenu>
         )}
       />
       <div className="mb-4 grid max-w-md grid-cols-3 gap-6">
