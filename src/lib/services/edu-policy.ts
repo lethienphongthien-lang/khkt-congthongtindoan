@@ -6,7 +6,6 @@ import { hasEduIntegration } from "./edu-integration";
 import { EDU_LABEL, EDU_OPEN, type EduDomain, type EduPolicy } from "@/lib/edu-policy-types";
 
 export type { EduDomain, EduPolicy } from "@/lib/edu-policy-types";
-export { eduLockedLabels } from "@/lib/edu-policy-types";
 const LABEL = EDU_LABEL;
 const OPEN = EDU_OPEN;
 

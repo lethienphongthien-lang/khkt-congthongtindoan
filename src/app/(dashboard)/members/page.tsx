@@ -1,5 +1,4 @@
 import { getEduPolicy } from "@/lib/services/edu-policy";
-import { EduManagedNotice } from "@/components/members/edu-managed-notice";
 import Link from "next/link";
 import { ClickRow } from "@/components/ui/click-row";
 import { CompactList } from "@/components/ui/compact-list";
@@ -70,7 +69,6 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
           </ActionsMenu>
         )}
       />
-      {user.role === "ADMIN" && <EduManagedNotice policy={policy} />}
       <div className="mb-4 grid max-w-md grid-cols-3 gap-6">
         <Stat label={obj === "gv" ? "Giáo viên" : "Học sinh"} value={scopeTotal.toLocaleString("vi-VN")} />
         <Stat label="Đoàn viên" value={scopeDoanVien.toLocaleString("vi-VN")} />

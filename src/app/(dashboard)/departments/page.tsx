@@ -1,5 +1,4 @@
 import { getEduPolicy } from "@/lib/services/edu-policy";
-import { EduManagedNotice } from "@/components/members/edu-managed-notice";
 import Link from "next/link";
 import { ClickRow } from "@/components/ui/click-row";
 import { CompactList } from "@/components/ui/compact-list";
@@ -53,7 +52,6 @@ export default async function DepartmentsPage({ searchParams }: { searchParams: 
     <>
       <PageHeader title={isAdmin ? "Chi đoàn" : "Chi đoàn của tôi"} description={isAdmin ? `${totalDepts} Chi đoàn ${graduated ? "đã ra trường" : "đang học"}` : undefined}
         actions={isAdmin && <>{policy.placement && <SyncSchoolYearButton />}{policy.classes && <DepartmentFormButton />}</>} />
-      {isAdmin && <EduManagedNotice policy={policy} />}
       {isAdmin && (
         <FilterBar leading={
           <div className="flex gap-1 text-sm">
