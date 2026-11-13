@@ -2,17 +2,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronDown, Settings } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import type { Role } from "@prisma/client";
 import { cn } from "@/utils";
-import { navFor, type NavItem } from "@/lib/nav";
+import { navFor, settingsNavItem, isConfigWebsitePath, type NavItem } from "@/lib/nav";
 import { LogoutForm } from "./logout-button";
 import { DoanLogo } from "./logo";
 
 function NavGroup({ item, labels }: { item: NavItem; labels: string }) {
   const pathname = usePathname();
   const children = item.children ?? [];
-  const inside = children.some((c) => pathname === c.href || pathname.startsWith(c.href + "/")) || pathname.startsWith((item.match ?? item.href) + "/");
+  const inside = !isConfigWebsitePath(pathname) && (children.some((c) => pathname === c.href || pathname.startsWith(c.href + "/")) || pathname.startsWith((item.match ?? item.href) + "/"));
   // Nhóm mở sẵn nếu được đánh dấu `open` hoặc đang ở một mục bên trong; vẫn bấm để mở/thu gọn thủ công.
   const [open, setOpen] = useState(item.open ?? inside);
   useEffect(() => { if (inside) setOpen(true); }, [inside]); // đi vào một mục thì nhóm chứa nó tự mở
@@ -41,7 +41,12 @@ function NavGroup({ item, labels }: { item: NavItem; labels: string }) {
 
 function NavLinks({ items, labels, onNavigate, badges }: { items: NavItem[]; labels: string; onNavigate?: () => void; badges?: Record<string, number> }) {
   const pathname = usePathname();
-  const active = (it: NavItem) => { const h = it.match ?? it.href; return pathname === h || (h !== "/dashboard" && pathname.startsWith(h + "/")); };
+  const active = (it: NavItem) => {
+    if (it.href === "/settings") return pathname === "/settings" || isConfigWebsitePath(pathname);
+    const h = it.match ?? it.href;
+    if (h === "/cms" && isConfigWebsitePath(pathname)) return false;
+    return pathname === h || (h !== "/dashboard" && pathname.startsWith(h + "/"));
+  };
   const link = (it: NavItem) => (
     <Link key={it.href} href={it.href} onClick={onNavigate} title={it.label}
       className={cn("relative flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
@@ -54,7 +59,7 @@ function NavLinks({ items, labels, onNavigate, badges }: { items: NavItem[]; lab
   return <>{items.map((it) => (it.children ? <NavGroup key={it.href} item={it} labels={labels} /> : link(it)))}</>;
 }
 
-function SidebarBody({ items, labels, onNavigate, badges }: { items: NavItem[]; labels: string; onNavigate?: () => void; badges?: Record<string, number> }) {
+function SidebarBody({ role, items, labels, onNavigate, badges }: { role: Role; items: NavItem[]; labels: string; onNavigate?: () => void; badges?: Record<string, number> }) {
   return (
     <>
       <div className="flex items-center gap-3 border-b border-white/15 px-4 py-4">
@@ -65,7 +70,7 @@ function SidebarBody({ items, labels, onNavigate, badges }: { items: NavItem[]; 
         </div>
       </div>
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-3" aria-label="Điều hướng chính">
-        <NavLinks items={[...items.filter((i) => !i.footer), { href: "/settings", label: "Cài đặt", icon: Settings }, ...items.filter((i) => i.footer)]} labels={labels} onNavigate={onNavigate} badges={badges} />
+        <NavLinks items={[...items.filter((i) => !i.footer), settingsNavItem(role), ...items.filter((i) => i.footer)]} labels={labels} onNavigate={onNavigate} badges={badges} />
       </nav>
       <div className="space-y-0.5 border-t border-white/15 p-3">
         <LogoutForm variant="sidebar" labelClass={labels} />
@@ -78,7 +83,7 @@ export function Sidebar({ role, badges }: { role: Role; badges?: Record<string, 
   // Tablet: thu gọn còn icon. Desktop: đầy đủ. Mobile dùng BottomNav nên không có thanh bên.
   return (
     <aside className="no-print fixed inset-y-0 left-0 z-30 hidden w-16 flex-col bg-primary-dark md:flex lg:w-60">
-      <SidebarBody items={navFor(role)} labels="hidden lg:inline" badges={badges} />
+      <SidebarBody role={role} items={navFor(role)} labels="hidden lg:inline" badges={badges} />
     </aside>
   );
 }

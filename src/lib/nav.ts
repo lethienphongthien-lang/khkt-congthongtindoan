@@ -3,6 +3,9 @@ import type { Role } from "@prisma/client";
 
 export type NavItem = { /** Đứng ngay sau mục Cài đặt (thanh bên máy tính), cuối danh sách. */ footer?: boolean; href: string; label: string; icon: LucideIcon; /** Tiền tố đường dẫn coi là đang ở mục này (mặc định = href). */ match?: string; /** Menu con (hiển thị dạng nhóm mở/đóng). */ children?: { href: string; label: string; icon?: LucideIcon }[]; /** Nhóm mở sẵn (mặc định: chỉ mở khi đang ở một mục bên trong). */ open?: boolean };
 
+export const CONFIG_WEBSITE_PATHS = ["/cms/settings", "/cms/menu", "/cms/marquee", "/cms/pages"] as const;
+export const isConfigWebsitePath = (path: string) => CONFIG_WEBSITE_PATHS.some((prefix) => path === prefix || path.startsWith(prefix + "/"));
+
 export function navFor(role: Role): NavItem[] {
   if (role === "MEMBER") {
     return [
@@ -64,6 +67,7 @@ export function navFor(role: Role): NavItem[] {
   // Admin: gom nhóm cho gọn (nhóm tự mở khi đang ở một mục bên trong; "Cổng thông tin" luôn mở sẵn)
   return [
     { href: "/dashboard", label: "Tổng quan", icon: LayoutDashboard },
+    { href: "/accounts", label: "Tài khoản & Nhân sự", icon: Users },
     { href: "/approvals", label: "Hàng chờ duyệt", icon: Inbox },
     { href: "/members", label: "Tổ chức", icon: Users, children: [{ href: "/members", label: "Đoàn viên & thanh niên", icon: Users }, { href: "/departments", label: "Chi đoàn", icon: School }] },
     {
@@ -110,8 +114,10 @@ const PRIMARY_MOBILE: Record<Role, string[]> = {
   EXTERNAL: [],
 };
 
+export const settingsNavItem = (role: Role): NavItem => ({ href: role === "ADMIN" ? "/settings" : "/settings/profile", label: role === "ADMIN" ? "Cấu hình & Cài đặt" : "Cài đặt cá nhân", icon: Settings });
+
 export function mobileNav(role: Role): { main: NavItem[]; more: NavItem[] } {
-  const all: NavItem[] = [...navFor(role), { href: "/settings", label: "Cài đặt", icon: Settings }];
+  const all: NavItem[] = [...navFor(role), settingsNavItem(role)];
   const keys = PRIMARY_MOBILE[role];
   // Tìm mục (kể cả nằm trong nhóm) cho 4 tab chính
   const flat = all.flatMap((i) => (i.children ? i.children.map((c) => ({ href: c.href, label: c.label, icon: c.icon ?? i.icon })) : [i]));
@@ -134,12 +140,13 @@ export const ROLE_LABEL: Record<Role, string> = { ADMIN: "Ban chấp hành Đoà
 
 export const PAGE_TITLES: Record<string, string> = {
   dashboard: "Tổng quan", members: "Đoàn viên & thanh niên", departments: "Chi đoàn", activities: "Hoạt động", attendance: "Điểm danh",
-  volunteer: "Tình nguyện", games: "Trò chơi", quizzes: "Trò chơi tích điểm", marquee: "Dòng chữ chạy", cms: "Cổng thông tin", "tin-tuc": "Tin tức", "ke-hoach": "Kế hoạch", "su-kien": "Sự kiện", "thong-bao": "Thông báo", "cau-chuyen-dep": "Câu chuyện đẹp", "tro-choi": "Trò chơi", "dinh-huong-nghe-nghiep": "Hướng nghiệp", "tai-lieu-sinh-hoat": "Tài liệu sinh hoạt Chi đoàn", pages: "Trang giới thiệu", "chapter-reports": "Báo cáo Chi đoàn", emulation: "Thi đua", achievements: "Thành tích", reports: "Báo cáo", audit: "Nhật ký hệ thống", settings: "Cài đặt", profile: "Hồ sơ & thẻ số", checkin: "Quét QR điểm danh",
+  volunteer: "Tình nguyện", games: "Trò chơi", quizzes: "Trò chơi tích điểm", marquee: "Dòng chữ chạy", cms: "Cổng thông tin", "tin-tuc": "Tin tức", "ke-hoach": "Kế hoạch", "su-kien": "Sự kiện", "thong-bao": "Thông báo", "cau-chuyen-dep": "Câu chuyện đẹp", "tro-choi": "Trò chơi", "dinh-huong-nghe-nghiep": "Hướng nghiệp", "tai-lieu-sinh-hoat": "Tài liệu sinh hoạt Chi đoàn", pages: "Trang giới thiệu", "chapter-reports": "Báo cáo Chi đoàn", emulation: "Thi đua", achievements: "Thành tích", reports: "Báo cáo", audit: "Nhật ký hệ thống", settings: "Cấu hình & Cài đặt", accounts: "Tài khoản & Nhân sự", profile: "Hồ sơ & thẻ số", checkin: "Quét QR điểm danh",
   history: "Lịch sử hoạt động", notifications: "Thông báo", confessions: "Sơn Hà Confession", "team-chat": "Kênh chat", feedback: "Góp ý", counseling: "Tư vấn tâm lý", "dien-dan": "Diễn đàn", approvals: "Hàng chờ duyệt", schedule: "Lịch công tác tuần", new: "Tạo mới", edit: "Chỉnh sửa", violations: "Vi phạm",
 };
 
 /** Tiêu đề riêng cho đường dẫn cụ thể (ưu tiên hơn PAGE_TITLES theo đoạn). */
 export const PATH_TITLES: Record<string, string> = {
+  "/settings/profile": "Tài khoản cá nhân",
   "/cms/tin-tuc/new": "Đăng tin", "/cms/cau-chuyen-dep/new": "Đăng câu chuyện", "/cms/dinh-huong-nghe-nghiep/new": "Đăng bài hướng nghiệp", "/cms/tai-lieu-sinh-hoat/new": "Đăng tài liệu sinh hoạt", "/cms/ke-hoach/new": "Đăng kế hoạch", "/cms/su-kien/new": "Tạo sự kiện", "/cms/thong-bao/new": "Đăng thông báo", "/cms/dien-dan/new": "Tạo chủ đề diễn đàn", "/chapter-reports/new": "Đăng báo cáo", "/members/new": "Thêm đoàn viên", "/volunteer/new": "Đăng ký tình nguyện", "/activities/new": "Tạo hoạt động", "/counseling": "Tư vấn tâm lý học đường",
 };
 
