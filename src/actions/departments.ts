@@ -1,5 +1,6 @@
 "use server";
 import { assertEduWrite } from "@/lib/services/edu-policy";
+import { hasLinkedClass } from "@/lib/services/edu-integration";
 import { setDeputy } from "@/lib/services/class-deputies";
 import { assignClassOfficer } from "@/lib/services/class-officers";
 import { z } from "zod";
@@ -46,6 +47,7 @@ export async function saveDepartmentAction(id: string | null, input: unknown) {
     // Chi đoàn giáo viên không có khối/khóa
     const startYear = isTeacher ? null : given ?? current?.startYear ?? (p ? startYearFor(p.grade, schoolYearStart()) : null);
     const dup = await db.department.findFirst({ where: { name: data.name, startYear, ...(id ? { NOT: { id } } : {}) } });
+    if (dup?.deletedAt) throw new UserError("Chi đoàn này (cùng tên, cùng khóa) đã bị xóa cùng lớp ở EduConnect. Khôi phục lớp ở EduConnect (Thùng rác) hoặc tạo lớp mới trùng tên để chi đoàn được khôi phục.");
     if (dup) throw new UserError("Chi đoàn này (cùng tên, cùng khóa) đã tồn tại");
 
     if (id) {
@@ -87,6 +89,8 @@ export async function deleteDepartmentAction(id: string) {
     const dept = await db.department.findUnique({ where: { id }, include: { _count: { select: { members: true } } } });
     if (!dept) throw new UserError("Không tìm thấy Chi đoàn");
     if (dept._count.members > 0) throw new UserError("Chi đoàn còn đoàn viên, hãy chuyển đoàn viên sang Chi đoàn khác trước khi xóa");
+    // Chi đoàn gắn liền với lớp: chi đoàn chỉ bị xóa (mềm) khi xóa lớp ở EduConnect.
+    if (await hasLinkedClass(id)) throw new UserError(`Chi đoàn ${dept.name} là lớp của EduConnect. Hãy xóa lớp ở EduConnect trước (chi đoàn sẽ bị xóa theo).`);
     await db.department.delete({ where: { id } });
     await audit(admin.id, "department.delete", "Department", id, { name: dept.name });
     revalidatePath("/departments");

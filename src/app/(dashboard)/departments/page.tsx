@@ -24,7 +24,7 @@ export default async function DepartmentsPage({ searchParams }: { searchParams: 
   const graduated = sp.ra_truong === "1";
   const khoi = gradeOf(str(sp.khoi)), q = str(sp.q), sort = str(sp.sort), obj = str(sp.obj) === "gv" ? "gv" : str(sp.obj) === "hs" ? "hs" : "";
   const where: Prisma.DepartmentWhereInput = isAdmin
-    ? { graduatedAt: graduated ? { not: null } : null, ...(obj ? { isTeacher: obj === "gv" } : {}), ...(khoi || q ? { name: { ...(khoi ? { contains: khoi } : {}), ...(q ? { contains: q, mode: "insensitive" as const } : {}) } } : {}) }
+    ? { deletedAt: null, graduatedAt: graduated ? { not: null } : null, ...(obj ? { isTeacher: obj === "gv" } : {}), ...(khoi || q ? { name: { ...(khoi ? { contains: khoi } : {}), ...(q ? { contains: q, mode: "insensitive" as const } : {}) } } : {}) }
     : { id: user.departmentId ?? "__none__" };
   const [allDepts, memberRows] = await Promise.all([
     db.department.findMany({

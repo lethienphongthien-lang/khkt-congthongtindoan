@@ -15,7 +15,7 @@ function eduDbMessage(e: unknown): string | null {
   const msg = e instanceof Error ? e.message : "";
   const locked = /Dữ liệu do EduConnect quản lý \((years|classes|placement|profiles)\)/.exec(msg);
   if (locked) return `${EDU_LABEL[locked[1] as EduDomain]} do EduConnect quản lý. Nhờ quản trị viên EduConnect thực hiện, hoặc cấp quyền ở Cấu hình → Cổng Đoàn.`;
-  const linked = /Chi đoàn [^\n`"]*? gắn với lớp có dữ liệu ở EduConnect[^\n`"]*/.exec(msg);
+  const linked = /Chi đoàn [^\n`"]*? là lớp của EduConnect[^\n`"]*/.exec(msg);
   return linked ? linked[0] : null;
 }
 
