@@ -22,3 +22,10 @@ export async function isSharedTeacher(accountId: string, client: Client = db): P
     WHERE u."accountId"=${accountId} AND NOT ('STUDENT'::edu."Role"=ANY(u.roles))) AS yes`;
   return r.yes;
 }
+
+/** Chi đoàn đang gắn với lớp ở EduConnect (chi đoàn chính là lớp). Không có tích hợp thì luôn false. */
+export async function hasLinkedClass(departmentId: string, client: Client = db): Promise<boolean> {
+  if (!await hasEduIntegration(client)) return false;
+  const [r] = await client.$queryRaw<{ yes: boolean }[]>`SELECT EXISTS(SELECT 1 FROM edu."SchoolClass" WHERE "departmentId" = ${departmentId}) AS yes`;
+  return r.yes;
+}
