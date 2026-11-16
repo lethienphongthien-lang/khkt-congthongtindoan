@@ -8,13 +8,15 @@ import { Alert } from "@/components/ui/misc";
 import { csvStamp, downloadCsv } from "@/components/members/credentials";
 import type { Credential } from "@/actions/members";
 
-type ClassOption = { id: string; name: string; count: number };
+type ClassOption = { id: string; name: string; count: number; hasAccount: boolean };
 
 /**
  * Admin chọn một hoặc nhiều lớp (Chi đoàn) → xem số tài khoản → cấp lại từng lớp → tải một tệp CSV.
  * Mật khẩu chỉ nằm trong bộ nhớ trình duyệt này; đóng trang là mất nên CSV tự tải ngay khi xong.
  */
-export function ClassPasswordManager({ classes }: { classes: ClassOption[] }) {
+export function ClassPasswordManager({ classes: all0, mode = "members" }: { classes: ClassOption[]; mode?: "members" | "account" }) {
+  const isAcc = mode === "account";
+  const classes = isAcc ? all0.filter((c) => c.hasAccount).map((c) => ({ ...c, count: 1 })) : all0;
   const [all, setAll] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [rows, setRows] = useState<Credential[]>([]);
@@ -32,13 +34,13 @@ export function ClassPasswordManager({ classes }: { classes: ClassOption[] }) {
   const selected = classes.filter((c) => all || picked.has(c.id));
   const total = selected.reduce((n, c) => n + c.count, 0);
   const toggle = (id: string) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const save = (r: Credential[]) => downloadCsv(r, `mat-khau-lop-${csvStamp()}.csv`);
+  const save = (r: Credential[]) => downloadCsv(r, `mat-khau-${isAcc ? "chi-doan" : "lop"}-${csvStamp()}.csv`);
 
   async function run() {
     running.current = true; setPhase("running"); setError(""); setRows([]); setDoneClasses(0);
     const out: Credential[] = [];
     for (const c of selected) {
-      const res = await resetDepartmentPasswordsAction(c.id);
+      const res = await resetDepartmentPasswordsAction(c.id, mode);
       if (!res.ok || !res.data) { setError(`Lớp ${c.name}: ${res.ok ? "không có dữ liệu" : res.error}. Đã cấp lại ${out.length} tài khoản, hãy tải CSV phần đã xong rồi chọn lại các lớp còn lại.`); break; }
       out.push(...res.data.rows); setRows([...out]); setDoneClasses((n) => n + 1);
     }
@@ -69,7 +71,7 @@ export function ClassPasswordManager({ classes }: { classes: ClassOption[] }) {
 
   return (
     <div className="flex max-w-3xl flex-col gap-4 text-sm">
-      <p className="text-muted">Cấp mật khẩu tạm thời mới cho tất cả tài khoản đang hoạt động của các lớp đã chọn và tải CSV. Mỗi người phải đổi mật khẩu khi đăng nhập lại, và các thiết bị đăng nhập nhanh của họ bị thu hồi.</p>
+      <p className="text-muted">{isAcc ? "Cấp mật khẩu tạm thời mới cho tài khoản chung của các Chi đoàn đã chọn" : "Cấp mật khẩu tạm thời mới cho tất cả tài khoản đoàn viên đang hoạt động của các lớp đã chọn"} và tải CSV. Mỗi người phải đổi mật khẩu khi đăng nhập lại, và các thiết bị đăng nhập nhanh của họ bị thu hồi.</p>
       <fieldset className="space-y-2">
         <legend className="mb-1 font-medium">Lớp (Chi đoàn)</legend>
         <label className="flex items-center gap-2"><input type="checkbox" className="size-4" checked={all} onChange={() => setAll(!all)} />Tất cả lớp</label>

@@ -121,21 +121,23 @@ export async function resetMemberPasswordAction(id: string) {
 }
 
 /** Cấp lại mật khẩu tạm thời cho toàn bộ đoàn viên đang sinh hoạt của một Chi đoàn (lớp). Trả danh sách để Admin tải CSV, mật khẩu chỉ trả về một lần. */
-export async function resetDepartmentPasswordsAction(departmentId: string) {
+export async function resetDepartmentPasswordsAction(departmentId: string, target: "members" | "account" = "members") {
   return run<{ rows: Credential[] }>(async () => {
     const admin = await requireRole(["ADMIN"]);
-    const dept = await db.department.findUnique({ where: { id: departmentId }, select: { id: true, name: true } });
+    const dept = await db.department.findUnique({ where: { id: departmentId }, select: { id: true, name: true, account: { select: { id: true, username: true, fullName: true, status: true } } } });
     if (!dept) throw new UserError("Không tìm thấy Chi đoàn");
-    const members = await db.member.findMany({ where: { departmentId, status: "ACTIVE", user: { status: "ACTIVE" } }, orderBy: { code: "asc" }, select: { code: true, fullName: true, userId: true } });
-    if (!members.length) throw new UserError("Chi đoàn chưa có tài khoản nào để cấp lại");
-    const hashed = await Promise.all(members.map(async () => { const password = generateTempPassword(); return { password, passwordHash: await hashPassword(password) }; }));
+    const deptAccount = target === "account" && dept.account?.status === "ACTIVE" ? dept.account : null;
+    const members = target === "account" ? [] : await db.member.findMany({ where: { departmentId, status: "ACTIVE", user: { status: "ACTIVE" } }, orderBy: { code: "asc" }, select: { code: true, fullName: true, userId: true } });
+    const targets = [...members.map((m) => ({ id: m.userId, code: m.code, fullName: m.fullName })), ...(deptAccount ? [{ id: deptAccount.id, code: deptAccount.username, fullName: deptAccount.fullName }] : [])];
+    if (!targets.length) throw new UserError("Chi đoàn chưa có tài khoản nào để cấp lại");
+    const hashed = await Promise.all(targets.map(async () => { const password = generateTempPassword(); return { password, passwordHash: await hashPassword(password) }; }));
     await db.$transaction([
-      ...members.map((m, i) => db.user.update({ where: { id: m.userId }, data: { passwordHash: hashed[i].passwordHash, mustChangePassword: true } })),
-      db.passkey.deleteMany({ where: { userId: { in: members.map((m) => m.userId) } } }),
+      ...targets.map((m, i) => db.user.update({ where: { id: m.id }, data: { passwordHash: hashed[i].passwordHash, mustChangePassword: true } })),
+      db.passkey.deleteMany({ where: { userId: { in: targets.map((m) => m.id) } } }),
     ]);
-    await audit(admin.id, "account.reset_password", "Department", dept.id, { department: dept.name, count: members.length });
+    await audit(admin.id, "account.reset_password", "Department", dept.id, { department: dept.name, count: targets.length, departmentAccount: !!deptAccount });
     revalidatePath("/members");
-    const rows = members.map((m, i) => ({ code: m.code, fullName: m.fullName, className: dept.name, department: dept.name, password: hashed[i].password }));
+    const rows = targets.map((m, i) => ({ code: m.code, fullName: m.fullName, className: dept.name, department: dept.name, password: hashed[i].password }));
     return { data: { rows }, message: `Đã cấp lại mật khẩu cho ${rows.length} tài khoản` };
   });
 }

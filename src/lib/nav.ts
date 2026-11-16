@@ -74,6 +74,7 @@ export function navFor(role: Role): NavItem[] {
       children: [{ href: "/volunteer", label: "Tình nguyện", icon: HeartHandshake }, { href: "/schedule", label: "Lịch công tác", icon: ClipboardList }],
     },
     { href: "/emulation", label: "Thi đua", icon: Trophy },
+    { href: "/violations", label: "Cờ đỏ", icon: Flag },
     { href: "/quizzes", label: "Trò chơi", icon: Puzzle },
     { href: "/driving-test", label: "Ôn thi lái xe", icon: CarFront },
     {

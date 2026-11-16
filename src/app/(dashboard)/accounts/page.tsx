@@ -33,8 +33,9 @@ export default async function AccountsPage({searchParams}:{searchParams:Promise<
       </div>;
     })()}
     {tab==="security"&&await(async()=>{
-      const classes=await db.department.findMany({where:{graduatedAt:null},select:{id:true,name:true,_count:{select:{members:{where:{status:"ACTIVE",user:{status:"ACTIVE"}}}}}}});
-      return <section className="space-y-3 rounded-lg border border-border bg-white/85 p-4"><h2 className="font-semibold">Cấp lại mật khẩu theo lớp</h2><ClassPasswordManager classes={classes.map(c=>({id:c.id,name:c.name,count:c._count.members})).sort((a,b)=>a.name.localeCompare(b.name,"vi"))} /></section>;
+      const classes=await db.department.findMany({where:{graduatedAt:null},select:{id:true,name:true,account:{select:{status:true}},_count:{select:{members:{where:{status:"ACTIVE",user:{status:"ACTIVE"}}}}}}});
+      const opts=classes.map(c=>({id:c.id,name:c.name,count:c._count.members,hasAccount:c.account?.status==="ACTIVE"})).sort((a,b)=>a.name.localeCompare(b.name,"vi"));
+      return <div className="space-y-4"><section className="space-y-3 rounded-lg border border-border bg-white/85 p-4"><h2 className="font-semibold">Cấp lại mật khẩu đoàn viên theo lớp</h2><ClassPasswordManager classes={opts} /></section><section className="space-y-3 rounded-lg border border-border bg-white/85 p-4"><h2 className="font-semibold">Cấp lại mật khẩu tài khoản Chi đoàn</h2><ClassPasswordManager mode="account" classes={opts} /></section></div>;
     })()}
   </div>;
 }
