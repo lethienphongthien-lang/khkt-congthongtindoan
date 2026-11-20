@@ -84,7 +84,6 @@ export function SiteHeader({ address, bannerUrl, phone, email, facebook, youtube
             {email && <a href={`mailto:${email}`} className="max-sm:hidden inline-flex items-center gap-1.5 hover:underline"><Mail className="size-3.5 text-[#ffd400]" />{t("header.email", { email })}</a>}
             </div>
             <div className="flex items-center gap-4">
-              <LanguageSwitcher />
               {facebook && <a href={facebook} target="_blank" rel="noopener noreferrer" className="hover:underline">Facebook</a>}
               {youtube && <a href={youtube} target="_blank" rel="noopener noreferrer" className="hover:underline">Youtube</a>}
             </div>
@@ -117,6 +116,7 @@ export function SiteHeader({ address, bannerUrl, phone, email, facebook, youtube
         {searchOpen && <div className="px-3 pb-3"><SearchBox className="w-full" autoFocus /></div>}
         {open && (
           <div className="fixed inset-x-0 top-14 bottom-0 z-50 overflow-y-auto bg-white pb-8">
+            <div className="flex items-center justify-between border-b border-border px-4 py-2.5 text-sm font-semibold text-slate-600">{t("lang.label")}<LanguageSwitcher variant="light" /></div>
             <ul className="divide-y divide-border">
               <li><Link href="/" className={cn("flex items-center justify-between px-4 py-3.5 text-[15px] font-semibold text-slate-800", pathname === "/" && "bg-primary-light text-primary-dark")}>{t("common.home")}<ChevronRight className="size-4 text-slate-400" /></Link></li>
               {main.map((it) => (
@@ -197,7 +197,8 @@ export function SiteHeader({ address, bannerUrl, phone, email, facebook, youtube
                 </li>
               ))}
             </ul>
-            <Link href={loggedIn ? "/dashboard" : "/login"} className="ml-auto flex shrink-0 items-center px-3 py-1.5 text-xs font-semibold tracking-wide whitespace-nowrap text-white/90 uppercase hover:bg-white/10 hover:text-white sm:px-4 sm:text-sm">
+            <LanguageSwitcher className="ml-auto mr-1" />
+            <Link href={loggedIn ? "/dashboard" : "/login"} className="flex shrink-0 items-center px-3 py-1.5 text-xs font-semibold tracking-wide whitespace-nowrap text-white/90 uppercase hover:bg-white/10 hover:text-white sm:px-4 sm:text-sm">
               {loggedIn ? t("common.manage") : t("common.login")}
             </Link>
           </div>
