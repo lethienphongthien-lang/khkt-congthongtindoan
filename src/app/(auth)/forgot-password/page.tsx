@@ -1,16 +1,18 @@
 import Link from "next/link";
+import { getT } from "@/lib/i18n/server";
 import { AuthHeader } from "@/components/layout/auth-header";
 
-export const metadata = { title: "Quên mật khẩu" };
+export async function generateMetadata() { return { title: (await getT())("app.auth.forgotTitle") }; }
 
-export default function ForgotPasswordPage() {
+export default async function ForgotPasswordPage() {
+  const t = await getT();
   return (
     <div className="w-full max-w-sm">
-      <AuthHeader title="Quên mật khẩu" />
+      <AuthHeader title={t("app.auth.forgotTitle")} />
       <div className="space-y-3 rounded-lg border border-border bg-white p-6 text-sm">
-        <p>Tài khoản đoàn viên do nhà trường cấp nên mật khẩu không thể tự đặt lại qua email.</p>
-        <p>Vui lòng liên hệ <b>Bí thư Chi đoàn</b> hoặc <b>Ban chấp hành Đoàn trường</b> để được cấp lại mật khẩu tạm thời. Bạn sẽ được yêu cầu đổi mật khẩu ngay trong lần đăng nhập kế tiếp.</p>
-        <Link href="/login" className="inline-block text-primary hover:underline">← Quay lại đăng nhập</Link>
+        <p>{t("app.auth.forgot1")}</p>
+        <p>{t("app.auth.forgot2a")}<b>{t("app.auth.secretary")}</b>{t("app.auth.forgot2b")}<b>{t("app.auth.bch")}</b>{t("app.auth.forgot2c")}</p>
+        <Link href="/login" className="inline-block text-primary hover:underline">{t("app.auth.backLogin")}</Link>
       </div>
     </div>
   );

@@ -1,3 +1,5 @@
+import type { MessageKey } from "@/lib/i18n/translate";
+
 /** Chủ đề trò chơi: tên, biểu tượng, màu (dùng chung cho danh sách, trang chơi và trang quản lý). */
 export const THEMES = {
   quiz: { label: "Đố vui", emoji: "🧠", grad: "from-sky-500 to-blue-600", soft: "bg-sky-50 text-sky-700" },
@@ -7,4 +9,9 @@ export const THEMES = {
   mix: { label: "Thử thách tổng hợp", emoji: "🏆", grad: "from-rose-500 to-pink-600", soft: "bg-rose-50 text-rose-700" },
 } as const;
 export type ThemeKey = keyof typeof THEMES;
-export const themeOf = (k: string) => THEMES[(k in THEMES ? k : "quiz") as ThemeKey];
+/** Có truyền t thì nhãn được dịch theo ngôn ngữ hiện tại. */
+export const themeOf = (k: string, t?: (key: MessageKey) => string) => {
+  const key = (k in THEMES ? k : "quiz") as ThemeKey;
+  const th = THEMES[key];
+  return t ? { ...th, label: t(`community.theme.${key}` as MessageKey) } : th;
+};

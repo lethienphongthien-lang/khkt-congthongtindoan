@@ -1,3 +1,4 @@
+import { getT } from "@/lib/i18n/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Calendar, FileText } from "lucide-react";
@@ -12,7 +13,8 @@ import { PeriodModalButton } from "@/components/cms/period-modal";
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const p = await db.reportPeriod.findUnique({ where: { id }, select: { title: true } });
-  return { title: p ? `${p.title} - Tiến độ báo cáo` : "Tiến độ báo cáo Chi đoàn" };
+  const t = await getT();
+  return { title: p ? t("cms.cr.trackerTitle", { title: p.title }) : t("cms.cr.trackerDefault") };
 }
 
 export default async function PeriodReportTrackerPage({
@@ -20,6 +22,7 @@ export default async function PeriodReportTrackerPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const t = await getT();
   const user = await requireRole(["ADMIN"]);
   const { id } = await params;
 
@@ -58,9 +61,9 @@ export default async function PeriodReportTrackerPage({
   }));
 
   const subtitle = [
-    period.academicYear ? `Năm học ${period.academicYear}` : null,
-    period.startDate ? `Từ ${formatDate(period.startDate)}` : null,
-    period.endDate ? `Hạn chót: ${formatDate(period.endDate)}` : null,
+    period.academicYear ? t("cms.cr.yearSub", { y: period.academicYear }) : null,
+    period.startDate ? t("cms.cr.from", { d: formatDate(period.startDate) }) : null,
+    period.endDate ? t("cms.cr.deadline", { d: formatDate(period.endDate) }) : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -71,14 +74,14 @@ export default async function PeriodReportTrackerPage({
         <nav className="text-xs text-muted">
           <Link href="/chapter-reports" className="inline-flex items-center gap-1 hover:text-primary">
             <ArrowLeft className="size-3.5" />
-            Quay lại danh sách đợt báo cáo
+            {t("cms.cr.backList")}
           </Link>
         </nav>
       </div>
 
       <PageHeader
         title={period.title}
-        description={subtitle || "Theo dõi tình hình nộp báo cáo của các Chi đoàn"}
+        description={subtitle || t("cms.cr.trackDesc")}
         actions={
           <div className="flex items-center gap-2">
             <PeriodModalButton
@@ -86,13 +89,13 @@ export default async function PeriodReportTrackerPage({
               schoolYears={schoolYears}
               trigger={
                 <button type="button" className={buttonClass("secondary")}>
-                  Sửa đợt báo cáo
+                  {t("cms.cr.editPeriod")}
                 </button>
               }
             />
             <Link href={`/chapter-reports/new?periodId=${period.id}`} className={buttonClass()}>
               <FileText className="size-4" />
-              Đăng báo cáo thay
+              {t("cms.cr.postFor")}
             </Link>
           </div>
         }
@@ -101,7 +104,7 @@ export default async function PeriodReportTrackerPage({
       {period.description && (
         <div className="rounded-xl border border-primary/20 bg-primary-light/40 p-4 text-sm">
           <div className="font-semibold mb-1 flex items-center gap-1.5 text-primary">
-            <Calendar className="size-4" /> Hướng dẫn & Yêu cầu nội dung báo cáo:
+            <Calendar className="size-4" /> {t("cms.cr.guide")}
           </div>
           <p className="whitespace-pre-line text-foreground/90">{period.description}</p>
         </div>

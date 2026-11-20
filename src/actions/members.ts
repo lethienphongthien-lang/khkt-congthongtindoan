@@ -16,6 +16,9 @@ import { NAME_MSG, NAME_RE, cleanName, todayVN } from "@/lib/validation/rules";
 import { createMemberWithAccount, findOrCreateClass, nextMemberCodes } from "@/lib/services/member-account";
 import { notifyUser, notifyUsers } from "@/lib/notify";
 import { deleteImage, isOwnPublicId } from "@/lib/cloudinary";
+import { getT } from "@/lib/i18n/server";
+import type { MessageKey, TFn } from "@/lib/i18n/translate";
+const tr = async (key: MessageKey, p?: Record<string, string | number>) => (await getT())(key, p);
 
 export type Credential = { code: string; fullName: string; className: string; department: string; password: string };
 export type ImportResult = { created: Credential[]; errors: { row: number; message: string }[] };
@@ -23,7 +26,7 @@ export type ImportResult = { created: Credential[]; errors: { row: number; messa
 /** Lớp chính là Chi đoàn: hệ thống tự gắn thành viên vào "lớp" cùng tên Chi đoàn (không còn hỏi lớp riêng). */
 async function resolveClass(departmentId: string) {
   const dept = await db.department.findUnique({ where: { id: departmentId } });
-  if (!dept) throw new UserError("Chi đoàn không tồn tại");
+  if (!dept) throw new UserError(await tr("act.chapterMissing"));
   return findOrCreateClass(db, departmentId, dept.name);
 }
 
@@ -47,7 +50,7 @@ export async function createMemberAction(input: unknown) {
     const data = memberSchema.parse(input);
     const detail = detailOf(input);
     if (!data.isDoanVien) data.joinedAt = undefined; // thanh niên chưa có ngày vào Đoàn
-    if (data.avatarPublicId && !isOwnPublicId(data.avatarPublicId, "members")) throw new UserError("Ảnh không hợp lệ");
+    if (data.avatarPublicId && !isOwnPublicId(data.avatarPublicId, "members")) throw new UserError(await tr("act.m.badImage"));
     const cls = await resolveClass(data.departmentId);
     const year = data.joinedAt?.getFullYear() ?? new Date().getFullYear();
     const result = await db.$transaction(async (tx) => {
@@ -59,7 +62,7 @@ export async function createMemberAction(input: unknown) {
     revalidatePath("/members");
     return {
       data: { code: result.code, fullName: data.fullName, className: cls.name, department: "", password: result.tempPassword },
-      message: data.isDoanVien ? "Đã thêm đoàn viên và tạo tài khoản" : "Đã thêm thanh niên và tạo tài khoản",
+      message: data.isDoanVien ? await tr("act.m.addedMember") : await tr("act.m.addedYouth"),
     };
   });
 }
@@ -70,13 +73,13 @@ export async function updateMemberAction(id: string, input: unknown) {
     const data = memberSchema.parse(input);
     const detail = detailOf(input);
     const current = await db.member.findUnique({ where: { id } });
-    if (!current) throw new UserError("Không tìm thấy đoàn viên");
+    if (!current) throw new UserError(await tr("misc.m.notFound"));
     // Họ tên, giới tính, ngày sinh là dữ liệu dùng chung; đổi chi đoàn là xếp lớp. Các trường riêng của Đoàn luôn được sửa.
     const sameDob = (current.dateOfBirth?.getTime() ?? null) === (data.dateOfBirth?.getTime() ?? null);
     if (data.fullName !== current.fullName || (data.gender ?? null) !== (current.gender ?? null) || !sameDob) await assertEduWrite("profiles");
     if (data.departmentId !== current.departmentId) await assertEduWrite("placement");
     if (data.avatarPublicId && data.avatarPublicId !== current.avatarPublicId && !isOwnPublicId(data.avatarPublicId, "members")) {
-      throw new UserError("Ảnh không hợp lệ");
+      throw new UserError(await tr("act.m.badImage"));
     }
     const cls = await resolveClass(data.departmentId);
     await db.$transaction([
@@ -88,7 +91,7 @@ export async function updateMemberAction(id: string, input: unknown) {
     await audit(admin.id, "member.update", "Member", id, { code: current.code });
     revalidatePath("/members");
     revalidatePath(`/members/${id}`);
-    return { message: "Đã cập nhật đoàn viên" };
+    return { message: await tr("act.m.updated") };
   });
 }
 
@@ -96,12 +99,12 @@ export async function setMemberAccountStatusAction(id: string, status: "ACTIVE" 
   return run(async () => {
     const admin = await requireRole(["ADMIN"]);
     const m = await db.member.findUnique({ where: { id } });
-    if (!m) throw new UserError("Không tìm thấy đoàn viên");
+    if (!m) throw new UserError(await tr("misc.m.notFound"));
     await db.user.update({ where: { id: m.userId }, data: { status } });
     await audit(admin.id, status === "LOCKED" ? "account.lock" : "account.unlock", "User", m.userId, { code: m.code });
     revalidatePath("/members");
     revalidatePath(`/members/${id}`);
-    return { message: status === "LOCKED" ? "Đã khóa tài khoản" : "Đã kích hoạt tài khoản" };
+    return { message: status === "LOCKED" ? await tr("act.m.locked") : await tr("act.m.unlocked") };
   });
 }
 
@@ -109,14 +112,14 @@ export async function resetMemberPasswordAction(id: string) {
   return run<{ password: string }>(async () => {
     const admin = await requireRole(["ADMIN"]);
     const m = await db.member.findUnique({ where: { id } });
-    if (!m) throw new UserError("Không tìm thấy đoàn viên");
+    if (!m) throw new UserError(await tr("misc.m.notFound"));
     const password = generateTempPassword();
     await db.$transaction([
       db.user.update({ where: { id: m.userId }, data: { passwordHash: await hashPassword(password), mustChangePassword: true } }),
       db.passkey.deleteMany({ where: { userId: m.userId } }), // cấp lại mật khẩu = thu hồi các thiết bị đăng nhập nhanh
     ]);
     await audit(admin.id, "account.reset_password", "User", m.userId, { code: m.code });
-    return { data: { password }, message: "Đã cấp lại mật khẩu tạm thời" };
+    return { data: { password }, message: await tr("act.m.pwReset") };
   });
 }
 
@@ -125,11 +128,11 @@ export async function resetDepartmentPasswordsAction(departmentId: string, targe
   return run<{ rows: Credential[] }>(async () => {
     const admin = await requireRole(["ADMIN"]);
     const dept = await db.department.findUnique({ where: { id: departmentId }, select: { id: true, name: true, account: { select: { id: true, username: true, fullName: true, status: true } } } });
-    if (!dept) throw new UserError("Không tìm thấy Chi đoàn");
+    if (!dept) throw new UserError(await tr("act.d.notFound"));
     const deptAccount = target === "account" && dept.account?.status === "ACTIVE" ? dept.account : null;
     const members = target === "account" ? [] : await db.member.findMany({ where: { departmentId, status: "ACTIVE", user: { status: "ACTIVE" } }, orderBy: { code: "asc" }, select: { code: true, fullName: true, userId: true } });
     const targets = [...members.map((m) => ({ id: m.userId, code: m.code, fullName: m.fullName })), ...(deptAccount ? [{ id: deptAccount.id, code: deptAccount.username, fullName: deptAccount.fullName }] : [])];
-    if (!targets.length) throw new UserError("Chi đoàn chưa có tài khoản nào để cấp lại");
+    if (!targets.length) throw new UserError(await tr("act.m.noAccounts"));
     const hashed = await Promise.all(targets.map(async () => { const password = generateTempPassword(); return { password, passwordHash: await hashPassword(password) }; }));
     await db.$transaction([
       ...targets.map((m, i) => db.user.update({ where: { id: m.id }, data: { passwordHash: hashed[i].passwordHash, mustChangePassword: true } })),
@@ -138,7 +141,7 @@ export async function resetDepartmentPasswordsAction(departmentId: string, targe
     await audit(admin.id, "account.reset_password", "Department", dept.id, { department: dept.name, count: targets.length, departmentAccount: !!deptAccount });
     revalidatePath("/members");
     const rows = targets.map((m, i) => ({ code: m.code, fullName: m.fullName, className: dept.name, department: dept.name, password: hashed[i].password }));
-    return { data: { rows }, message: `Đã cấp lại mật khẩu cho ${rows.length} tài khoản` };
+    return { data: { rows }, message: await tr("act.m.pwResetN", { n: rows.length }) };
   });
 }
 
@@ -147,19 +150,19 @@ export async function deleteMemberAction(id: string) {
     const admin = await requireRole(["ADMIN"]);
     await assertEduWrite("profiles");
     const m = await db.member.findUnique({ where: { id } });
-    if (!m) throw new UserError("Không tìm thấy đoàn viên");
-    if ((await linkedStudentMemberIds([id])).has(id)) throw new UserError(`Đoàn viên ${m.fullName} ${LINKED_STUDENT_HINT}`);
+    if (!m) throw new UserError(await tr("misc.m.notFound"));
+    if ((await linkedStudentMemberIds([id])).has(id)) throw new UserError(`${m.fullName} ${LINKED_STUDENT_HINT}`);
     try {
       await db.user.delete({ where: { id: m.userId } }); // cascade -> Member, Attendance, Points...
     } catch (e) {
       // P2003: còn dữ liệu của hệ thống khác (EduConnect: điểm, đăng ký thi...) tham chiếu tới tài khoản này.
-      if ((e as { code?: string }).code === "P2003") throw new UserError("Không xóa được: tài khoản còn dữ liệu học tập ở EduConnect. Hãy khóa tài khoản hoặc xử lý bên EduConnect trước.");
+      if ((e as { code?: string }).code === "P2003") throw new UserError(await tr("act.m.eduData"));
       throw e;
     }
     await deleteImage(m.avatarPublicId);
     await audit(admin.id, "member.delete", "Member", id, { code: m.code, fullName: m.fullName });
     revalidatePath("/members");
-    return { message: "Đã xóa đoàn viên" };
+    return { message: await tr("act.m.deleted") };
   });
 }
 
@@ -169,15 +172,15 @@ export async function adjustPointsAction(input: unknown) {
     const data = pointAdjustSchema.parse(input);
     await db.$transaction(async (tx) => {
       const m = await tx.member.findUnique({ where: { id: data.memberId } });
-      if (!m) throw new UserError("Không tìm thấy đoàn viên");
-      if (m.totalPoints + data.points < 0) throw new UserError("Tổng điểm không thể âm");
+      if (!m) throw new UserError(await tr("misc.m.notFound"));
+      if (m.totalPoints + data.points < 0) throw new UserError(await tr("act.m.negative"));
       await tx.pointTransaction.create({ data: { memberId: m.id, type: "ADJUSTMENT", points: data.points, reason: data.reason, createdById: admin.id } });
       await tx.member.update({ where: { id: m.id }, data: { totalPoints: { increment: data.points } } });
       await notifyUser(m.userId, { type: "POINTS", title: `${data.points > 0 ? "Được cộng" : "Bị trừ"} ${Math.abs(data.points)} điểm`, body: data.reason, link: "/games" }, tx);
       await audit(admin.id, "points.adjust", "Member", m.id, { points: data.points, reason: data.reason }, tx);
     });
     revalidatePath(`/members/${data.memberId}`);
-    return { message: "Đã điều chỉnh điểm" };
+    return { message: await tr("act.m.adjusted") };
   });
 }
 
@@ -185,7 +188,7 @@ export async function adjustPointsAction(input: unknown) {
 export async function updateOwnAvatarAction(input: { avatarUrl: string; avatarPublicId: string }) {
   return run(async () => {
     const user = await requireUser();
-    if (!isOwnPublicId(input.avatarPublicId, "members") || !input.avatarUrl.startsWith("https://res.cloudinary.com/")) throw new UserError("Ảnh không hợp lệ");
+    if (!isOwnPublicId(input.avatarPublicId, "members") || !input.avatarUrl.startsWith("https://res.cloudinary.com/")) throw new UserError(await tr("act.m.badImage"));
     if (user.memberId) {
       const m = await db.member.findUniqueOrThrow({ where: { id: user.memberId } });
       await db.member.update({ where: { id: m.id }, data: { avatarUrl: input.avatarUrl, avatarPublicId: input.avatarPublicId } });
@@ -196,27 +199,27 @@ export async function updateOwnAvatarAction(input: { avatarUrl: string; avatarPu
       await deleteImage(u.avatarPublicId);
     }
     invalidatePublic();
-    return { message: "Đã cập nhật ảnh" };
+    return { message: await tr("members.avatarUpdated") };
   });
 }
 
-const idsSchema = z.array(z.string().min(1)).min(1, "Chọn ít nhất một người").max(1000, "Mỗi lần chọn tối đa 1000 người");
+const makeIdsSchema = (t: TFn) => z.array(z.string().min(1)).min(1, t("misc.m.pickOne")).max(1000, t("misc.m.pickMax"));
 
 /** Kết nạp nhiều thanh niên vào Đoàn cùng lúc (bỏ qua người đã là đoàn viên). */
 export async function admitMembersAction(ids: unknown, joinedAt: string) {
   return run<{ admitted: number; skipped: number }>(async () => {
     const admin = await requireRole(["ADMIN"]);
-    const list = idsSchema.parse(ids);
+    const list = makeIdsSchema(await getT()).parse(ids);
     const when = joinedAt ? new Date(joinedAt) : new Date();
-    if (Number.isNaN(when.getTime())) throw new UserError("Ngày vào Đoàn không hợp lệ");
-    if (when.getTime() > Date.now() + 86_400_000) throw new UserError("Ngày vào Đoàn không thể ở tương lai");
+    if (Number.isNaN(when.getTime())) throw new UserError(await tr("act.m.badJoinDate"));
+    if (when.getTime() > Date.now() + 86_400_000) throw new UserError(await tr("act.m.futureJoin"));
     const targets = await db.member.findMany({ where: { id: { in: list }, isDoanVien: false }, select: { id: true, userId: true } });
-    if (!targets.length) throw new UserError("Những người đã chọn đều là đoàn viên rồi");
+    if (!targets.length) throw new UserError(await tr("act.m.allMembers"));
     await db.member.updateMany({ where: { id: { in: targets.map((t) => t.id) } }, data: { isDoanVien: true, joinedAt: when } });
     await notifyUsers(targets.map((t) => t.userId), { type: "SYSTEM", title: "Chúc mừng! Bạn đã được kết nạp vào Đoàn", body: "Từ nay bạn là đoàn viên Đoàn TNCS Hồ Chí Minh.", link: "/profile" });
     await audit(admin.id, "member.admit_bulk", "Member", null, { count: targets.length });
     revalidatePath("/members"); revalidatePath("/departments"); invalidatePublic();
-    return { data: { admitted: targets.length, skipped: list.length - targets.length }, message: `Đã kết nạp ${targets.length} người vào Đoàn` };
+    return { data: { admitted: targets.length, skipped: list.length - targets.length }, message: await tr("act.m.admittedN", { n: targets.length }) };
   });
 }
 
@@ -225,7 +228,7 @@ export async function deleteMembersAction(ids: unknown) {
   return run<{ deleted: number; failed: string[] }>(async () => {
     const admin = await requireRole(["ADMIN"]);
     await assertEduWrite("profiles");
-    const list = idsSchema.parse(ids);
+    const list = makeIdsSchema(await getT()).parse(ids);
     const found = await db.member.findMany({ where: { id: { in: list } }, select: { id: true, userId: true, code: true, fullName: true, avatarPublicId: true } });
     // Đoàn viên đang là học sinh EduConnect không xóa ở đây (chi đoàn chính là lớp, đoàn viên chính là học sinh).
     const linked = await linkedStudentMemberIds(found.map((m) => m.id));
@@ -245,8 +248,8 @@ export async function deleteMembersAction(ids: unknown) {
     }
     await audit(admin.id, "member.delete_bulk", "Member", null, { deleted, failed: failed.length });
     revalidatePath("/members"); revalidatePath("/departments");
-    if (!deleted) throw new UserError(failed.length ? `Không xóa được: ${failed.slice(0, 5).join(", ")}${failed.length > 5 ? "…" : ""}. Bí thư đã tạo hoạt động cần được chuyển cho người khác trước.` : "Không tìm thấy ai để xóa");
-    return { data: { deleted, failed }, message: failed.length ? `Đã xóa ${deleted} người; ${failed.length} người không xóa được (${failed.slice(0, 3).join(", ")}${failed.length > 3 ? "…" : ""})` : `Đã xóa ${deleted} người` };
+    if (!deleted) throw new UserError(failed.length ? await tr("act.m.cannotDeleteSome", { names: `${failed.slice(0, 5).join(", ")}${failed.length > 5 ? "…" : ""}` }) : await tr("act.m.noneToDelete"));
+    return { data: { deleted, failed }, message: failed.length ? await tr("act.m.deletedPartial", { n: deleted, f: failed.length, names: `${failed.slice(0, 3).join(", ")}${failed.length > 3 ? "…" : ""}` }) : await tr("act.m.deletedN", { n: deleted }) };
   });
 }
 
@@ -255,16 +258,16 @@ export async function admitMemberAction(id: string, joinedAt: string) {
   return run(async () => {
     const admin = await requireRole(["ADMIN"]);
     const when = joinedAt ? new Date(joinedAt) : new Date();
-    if (Number.isNaN(when.getTime())) throw new UserError("Ngày vào Đoàn không hợp lệ");
-    if (when.getTime() > Date.now() + 86_400_000) throw new UserError("Ngày vào Đoàn không thể ở tương lai");
+    if (Number.isNaN(when.getTime())) throw new UserError(await tr("act.m.badJoinDate"));
+    if (when.getTime() > Date.now() + 86_400_000) throw new UserError(await tr("act.m.futureJoin"));
     const m = await db.member.findUnique({ where: { id } });
-    if (!m) throw new UserError("Không tìm thấy thành viên");
-    if (m.isDoanVien) throw new UserError("Thành viên này đã là đoàn viên");
+    if (!m) throw new UserError(await tr("act.m.memberNotFound"));
+    if (m.isDoanVien) throw new UserError(await tr("act.m.alreadyMember"));
     await db.member.update({ where: { id }, data: { isDoanVien: true, joinedAt: when } });
     await notifyUser(m.userId, { type: "SYSTEM", title: "Chúc mừng! Bạn đã được kết nạp vào Đoàn", body: "Từ nay bạn là đoàn viên Đoàn TNCS Hồ Chí Minh.", link: "/profile" });
     await audit(admin.id, "member.admit", "Member", id, { code: m.code });
     revalidatePath("/members"); invalidatePublic();
-    return { message: `Đã kết nạp ${m.fullName} vào Đoàn` };
+    return { message: await tr("act.m.admitted", { name: m.fullName }) };
   });
 }
 
@@ -272,10 +275,10 @@ export async function admitMemberAction(id: string, joinedAt: string) {
 export async function updateOwnProfileAction(input: unknown) {
   return run(async () => {
     const user = await requireUser();
-    if (!user.memberId) throw new UserError("Chỉ đoàn viên mới có hồ sơ đoàn viên");
+    if (!user.memberId) throw new UserError(await tr("act.m.onlyMembers"));
     const data = ownProfileSchema.parse(input);
-    if (data.dateOfBirth && data.dateOfBirth > new Date()) throw new UserError("Ngày sinh không thể ở tương lai");
-    if (data.joinedAt && data.joinedAt > new Date()) throw new UserError("Ngày vào Đoàn không thể ở tương lai");
+    if (data.dateOfBirth && data.dateOfBirth > new Date()) throw new UserError(await tr("act.m.dobFuture"));
+    if (data.joinedAt && data.joinedAt > new Date()) throw new UserError(await tr("act.m.futureJoin"));
     const self = await db.member.findUniqueOrThrow({ where: { id: user.memberId }, select: { isDoanVien: true } });
     await db.$transaction([
       db.member.update({ where: { id: user.memberId }, data: { fullName: data.fullName, gender: data.gender ?? null, dateOfBirth: data.dateOfBirth ?? null, joinedAt: self.isDoanVien ? data.joinedAt ?? null : null } }),
@@ -283,7 +286,7 @@ export async function updateOwnProfileAction(input: unknown) {
     ]);
     await audit(user.id, "member.self_update", "Member", user.memberId, { code: user.memberCode });
     invalidatePublic();
-    return { message: "Đã cập nhật thông tin" };
+    return { message: await tr("act.m.infoUpdated") };
   });
 }
 
@@ -320,24 +323,24 @@ export async function importMembersAction(formData: FormData) {
     const admin = await requireRole(["ADMIN"]);
     await assertEduWrite("profiles", "placement");
     const file = formData.get("file");
-    if (!(file instanceof File) || file.size === 0) throw new UserError("Vui lòng chọn file Excel (.xlsx)");
-    if (!file.name.toLowerCase().endsWith(".xlsx")) throw new UserError("Chỉ hỗ trợ file .xlsx");
-    if (file.size > 4 * 1024 * 1024) throw new UserError("File tối đa 4MB");
+    if (!(file instanceof File) || file.size === 0) throw new UserError(await tr("act.x.pick"));
+    if (!file.name.toLowerCase().endsWith(".xlsx")) throw new UserError(await tr("act.x.onlyXlsx"));
+    if (file.size > 4 * 1024 * 1024) throw new UserError(await tr("act.x.max4"));
 
     const wb = new ExcelJS.Workbook();
     try {
       await wb.xlsx.load(Buffer.from(await file.arrayBuffer()) as unknown as ArrayBuffer);
     } catch {
-      throw new UserError("Không đọc được file Excel");
+      throw new UserError(await tr("act.x.unreadable"));
     }
     const ws = wb.worksheets[0];
-    if (!ws) throw new UserError("File không có dữ liệu");
+    if (!ws) throw new UserError(await tr("act.x.empty"));
 
     const headerRow = ws.getRow(1);
     const col: Record<string, number> = {};
     headerRow.eachCell((cell, n) => { col[cellText(cell.value).toLowerCase()] = n; });
-    if (!col["họ tên"]) throw new UserError('Thiếu cột "Họ tên". Hãy dùng file mẫu.');
-    if (!col["chi đoàn"] && !col["lớp"]) throw new UserError('Thiếu cột "Chi đoàn". Hãy dùng file mẫu.');
+    if (!col["họ tên"]) throw new UserError(await tr("act.x.noNameCol"));
+    if (!col["chi đoàn"] && !col["lớp"]) throw new UserError(await tr("act.x.noDeptCol"));
     const get = (row: ExcelJS.Row, h: (typeof HEADERS)[number]) => (col[h.toLowerCase()] ? row.getCell(col[h.toLowerCase()]).value : null);
 
     const departments = await db.department.findMany();
@@ -347,7 +350,7 @@ export async function importMembersAction(formData: FormData) {
     const prepared: Prepared[] = [];
     const errors: ImportResult["errors"] = [];
     const total = ws.actualRowCount - 1;
-    if (total > MAX_IMPORT_ROWS) throw new UserError(`Mỗi lần nhập tối đa ${MAX_IMPORT_ROWS} đoàn viên`);
+    if (total > MAX_IMPORT_ROWS) throw new UserError(await tr("act.x.maxRows", { n: MAX_IMPORT_ROWS }));
 
     for (let r = 2; r <= ws.rowCount; r++) {
       const row = ws.getRow(r);
@@ -355,24 +358,24 @@ export async function importMembersAction(formData: FormData) {
       // Lớp chính là Chi đoàn: chỉ cần cột Chi đoàn (file mẫu cũ có cột Lớp thì dùng làm Chi đoàn)
       const deptName = cellText(get(row, "Chi đoàn")) || cellText(get(row, "Lớp"));
       if (!fullName && !deptName) continue; // dòng trống
-      if (fullName.length < 2) { errors.push({ row: r, message: "Thiếu họ tên" }); continue; }
-      if (!NAME_RE.test(fullName)) { errors.push({ row: r, message: `Họ tên “${fullName}” không hợp lệ. ${NAME_MSG}` }); continue; }
-      if (!deptName) { errors.push({ row: r, message: "Thiếu Chi đoàn" }); continue; }
+      if (fullName.length < 2) { errors.push({ row: r, message: await tr("act.x.noName") }); continue; }
+      if (!NAME_RE.test(fullName)) { errors.push({ row: r, message: `${await tr("act.x.badName", { name: fullName })} ${NAME_MSG}` }); continue; }
+      if (!deptName) { errors.push({ row: r, message: await tr("act.x.noDept") }); continue; }
       const dept = deptByName.get(deptName.toLowerCase());
-      if (!dept) { errors.push({ row: r, message: `Chi đoàn "${deptName}" chưa tồn tại` }); continue; }
+      if (!dept) { errors.push({ row: r, message: await tr("act.x.deptMissing", { name: deptName }) }); continue; }
 
       const dobRaw = get(row, "Ngày sinh");
       const dob = parseDate(dobRaw);
-      if (dobRaw && !dob) { errors.push({ row: r, message: "Ngày sinh không hợp lệ (dd/mm/yyyy)" }); continue; }
-      if (dob && (dob.toISOString().slice(0, 10) > todayVN() || dob.getUTCFullYear() < 1940)) { errors.push({ row: r, message: "Ngày sinh không được sau ngày hiện tại hoặc quá xa về trước" }); continue; }
+      if (dobRaw && !dob) { errors.push({ row: r, message: await tr("act.x.badDob") }); continue; }
+      if (dob && (dob.toISOString().slice(0, 10) > todayVN() || dob.getUTCFullYear() < 1940)) { errors.push({ row: r, message: await tr("act.x.dobRange") }); continue; }
       const joinedRaw = get(row, "Ngày vào Đoàn");
       const joined = parseDate(joinedRaw);
-      if (joinedRaw && !joined) { errors.push({ row: r, message: "Ngày vào Đoàn không hợp lệ (dd/mm/yyyy)" }); continue; }
-      if (joined && joined.toISOString().slice(0, 10) > todayVN()) { errors.push({ row: r, message: "Ngày vào Đoàn không được sau ngày hiện tại" }); continue; }
-      if (dob && joined && joined <= dob) { errors.push({ row: r, message: "Ngày vào Đoàn phải sau ngày sinh" }); continue; }
+      if (joinedRaw && !joined) { errors.push({ row: r, message: await tr("act.x.badJoin") }); continue; }
+      if (joined && joined.toISOString().slice(0, 10) > todayVN()) { errors.push({ row: r, message: await tr("act.x.joinFuture") }); continue; }
+      if (dob && joined && joined <= dob) { errors.push({ row: r, message: await tr("act.x.joinAfterDob") }); continue; }
       // "Loại": Đoàn viên (mặc định) hoặc Thanh niên (chưa vào Đoàn, không có ngày vào Đoàn)
       const kindText = cellText(get(row, "Loại")).toLowerCase();
-      if (kindText && !/thanh|đoàn|doan/.test(kindText)) { errors.push({ row: r, message: 'Cột "Loại" phải là "Đoàn viên" hoặc "Thanh niên"' }); continue; }
+      if (kindText && !/thanh|đoàn|doan/.test(kindText)) { errors.push({ row: r, message: await tr("act.x.badKind") }); continue; }
       const isDoanVien = !/thanh/.test(kindText);
       const genderText = cellText(get(row, "Giới tính"));
       const gender = ["Nam", "Nữ", "Khác"].find((g) => g.toLowerCase() === genderText.toLowerCase());
@@ -386,7 +389,7 @@ export async function importMembersAction(formData: FormData) {
         },
       });
     }
-    if (!prepared.length && !errors.length) throw new UserError("File không có dòng dữ liệu nào");
+    if (!prepared.length && !errors.length) throw new UserError(await tr("act.x.noRows"));
 
     // Băm mật khẩu trước, ngoài transaction, để transaction ngắn.
     const hashed = await Promise.all(prepared.map(async () => {
@@ -412,6 +415,6 @@ export async function importMembersAction(formData: FormData) {
       }, { timeout: 60_000, maxWait: 10_000 });
     }
     revalidatePath("/members");
-    return { data: { created, errors }, message: created.length ? `Đã nhập ${created.length} đoàn viên` : undefined };
+    return { data: { created, errors }, message: created.length ? await tr("act.x.imported", { n: created.length }) : undefined };
   });
 }

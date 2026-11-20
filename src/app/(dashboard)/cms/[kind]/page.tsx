@@ -1,3 +1,5 @@
+import { getT, getLocale } from "@/lib/i18n/server";
+import { intlLocale } from "@/lib/i18n/format";
 import Link from "next/link";
 import { ClickRow } from "@/components/ui/click-row";
 import { notFound } from "next/navigation";
@@ -6,7 +8,8 @@ import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth/session";
 import { ADMIN_ONLY_KINDS } from "@/lib/services/kind";
-import { CMS_SLUG, KIND_ACTION, KIND_LABEL } from "@/lib/services/public";
+import { CMS_SLUG } from "@/lib/services/public";
+import { kindLabelT, kindActionT } from "@/lib/i18n/kind-labels";
 import { formatDate, pageParam, str } from "@/utils";
 import { buttonClass } from "@/components/ui/button";
 import { CompactList } from "@/components/ui/compact-list";
@@ -17,6 +20,8 @@ import { ArticleStatus } from "@/components/cms/row-actions";
 const PAGE_SIZE = 12;
 
 export default async function CmsKindPage({ params, searchParams }: { params: Promise<{ kind: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const t = await getT();
+  const locale = await getLocale();
   const user = await requireRole(["ADMIN", "SECRETARY"]);
   const isAdmin = user.role === "ADMIN";
   const { kind: slug } = await params;
@@ -36,31 +41,31 @@ export default async function CmsKindPage({ params, searchParams }: { params: Pr
   ]);
   return (
     <>
-      <PageHeader title={KIND_LABEL[kind]} description={isAdmin ? "Quản lý nội dung hiển thị trên trang công khai" : "Bài của bạn được lưu ở dạng nháp, Admin duyệt rồi mới hiển thị công khai"}
+      <PageHeader title={kindLabelT(t, kind)} description={isAdmin ? t("cms.k.descAdmin") : t("cms.k.descSec")}
         actions={<>
-          {isAdmin && isPlan && <Link href="/settings?tab=plancats" className={buttonClass("secondary")}><FolderCog className="size-4" /><span className="max-sm:hidden">Thiết lập danh mục</span></Link>}
-          {isAdmin && <Link href={`/${slug}`} target="_blank" className={buttonClass("secondary")}><ExternalLink className="size-4" /><span className="max-sm:hidden">Xem trang công khai</span></Link>}
-          <Link href={`${base}/new`} className={buttonClass()}><Plus className="size-4" />{KIND_ACTION[kind]}</Link>
+          {isAdmin && isPlan && <Link href="/settings?tab=plancats" className={buttonClass("secondary")}><FolderCog className="size-4" /><span className="max-sm:hidden">{t("cms.k.setupCats")}</span></Link>}
+          {isAdmin && <Link href={`/${slug}`} target="_blank" className={buttonClass("secondary")}><ExternalLink className="size-4" /><span className="max-sm:hidden">{t("cms.k.viewPublic")}</span></Link>}
+          <Link href={`${base}/new`} className={buttonClass()}><Plus className="size-4" />{kindActionT(t, kind)}</Link>
         </>} />
-      <FilterBar fields={[{ type: "search", name: "q", placeholder: "Tìm theo tiêu đề..." }, ...(isPlan ? [{ type: "select" as const, name: "dm", label: "Danh mục", options: [...cats.map((c) => ({ value: c.id, label: c.name })), { value: "none", label: "Chưa phân loại" }] }] : [])]} />
-      {items.length === 0 ? <div className="rounded-lg border border-border bg-white/85"><EmptyState title={`Chưa có ${KIND_LABEL[kind].toLowerCase()}`} description="Nội dung đăng ở đây sẽ hiển thị trên trang công khai." action={<Link href={`${base}/new`} className={buttonClass()}>{KIND_ACTION[kind]} đầu tiên</Link>} /></div> : (
+      <FilterBar fields={[{ type: "search", name: "q", placeholder: t("cms.k.searchTitle") }, ...(isPlan ? [{ type: "select" as const, name: "dm", label: t("cms.k.category"), options: [...cats.map((c) => ({ value: c.id, label: c.name })), { value: "none", label: t("cms.k.uncategorized") }] }] : [])]} />
+      {items.length === 0 ? <div className="rounded-lg border border-border bg-white/85"><EmptyState title={t("cms.k.emptyTitle", { label: kindLabelT(t, kind).toLowerCase() })} description={t("cms.k.emptyDesc")} action={<Link href={`${base}/new`} className={buttonClass()}>{t("cms.k.first", { action: kindActionT(t, kind) })}</Link>} /></div> : (
         <>
           <CompactList items={items.map((a) => ({
-            id: a.id, title: a.title, subtitle: `${isAdmin && a.author?.role === "SECRETARY" ? `${formatDate(a.publishedAt ?? a.createdAt)}${a.publishedAt && a.publishedAt > new Date() ? " (hẹn giờ)" : ""} · ${(a.author?.fullName ?? "—")}` : `${formatDate(a.publishedAt ?? a.createdAt)}${a.publishedAt && a.publishedAt > new Date() ? " (hẹn giờ)" : ""}`} · ${a.viewCount.toLocaleString("vi-VN")} lượt xem`,
+            id: a.id, title: a.title, subtitle: `${isAdmin && a.author?.role === "SECRETARY" ? `${formatDate(a.publishedAt ?? a.createdAt)}${a.publishedAt && a.publishedAt > new Date() ? t("cms.k.scheduledParen") : ""} · ${(a.author?.fullName ?? "—")}` : `${formatDate(a.publishedAt ?? a.createdAt)}${a.publishedAt && a.publishedAt > new Date() ? t("cms.k.scheduledParen") : ""}`} · ${t("cms.k.views", { n: a.viewCount.toLocaleString(intlLocale(locale)) })}`,
             badge: <ArticleStatus published={a.published} pending={!a.published && a.author?.role === "SECRETARY"} />,
             href: `${base}/${a.id}`,
           }))} />
           <div className="max-sm:hidden">
             <DataTable>
-              <thead><tr><Th>Tiêu đề</Th>{isPlan && <Th>Danh mục</Th>}<Th>Người đăng</Th><Th>Ngày đăng</Th><Th>Trạng thái</Th><Th className="text-right">Lượt xem</Th></tr></thead>
+              <thead><tr><Th>{t("cms.k.thTitle")}</Th>{isPlan && <Th>{t("cms.k.category")}</Th>}<Th>{t("cms.k.thAuthor")}</Th><Th>{t("cms.k.thDate")}</Th><Th>{t("cms.k.thStatus")}</Th><Th className="text-right">{t("cms.k.thViews")}</Th></tr></thead>
               <tbody>{items.map((a) => (
                 <ClickRow key={a.id} href={`${base}/${a.id}`}>
                   <Td className="max-w-lg font-medium"><Link href={`${base}/${a.id}`} className="hover:text-primary">{a.title}</Link></Td>
-                  {isPlan && <Td className="whitespace-nowrap">{a.category?.name ?? <span className="text-muted">Chưa phân loại</span>}</Td>}
+                  {isPlan && <Td className="whitespace-nowrap">{a.category?.name ?? <span className="text-muted">{t("cms.k.uncategorized")}</span>}</Td>}
                   <Td className="whitespace-nowrap">{(a.author?.fullName ?? "—")}</Td>
-                  <Td className="whitespace-nowrap">{formatDate(a.publishedAt ?? a.createdAt)}{a.publishedAt && a.publishedAt > new Date() && <div className="text-xs text-warning">Hẹn giờ</div>}</Td>
+                  <Td className="whitespace-nowrap">{formatDate(a.publishedAt ?? a.createdAt)}{a.publishedAt && a.publishedAt > new Date() && <div className="text-xs text-warning">{t("cms.k.scheduled")}</div>}</Td>
                   <Td><ArticleStatus published={a.published} pending={!a.published && a.author?.role === "SECRETARY"} /></Td>
-                  <Td className="text-right whitespace-nowrap tabular-nums"><span className="inline-flex items-center gap-1.5 text-muted"><Eye className="size-4" />{a.viewCount.toLocaleString("vi-VN")}</span></Td>
+                  <Td className="text-right whitespace-nowrap tabular-nums"><span className="inline-flex items-center gap-1.5 text-muted"><Eye className="size-4" />{a.viewCount.toLocaleString(intlLocale(locale))}</span></Td>
                 </ClickRow>
               ))}</tbody>
             </DataTable>

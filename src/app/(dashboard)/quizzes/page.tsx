@@ -1,3 +1,4 @@
+import { getT } from "@/lib/i18n/server";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { db } from "@/lib/db";
@@ -9,24 +10,25 @@ import { DataTable, EmptyState, PageHeader, StatusBadge, Td, Th } from "@/compon
 import { QuizRowActions } from "@/components/games/quiz-admin";
 import { themeOf } from "@/components/games/game-meta";
 
-export const metadata = { title: "Trò chơi tích điểm" };
+export async function generateMetadata() { return { title: (await getT())("cms.quizzes.title") }; }
 
 export default async function QuizzesPage() {
+  const t = await getT();
   await requireRole(["ADMIN"]);
   const quizzes = await db.quiz.findMany({ orderBy: { createdAt: "desc" }, take: 50, include: { _count: { select: { questions: true, attempts: true } } } });
   const now = new Date();
-  const status = (q: (typeof quizzes)[number]) => !q.published ? <StatusBadge tone="gray">Đã ẩn</StatusBadge> : q.startsAt && q.startsAt > now ? <StatusBadge tone="amber">Chưa mở</StatusBadge> : q.endsAt && q.endsAt < now ? <StatusBadge tone="gray">Hết hạn</StatusBadge> : <StatusBadge tone="green">Đang mở</StatusBadge>;
+  const status = (q: (typeof quizzes)[number]) => !q.published ? <StatusBadge tone="gray">{t("cms.quizzes.hidden")}</StatusBadge> : q.startsAt && q.startsAt > now ? <StatusBadge tone="amber">{t("cms.quizzes.notOpen")}</StatusBadge> : q.endsAt && q.endsAt < now ? <StatusBadge tone="gray">{t("cms.quizzes.expired")}</StatusBadge> : <StatusBadge tone="green">{t("cms.quizzes.open")}</StatusBadge>;
   return (
     <>
-      <PageHeader title="Trò chơi tích điểm" description="Đố vui hằng tuần: đoàn viên chơi để tích điểm vào thi đua Chi đoàn"
-        actions={<Link href="/quizzes/new" className={buttonClass()}><Plus className="size-4" />Tạo trò chơi</Link>} />
-      {quizzes.length === 0 ? <div className="rounded-lg border border-border bg-white/85"><EmptyState title="Chưa có trò chơi" description="Có thể nhờ AI soạn sẵn câu hỏi theo chủ đề, bạn chỉ cần đọc lại và chỉnh sửa." action={<Link href="/quizzes/new" className={buttonClass()}>Tạo trò chơi đầu tiên</Link>} /></div> : (
+      <PageHeader title={t("cms.quizzes.title")} description={t("cms.quizzes.desc")}
+        actions={<Link href="/quizzes/new" className={buttonClass()}><Plus className="size-4" />{t("cms.quizzes.create")}</Link>} />
+      {quizzes.length === 0 ? <div className="rounded-lg border border-border bg-white/85"><EmptyState title={t("cms.quizzes.emptyTitle")} description={t("cms.quizzes.emptyDesc")} action={<Link href="/quizzes/new" className={buttonClass()}>{t("cms.quizzes.createFirst")}</Link>} /></div> : (
         <DataTable>
-          <thead><tr><Th>Trò chơi</Th><Th>Đối tượng</Th><Th>Câu</Th><Th>Điểm</Th><Th>Lượt chơi</Th><Th>Hạn</Th><Th>Trạng thái</Th><Th /></tr></thead>
+          <thead><tr><Th>{t("cms.quizzes.thGame")}</Th><Th>{t("cms.quizzes.thAudience")}</Th><Th>{t("cms.quizzes.thQs")}</Th><Th>{t("cms.quizzes.thPoints")}</Th><Th>{t("cms.quizzes.thPlays")}</Th><Th>{t("cms.quizzes.thDeadline")}</Th><Th>{t("cms.quizzes.thStatus")}</Th><Th /></tr></thead>
           <tbody>{quizzes.map((q) => (
             <ClickRow key={q.id} href={`/quizzes/${q.id}`}>
-              <Td className="max-w-md font-medium"><Link href={`/quizzes/${q.id}`} className="hover:text-primary">{themeOf(q.theme).emoji} {q.title}</Link></Td>
-              <Td className="whitespace-nowrap text-sm">{q.departmentIds.length === 0 ? "Toàn trường" : `${q.departmentIds.length} Chi đoàn`}</Td>
+              <Td className="max-w-md font-medium"><Link href={`/quizzes/${q.id}`} className="hover:text-primary">{themeOf(q.theme, t).emoji} {q.title}</Link></Td>
+              <Td className="whitespace-nowrap text-sm">{q.departmentIds.length === 0 ? t("cms.quizzes.wholeSchool") : t("cms.quizzes.nChapters", { n: q.departmentIds.length })}</Td>
               <Td>{q._count.questions}</Td><Td>{q.points}</Td><Td>{q._count.attempts}</Td>
               <Td className="whitespace-nowrap">{q.endsAt ? formatDate(q.endsAt) : "—"}</Td>
               <Td>{status(q)}</Td>

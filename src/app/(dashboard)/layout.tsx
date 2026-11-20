@@ -1,12 +1,14 @@
 import { vapidPublicKey } from "@/lib/push";
 import { getSessionUserId, requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { roleLabelOf } from "@/lib/nav";
+import { getT } from "@/lib/i18n/server";
+import { roleLabelOf, navLabel } from "@/lib/nav";
 import { AppShell } from "@/components/layout/app-shell";
 import { VisitPing } from "@/components/dashboard/visit-ping";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   // Nạp người dùng và thông báo song song (1 lượt truy vấn thay vì 2 lượt nối tiếp).
+  const t = await getT();
   const uid = await getSessionUserId();
   const [user, rows] = await Promise.all([
     requireUser(),
@@ -29,7 +31,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <AppShell
       role={user.role}
       user={{ fullName: user.fullName, avatarUrl: user.avatarUrl }}
-      roleLabel={roleLabelOf(user)}
+      roleLabel={navLabel(t, roleLabelOf(user))}
       unread={unread}
       pushKey={vapidPublicKey()}
       badges={pending ? { "/approvals": pending } : undefined}

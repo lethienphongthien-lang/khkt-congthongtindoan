@@ -1,5 +1,7 @@
 import { MessagesSquare, FileText, Flag, Globe, Settings, Award, BarChart3, CalendarDays, CheckSquare, IdCard, LayoutDashboard, Newspaper, QrCode, Trophy, School, History, Users, Vote, MessageSquare, Inbox, ClipboardList, Bell, BookOpen, Megaphone, HeartHandshake, Gamepad2, Compass, Puzzle, ScrollText, CarFront, type LucideIcon } from "lucide-react";
 import type { Role } from "@prisma/client";
+import { vi as viDict } from "@/lib/i18n/messages";
+import type { MessageKey, TFn } from "@/lib/i18n/translate";
 
 export type NavItem = { /** Thuộc nhóm quản trị phía cuối thanh bên. */ footer?: boolean; href: string; label: string; icon: LucideIcon; /** Tiền tố đường dẫn coi là đang ở mục này (mặc định = href). */ match?: string; /** Menu con (hiển thị dạng nhóm mở/đóng). */ children?: { href: string; label: string; icon?: LucideIcon }[]; /** Nhóm mở sẵn (mặc định: chỉ mở khi đang ở một mục bên trong). */ open?: boolean };
 
@@ -156,4 +158,10 @@ export function roleLabelOf(u: { role: Role; superAdmin?: boolean; position?: st
   if (u.role === "ADMIN") return u.superAdmin ? "Quản trị hệ thống" : u.position || "Ban chấp hành Đoàn trường";
   if (u.role === "MEMBER" && u.isDoanVien === false) return "Thanh niên";
   return ROLE_LABEL[u.role];
+}
+
+/** Dịch nhãn menu/tiêu đề mặc định (tiếng Việt) theo khóa app.nav.<nhãn>; nhãn lạ (từ DB) giữ nguyên. */
+export function navLabel(t: TFn, label: string): string {
+  const key = `app.nav.${label}` as MessageKey;
+  return key in viDict ? t(key) : label;
 }

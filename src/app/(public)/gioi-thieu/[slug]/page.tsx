@@ -8,25 +8,30 @@ import { Eye } from "lucide-react";
 import { db } from "@/lib/db";
 import { ViewTracker } from "@/components/public/view-tracker";
 import { Attachments, type PublicAttachment } from "@/components/public/attachments";
+import { getT, getLocale } from "@/lib/i18n/server";
+import { intlLocale } from "@/lib/i18n/format";
+import { sitePageTitle } from "@/components/public/blocks";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  return SITE_PAGES[slug] ? { title: SITE_PAGES[slug] } : {};
+  return SITE_PAGES[slug] ? { title: sitePageTitle(await getT(), slug, SITE_PAGES[slug]) } : {};
 }
 
 export default async function IntroPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ tab?: string }> }) {
+  const t = await getT();
+  const nf = intlLocale(await getLocale());
   const { slug } = await params;
   if (!SITE_PAGES[slug]) notFound();
   const [page, sp, live] = await Promise.all([getSitePage(slug), searchParams, db.sitePage.findUnique({ where: { slug }, select: { viewCount: true } })]);
   type Raw = { name: string; url: string; publicId: string; size?: number };
   const files = (v: unknown): PublicAttachment[] => (Array.isArray(v) ? (v as Raw[]) : []).filter((f) => f?.url && f?.name).map((f) => ({ id: f.publicId, name: f.name, url: f.url, size: f.size ?? 0 }));
   const tabs = (Array.isArray(page?.tabs) ? (page.tabs as { title: string; content: string; attachments?: unknown }[]) : []).filter((t) => t?.title);
-  const empty = <p className="py-6 text-center text-sm text-muted">Nội dung đang được cập nhật.</p>;
+  const empty = <p className="py-6 text-center text-sm text-muted">{t("public.contentUpdating")}</p>;
   return (
     <div>
       <ViewTracker kind="page" id={slug} />
-      <PageTitle title={SITE_PAGES[slug]} description={undefined} />
-      <div className="-mt-1 mb-3 flex items-center gap-1 text-sm text-muted"><Eye className="size-4" />{(live?.viewCount ?? 0).toLocaleString("vi-VN")} lượt xem</div>
+      <PageTitle title={sitePageTitle(t, slug, SITE_PAGES[slug])} description={undefined} />
+      <div className="-mt-1 mb-3 flex items-center gap-1 text-sm text-muted"><Eye className="size-4" />{t("public.views", { n: (live?.viewCount ?? 0).toLocaleString(nf) })}</div>
       {tabs.length > 0 ? (
         <SiteTabs titles={tabs.map((t) => t.title)} initial={Number(sp.tab) || 0}>
           {tabs.map((t) => (<div key={t.title}>{t.content.trim() ? <RichText text={t.content} /> : files(t.attachments).length ? null : empty}<Attachments files={files(t.attachments)} /></div>))}

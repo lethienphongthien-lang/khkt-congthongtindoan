@@ -1,4 +1,6 @@
 import type { Tone } from "@/components/ui/misc";
+import { vi } from "@/lib/i18n/messages";
+import type { MessageKey } from "@/lib/i18n/translate";
 
 /** Nhóm hành động trong nhật ký (bộ lọc) và tiền tố mã hành động thuộc từng nhóm. */
 export const AUDIT_GROUPS: { value: string; label: string; prefixes: string[] }[] = [
@@ -68,5 +70,19 @@ export function metaSummary(meta: unknown): string {
   const parts: string[] = [];
   for (const [k, label] of Object.entries(META_LABELS)) { const v = m[k]; if (typeof v === "string" || typeof v === "number") parts.push(`${label}: ${String(v).slice(0, 70)}`); }
   if (Array.isArray(m.fields) && m.fields.length) parts.push(`${m.fields.length} trường đã sửa`);
+  return parts.slice(0, 3).join(" · ");
+}
+
+/** Bản dịch theo ngôn ngữ hiện tại (dùng thay cho các hàm/hằng tiếng Việt ở trên khi hiển thị). */
+type TF = (k: MessageKey, p?: Record<string, string | number>) => string;
+export const actionLabelT = (t: TF, a: string) => (`audit.a.${a}` in vi ? t(`audit.a.${a}` as MessageKey) : a);
+export const targetLabelT = (t: TF, target: string) => (`audit.t.${target}` in vi ? t(`audit.t.${target}` as MessageKey) : target);
+export const auditGroupLabelT = (t: TF, value: string) => t(`audit.g.${value}` as MessageKey);
+export function metaSummaryT(t: TF, meta: unknown): string {
+  if (!meta || typeof meta !== "object") return "";
+  const m = meta as Record<string, unknown>;
+  const parts: string[] = [];
+  for (const k of Object.keys(META_LABELS)) { const v = m[k]; if (typeof v === "string" || typeof v === "number") parts.push(`${t(`audit.m.${k}` as MessageKey)}: ${String(v).slice(0, 70)}`); }
+  if (Array.isArray(m.fields) && m.fields.length) parts.push(t("audit.fieldsEdited", { n: m.fields.length }));
   return parts.slice(0, 3).join(" · ");
 }

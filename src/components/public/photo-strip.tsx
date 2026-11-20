@@ -2,16 +2,18 @@ import Link from "next/link";
 import { cdnImage } from "@/lib/image-url";
 import { articleHref } from "@/lib/services/public";
 import { Block } from "./blocks";
+import { getT } from "@/lib/i18n/server";
 
 export type StripPhoto = { id: string; title: string; slug: string; coverUrl: string | null };
 
 /** Dải ảnh hoạt động tự trượt ngang (lấy từ ảnh bìa các bài mới nhất); rê chuột để dừng, bấm vào ảnh để mở bài. Dùng lại hiệu ứng của dòng chữ chạy. */
-export function PhotoStrip({ photos }: { photos: StripPhoto[] }) {
+export async function PhotoStrip({ photos }: { photos: StripPhoto[] }) {
+  const t = await getT();
   const items = photos.filter((p) => p.coverUrl);
   if (items.length < 4) return null;
   const loop = [...items, ...items]; // lặp đôi để vòng cuộn liền mạch
   return (
-    <Block title="Hình ảnh hoạt động">
+    <Block title={t("public.photoStrip")}>
       <div className="marquee">
         <div className="marquee-track gap-1.5" style={{ animationDuration: `${items.length * 5}s` }}>
           {loop.map((p, k) => (

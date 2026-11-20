@@ -7,20 +7,14 @@ import { ChevronDown, ChevronRight, ExternalLink, Home, LayoutDashboard, LogIn, 
 import { cn } from "@/utils";
 import { DoanLogo } from "@/components/layout/logo";
 import type { MenuConfig } from "@/lib/menu-config";
+import { useLocale, useT } from "@/lib/i18n/client";
+import { menuLabel, type TFn } from "@/lib/i18n/translate";
+import { LanguageSwitcher } from "@/components/ui/language-switcher";
 
 /** Nhóm "Báo cáo Chi đoàn" trên điện thoại: dữ liệu Khối → lớp nằm ở trang riêng nên chỉ dẫn tới từng khối. */
-const REPORT_LINKS = [
-  { label: "Khối 10", href: "/bao-cao-chi-doan?khoi=10" }, { label: "Khối 11", href: "/bao-cao-chi-doan?khoi=11" },
-  { label: "Khối 12", href: "/bao-cao-chi-doan?khoi=12" }, { label: "Chi đoàn giáo viên", href: "/bao-cao-chi-doan?khoi=gv" },
-];
-
-/** Liên kết ngoài hiển thị ở mục "Liên kết" (mở tab mới). */
-const EXTERNAL_LINKS = [
-  { label: "Trường THPT Sơn Hà", href: "https://c3sonha.quangngai.edu.vn/" },
-  { label: "Sở GD&ĐT Quảng Ngãi", href: "https://quangngai.edu.vn/" },
-  { label: "Bộ Giáo dục và Đào tạo", href: "https://moet.gov.vn/" },
-  { label: "Trung ương Đoàn TNCS Hồ Chí Minh", href: "https://doanthanhnien.vn/" },
-  { label: "Tỉnh Đoàn Quảng Ngãi", href: "https://tinhdoan.quangngai.gov.vn/" },
+const reportLinks = (t: TFn) => [
+  { label: t("reports.grade", { grade: 10 }), href: "/bao-cao-chi-doan?khoi=10" }, { label: t("reports.grade", { grade: 11 }), href: "/bao-cao-chi-doan?khoi=11" },
+  { label: t("reports.grade", { grade: 12 }), href: "/bao-cao-chi-doan?khoi=12" }, { label: t("reports.teachers"), href: "/bao-cao-chi-doan?khoi=gv" },
 ];
 
 const isActive = (pathname: string, href: string) => {
@@ -39,28 +33,31 @@ function useLoggedIn() {
   return yes;
 }
 
-const WEEKDAYS = ["Chủ nhật", "Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy"];
 function Today() {
+  const t = useT();
   const [text, setText] = useState("");
   useEffect(() => {
     const d = new Date(Date.now() + 7 * 3600_000); // giờ Việt Nam
-    setText(`${WEEKDAYS[d.getUTCDay()]}, ${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}/${d.getUTCFullYear()}`);
-  }, []);
+    setText(`${t(`weekday.${d.getUTCDay()}` as "weekday.0")}, ${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}/${d.getUTCFullYear()}`);
+  }, [t]);
   return <span className="whitespace-nowrap">{text || " "}</span>;
 }
 
 function SearchBox({ className, autoFocus }: { className?: string; autoFocus?: boolean }) {
+  const t = useT();
   const router = useRouter();
   const [q, setQ] = useState("");
   return (
     <form className={cn("flex overflow-hidden rounded border border-border bg-white", className)} onSubmit={(e) => { e.preventDefault(); if (q.trim()) router.push(`/tim-kiem?q=${encodeURIComponent(q.trim())}`); }} role="search">
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm kiếm..." aria-label="Tìm kiếm" autoFocus={autoFocus} className="min-w-0 flex-1 px-3 py-1.5 text-sm outline-none" />
-      <button type="submit" className="bg-primary px-3 text-white hover:bg-primary-dark" aria-label="Tìm"><Search className="size-4" /></button>
+      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("common.searchPlaceholder")} aria-label={t("common.search")} autoFocus={autoFocus} className="min-w-0 flex-1 px-3 py-1.5 text-sm outline-none" />
+      <button type="submit" className="bg-primary px-3 text-white hover:bg-primary-dark" aria-label={t("common.find")}><Search className="size-4" /></button>
     </form>
   );
 }
 
 export function SiteHeader({ address, bannerUrl, phone, email, facebook, youtube, marquee, menu }: { menu: MenuConfig; address?: string; bannerUrl?: string; phone?: string; email?: string; facebook?: string; youtube?: string; marquee: { id: string; text: string; link: string | null }[] }) {
+  const t = useT();
+  const locale = useLocale();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false); // ô tìm kiếm trên điện thoại (bấm biểu tượng để mở)
@@ -70,10 +67,11 @@ export function SiteHeader({ address, bannerUrl, phone, email, facebook, youtube
     if (lastPath.current !== pathname) { lastPath.current = pathname; setOpen(false); }
   }, [pathname]);
   const loggedIn = useLoggedIn();
-  const main = menu.top.filter((it) => !it.hidden).map((it) => ({ ...it, children: it.children?.filter((c) => !c.hidden) }));
+  const tl = (x: { id: string; label: string }) => menuLabel(t, x.id, x.label);
+  const main = menu.top.filter((it) => !it.hidden).map((it) => ({ ...it, label: tl(it), short: locale === "vi" ? it.short : undefined, children: it.children?.filter((c) => !c.hidden).map((c) => ({ ...c, label: tl(c) })) }));
   // Điện thoại: các mục thanh trên, rồi các nhóm của thanh bên trái (bỏ mục trùng liên kết đã có ở trên)
   const shown = new Set(main.flatMap((it) => [it.href, ...(it.children ?? []).map((c) => c.href)]));
-  const groups = menu.side.filter((g) => !g.hidden).map((g) => ({ id: g.id, title: g.title, items: g.kind === "reports" ? REPORT_LINKS : g.items.filter((i) => !i.hidden && !shown.has(i.href)) })).filter((g) => g.items.length);
+  const groups = menu.side.filter((g) => !g.hidden).map((g) => ({ id: g.id, title: tl({ id: g.id, label: g.title }), items: g.kind === "reports" ? reportLinks(t) : g.items.filter((i) => !i.hidden && !shown.has(i.href)).map((i) => ({ ...i, label: tl(i) })) })).filter((g) => g.items.length);
 
   return (
     <header className="no-print contents">
@@ -82,10 +80,11 @@ export function SiteHeader({ address, bannerUrl, phone, email, facebook, youtube
         <div className="bg-[#0a4a94] text-white max-lg:hidden">
           <div className="flex w-full flex-wrap items-center justify-between gap-x-6 gap-y-0.5 px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm lg:px-8">
             <div className="flex flex-wrap items-center gap-x-6 gap-y-0.5">
-            {phone && <a href={`tel:${phone.replace(/[^\d+]/g, "")}`} className="inline-flex items-center gap-1.5 hover:underline"><Phone className="size-3.5 text-[#ffd400]" />Hotline: {phone}</a>}
-            {email && <a href={`mailto:${email}`} className="max-sm:hidden inline-flex items-center gap-1.5 hover:underline"><Mail className="size-3.5 text-[#ffd400]" />Email: {email}</a>}
+            {phone && <a href={`tel:${phone.replace(/[^\d+]/g, "")}`} className="inline-flex items-center gap-1.5 hover:underline"><Phone className="size-3.5 text-[#ffd400]" />{t("header.hotline", { phone })}</a>}
+            {email && <a href={`mailto:${email}`} className="max-sm:hidden inline-flex items-center gap-1.5 hover:underline"><Mail className="size-3.5 text-[#ffd400]" />{t("header.email", { email })}</a>}
             </div>
             <div className="flex items-center gap-4">
+              <LanguageSwitcher />
               {facebook && <a href={facebook} target="_blank" rel="noopener noreferrer" className="hover:underline">Facebook</a>}
               {youtube && <a href={youtube} target="_blank" rel="noopener noreferrer" className="hover:underline">Youtube</a>}
             </div>
@@ -95,22 +94,22 @@ export function SiteHeader({ address, bannerUrl, phone, email, facebook, youtube
       {/* Đầu trang trên điện thoại/máy tính bảng: MỘT thanh gọn kiểu ứng dụng (☰ + logo + tên | tìm kiếm | đăng nhập) */}
       <div className="sticky top-0 z-50 border-b border-border bg-white shadow-sm lg:hidden">
         <div className="flex h-14 items-center gap-0.5 px-1.5">
-          <button type="button" onClick={() => { setOpen((o) => !o); setSearchOpen(false); }} aria-label={open ? "Đóng menu" : "Mở menu"} aria-expanded={open}
+          <button type="button" onClick={() => { setOpen((o) => !o); setSearchOpen(false); }} aria-label={open ? t("common.menuClose") : t("common.menuOpen")} aria-expanded={open}
             className="flex size-9 shrink-0 touch-manipulation items-center justify-center rounded-full text-primary-dark hover:bg-primary-light active:bg-primary-light">
             {open ? <X className="size-6" /> : <Menu className="size-6" />}
           </button>
-          <Link href="/" className="flex min-w-0 flex-1 items-center gap-1.5 pl-0.5" aria-label="Trang chủ">
+          <Link href="/" className="flex min-w-0 flex-1 items-center gap-1.5 pl-0.5" aria-label={t("common.home")}>
             <DoanLogo className="h-8 shrink-0" />
             <div className="min-w-0 leading-tight">
-              <div className="truncate text-[9px] font-semibold tracking-[0.1em] text-slate-500 uppercase">Đoàn TNCS Hồ Chí Minh</div>
-              <div className="whitespace-nowrap text-[clamp(11px,3.5vw,14px)] font-extrabold tracking-normal text-primary-dark uppercase">Đoàn trường THPT Sơn Hà</div>
+              <div className="truncate text-[9px] font-semibold tracking-[0.1em] text-slate-500 uppercase">{t("site.org")}</div>
+              <div className="whitespace-nowrap text-[clamp(11px,3.5vw,14px)] font-extrabold tracking-normal text-primary-dark uppercase">{t("site.name")}</div>
             </div>
           </Link>
-          <button type="button" onClick={() => { setSearchOpen((o) => !o); setOpen(false); }} aria-label="Tìm kiếm" aria-expanded={searchOpen}
+          <button type="button" onClick={() => { setSearchOpen((o) => !o); setOpen(false); }} aria-label={t("common.search")} aria-expanded={searchOpen}
             className="flex size-9 shrink-0 items-center justify-center rounded-full text-primary-dark hover:bg-primary-light active:bg-primary-light">
             {searchOpen ? <X className="size-5" /> : <Search className="size-5" />}
           </button>
-          <Link href={loggedIn ? "/dashboard" : "/login"} aria-label={loggedIn ? "Vào trang quản lý" : "Đăng nhập"}
+          <Link href={loggedIn ? "/dashboard" : "/login"} aria-label={loggedIn ? t("common.goManage") : t("common.login")}
             className="ml-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-white hover:bg-primary-dark">
             {loggedIn ? <LayoutDashboard className="size-[18px]" /> : <LogIn className="size-[18px]" />}
           </Link>
@@ -119,7 +118,7 @@ export function SiteHeader({ address, bannerUrl, phone, email, facebook, youtube
         {open && (
           <div className="fixed inset-x-0 top-14 bottom-0 z-50 overflow-y-auto bg-white pb-8">
             <ul className="divide-y divide-border">
-              <li><Link href="/" className={cn("flex items-center justify-between px-4 py-3.5 text-[15px] font-semibold text-slate-800", pathname === "/" && "bg-primary-light text-primary-dark")}>Trang chủ<ChevronRight className="size-4 text-slate-400" /></Link></li>
+              <li><Link href="/" className={cn("flex items-center justify-between px-4 py-3.5 text-[15px] font-semibold text-slate-800", pathname === "/" && "bg-primary-light text-primary-dark")}>{t("common.home")}<ChevronRight className="size-4 text-slate-400" /></Link></li>
               {main.map((it) => (
                 <li key={it.id}>
                   <Link href={it.href} className={cn("flex items-center justify-between px-4 py-3.5 text-[15px] font-semibold text-slate-800", isActive(pathname, it.href) && "bg-primary-light text-primary-dark")}>{it.label}<ChevronRight className="size-4 text-slate-400" /></Link>
@@ -154,7 +153,7 @@ export function SiteHeader({ address, bannerUrl, phone, email, facebook, youtube
             </ul>
             {(phone || email || facebook || youtube) && (
               <div className="mt-2 space-y-2 border-t border-border px-4 pt-4 text-sm text-slate-700">
-                {phone && <a href={`tel:${phone.replace(/[^\d+]/g, "")}`} className="flex items-center gap-2"><Phone className="size-4 text-primary" />Hotline: {phone}</a>}
+                {phone && <a href={`tel:${phone.replace(/[^\d+]/g, "")}`} className="flex items-center gap-2"><Phone className="size-4 text-primary" />{t("header.hotline", { phone })}</a>}
                 {email && <a href={`mailto:${email}`} className="flex items-center gap-2"><Mail className="size-4 text-primary" />{email}</a>}
                 {address && <p className="flex items-center gap-2"><MapPin className="size-4 shrink-0 text-primary" />{address}</p>}
                 {(facebook || youtube) && <div className="flex gap-4 pt-1 text-primary">{facebook && <a href={facebook} target="_blank" rel="noopener noreferrer" className="font-medium">Facebook</a>}{youtube && <a href={youtube} target="_blank" rel="noopener noreferrer" className="font-medium">Youtube</a>}</div>}
@@ -167,11 +166,11 @@ export function SiteHeader({ address, bannerUrl, phone, email, facebook, youtube
       {/* Hàng thương hiệu: logo + tên | tìm kiếm | đăng nhập (thấp, gọn) */}
       <div className="border-b border-border bg-white max-lg:hidden">
         <div className="flex w-full items-center gap-4 px-3 py-2.5 sm:px-4 sm:py-3 lg:px-8">
-          <Link href="/" className="flex min-w-0 shrink-0 items-center gap-2.5" aria-label="Trang chủ">
+          <Link href="/" className="flex min-w-0 shrink-0 items-center gap-2.5" aria-label={t("common.home")}>
             <DoanLogo className="h-11 shrink-0 sm:h-14" />
             <div className="min-w-0 leading-tight">
-              <p className="text-[10px] font-semibold tracking-[0.15em] text-slate-500 uppercase sm:text-[13px]">Đoàn TNCS Hồ Chí Minh</p>
-              <h1 className="text-sm font-extrabold tracking-wide text-primary-dark uppercase sm:text-xl">Đoàn trường THPT Sơn Hà</h1>
+              <p className="text-[10px] font-semibold tracking-[0.15em] text-slate-500 uppercase sm:text-[13px]">{t("site.org")}</p>
+              <h1 className="text-sm font-extrabold tracking-wide text-primary-dark uppercase sm:text-xl">{t("site.name")}</h1>
               {address && <p className="mt-0.5 flex items-center gap-1 text-[11px] text-slate-500 sm:text-xs"><MapPin className="size-3 shrink-0 text-primary" /><span className="truncate">{address}</span></p>}
             </div>
           </Link>
@@ -181,10 +180,10 @@ export function SiteHeader({ address, bannerUrl, phone, email, facebook, youtube
 
       {/* Thanh menu */}
       <div className="sticky top-0 z-40 shadow-md max-lg:hidden">
-        <nav className="bg-[#073a70]" aria-label="Menu chính">
+        <nav className="bg-[#073a70]" aria-label={t("common.mainMenu")}>
           <div className="flex w-full items-center px-1 lg:px-6">
             <ul className="hidden min-w-0 items-stretch divide-x divide-white/20 lg:flex">
-              <li><Link href="/" aria-label="Trang chủ" className={cn("flex h-full items-center px-[clamp(9px,1.1vw,22px)] py-1.5 text-white hover:bg-white/10", pathname === "/" && "bg-white/15")}><Home className="size-5" /></Link></li>
+              <li><Link href="/" aria-label={t("common.home")} className={cn("flex h-full items-center px-[clamp(9px,1.1vw,22px)] py-1.5 text-white hover:bg-white/10", pathname === "/" && "bg-white/15")}><Home className="size-5" /></Link></li>
               {main.map((it) => (
                 <li key={it.id} className="group relative">
                   <Link href={it.href} className={cn("flex h-full items-center gap-1 px-[clamp(8px,1vw,22px)] py-1.5 text-[clamp(11px,0.78vw+3px,14px)] font-semibold tracking-wide whitespace-nowrap text-white/90 uppercase hover:bg-white/10 hover:text-white", isActive(pathname, it.href) && "bg-white text-primary-dark hover:bg-white hover:text-primary-dark")}>
@@ -199,7 +198,7 @@ export function SiteHeader({ address, bannerUrl, phone, email, facebook, youtube
               ))}
             </ul>
             <Link href={loggedIn ? "/dashboard" : "/login"} className="ml-auto flex shrink-0 items-center px-3 py-1.5 text-xs font-semibold tracking-wide whitespace-nowrap text-white/90 uppercase hover:bg-white/10 hover:text-white sm:px-4 sm:text-sm">
-              {loggedIn ? "Quản lý" : "Đăng nhập"}
+              {loggedIn ? t("common.manage") : t("common.login")}
             </Link>
           </div>
         </nav>
@@ -211,7 +210,7 @@ export function SiteHeader({ address, bannerUrl, phone, email, facebook, youtube
           {bannerUrl ? (
             <div className="h-28 sm:h-36 lg:h-44">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={cdnImage(bannerUrl, 1600)} alt="Banner Đoàn trường THPT Sơn Hà" fetchPriority="high" decoding="async" className="size-full object-cover object-center" />
+              <img src={cdnImage(bannerUrl, 1600)} alt={t("header.banner")} fetchPriority="high" decoding="async" className="size-full object-cover object-center" />
             </div>
           ) : (
             <div className="relative h-32 bg-gradient-to-b from-[#5a9fe0] via-[#97c6ee] to-[#d9ecfb] sm:h-40 lg:h-52">
@@ -222,14 +221,14 @@ export function SiteHeader({ address, bannerUrl, phone, email, facebook, youtube
 
               {/* Hai bên: các dòng viết tay (từ màn hình lớn) */}
               <div className="pointer-events-none absolute top-1/2 left-[3%] hidden -translate-y-1/2 -rotate-3 font-script text-[#0a3d82] xl:block">
-                <div className="text-4xl leading-tight 2xl:text-5xl">Tuổi trẻ</div>
-                <div className="text-4xl leading-tight 2xl:text-5xl">Sơn Hà</div>
+                <div className="text-4xl leading-tight 2xl:text-5xl">{t("misc.banner.l1")}</div>
+                <div className="text-4xl leading-tight 2xl:text-5xl">{t("misc.banner.l2")}</div>
                 <svg viewBox="0 0 220 14" className="mt-1 w-44 2xl:w-52"><path d="M4 10 C 50 3, 140 2, 216 8" fill="none" stroke="#ffd400" strokeWidth="5" strokeLinecap="round" /></svg>
               </div>
               <div className="pointer-events-none absolute top-1/2 right-[3%] hidden -translate-y-1/2 rotate-3 text-right font-script text-[#0a3d82] xl:block">
-                {["Tiên phong", "Sáng tạo", "Phát triển"].map((t) => (
-                  <div key={t} className="flex items-center justify-end gap-2 text-3xl leading-tight 2xl:text-4xl">
-                    {t}<svg viewBox="0 0 24 24" className="size-4 text-[#ffd400]" fill="currentColor"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.7 7.1L12 17.6 5.7 21.3l1.7-7.1L2 9.5l7.1-.6z" /></svg>
+                {(["misc.banner.r1", "misc.banner.r2", "misc.banner.r3"] as const).map((k) => (
+                  <div key={k} className="flex items-center justify-end gap-2 text-3xl leading-tight 2xl:text-4xl">
+                    {t(k)}<svg viewBox="0 0 24 24" className="size-4 text-[#ffd400]" fill="currentColor"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.7 7.1L12 17.6 5.7 21.3l1.7-7.1L2 9.5l7.1-.6z" /></svg>
                   </div>
                 ))}
               </div>
@@ -238,9 +237,9 @@ export function SiteHeader({ address, bannerUrl, phone, email, facebook, youtube
               <div className="relative flex h-full items-center justify-center gap-3 px-4 sm:gap-5 lg:gap-7">
                 <DoanLogo className="h-16 shrink-0 drop-shadow-md sm:h-24 lg:h-36" />
                 <div className="min-w-0 leading-tight">
-                  <p className="text-[10px] font-bold tracking-[0.18em] text-primary uppercase sm:text-sm lg:text-lg">Cổng thông tin điện tử</p>
-                  <h2 className="text-[17px] font-extrabold tracking-tight text-[#0a3d82] uppercase sm:text-3xl lg:text-5xl">Đoàn trường THPT Sơn Hà</h2>
-                  <p className="mt-0.5 text-[9px] font-semibold tracking-[0.2em] text-primary uppercase sm:mt-1 sm:text-xs lg:text-base">Đoàn TNCS Hồ Chí Minh</p>
+                  <p className="text-[10px] font-bold tracking-[0.18em] text-primary uppercase sm:text-sm lg:text-lg">{t("site.portal")}</p>
+                  <h2 className="text-[17px] font-extrabold tracking-tight text-[#0a3d82] uppercase sm:text-3xl lg:text-5xl">{t("site.name")}</h2>
+                  <p className="mt-0.5 text-[9px] font-semibold tracking-[0.2em] text-primary uppercase sm:mt-1 sm:text-xs lg:text-base">{t("site.org")}</p>
                 </div>
               </div>
             </div>
@@ -252,7 +251,7 @@ export function SiteHeader({ address, bannerUrl, phone, email, facebook, youtube
       <div className="border-b border-border bg-slate-100/90">
         <div className="flex w-full flex-wrap items-center gap-x-3 gap-y-1.5 px-3 py-1.5 text-sm sm:px-4 sm:py-2 sm:flex-nowrap lg:px-8">
           <span className="text-xs font-semibold text-slate-600 max-sm:hidden sm:text-sm"><Today /></span>
-          <Marquee items={marquee} className="order-last w-full sm:order-none sm:w-auto sm:flex-1" />
+          <Marquee items={marquee} label={t("common.message")} className="order-last w-full sm:order-none sm:w-auto sm:flex-1" />
                   </div>
       </div>
     </header>
@@ -260,7 +259,7 @@ export function SiteHeader({ address, bannerUrl, phone, email, facebook, youtube
 }
 
 /** Chữ chạy ngang; rê chuột để dừng. Người dùng bật "giảm chuyển động" thì hiện đứng yên. */
-function Marquee({ items, className }: { items: { id: string; text: string; link: string | null }[]; className?: string }) {
+function Marquee({ items, className, label }: { items: { id: string; text: string; link: string | null }[]; className?: string; label: string }) {
   const chars = items.reduce((n, i) => n + i.text.length + 4, 0);
   // Nội dung được lặp đủ rộng (>= ~2000px) rồi nhân đôi, chạy -50% => các dòng chữ nối đuôi nhau liên tục, không có khoảng trống.
   const repeat = Math.max(1, Math.ceil(2000 / (chars * 11)));
@@ -274,7 +273,7 @@ function Marquee({ items, className }: { items: { id: string; text: string; link
     </div>
   );
   return (
-    <div className={cn("marquee text-[13px] font-extrabold tracking-wide text-primary uppercase sm:text-base", className)} role="marquee" aria-label="Thông điệp">
+    <div className={cn("marquee text-[13px] font-extrabold tracking-wide text-primary uppercase sm:text-base", className)} role="marquee" aria-label={label}>
       <div className="marquee-track" style={{ animationDuration: `${Math.max(20, chars * repeat * 0.2)}s` }}>{group(0)}{group(1)}</div>
     </div>
   );

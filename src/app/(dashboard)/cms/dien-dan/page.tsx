@@ -1,3 +1,5 @@
+import { getT, getLocale } from "@/lib/i18n/server";
+import { intlLocale } from "@/lib/i18n/format";
 import Link from "next/link";
 import { ClickRow } from "@/components/ui/click-row";
 import { db } from "@/lib/db";
@@ -10,7 +12,7 @@ import { ArticleStatus } from "@/components/cms/row-actions";
 import { ExternalLink, MessageSquare, Plus, Trash2 } from "lucide-react";
 import { deleteForumCommentAction } from "@/actions/forum";
 
-export const metadata = { title: "Quản lý Diễn đàn" };
+export async function generateMetadata() { return { title: (await getT())("cms.fo.title") }; }
 const PAGE_SIZE = 12;
 
 export default async function CmsForumPage({
@@ -18,6 +20,8 @@ export default async function CmsForumPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const t = await getT();
+  const locale = await getLocale();
   const user = await requireRole(["ADMIN", "SECRETARY"]);
   const isAdmin = user.role === "ADMIN";
   const sp = await searchParams;
@@ -70,17 +74,17 @@ export default async function CmsForumPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Quản lý Diễn đàn"
-        description="Đăng tải các chủ đề bài viết và quản lý ý kiến thảo luận của học sinh."
+        title={t("cms.fo.title")}
+        description={t("cms.fo.desc")}
         actions={
           <div className="flex items-center gap-2">
             <Link href="/dien-dan" target="_blank" className={buttonClass("secondary")}>
               <ExternalLink className="size-4" />
-              <span className="max-sm:hidden">Xem trang công khai</span>
+              <span className="max-sm:hidden">{t("cms.k.viewPublic")}</span>
             </Link>
             <Link href="/cms/dien-dan/new" className={buttonClass()}>
               <Plus className="size-4" />
-              Tạo chủ đề thảo luận
+              {t("cms.fo.create")}
             </Link>
           </div>
         }
@@ -89,12 +93,12 @@ export default async function CmsForumPage({
       {items.length === 0 ? (
         <div className="rounded-lg border border-border bg-white/85 p-6">
           <EmptyState
-            title="Chưa có chủ đề diễn đàn nào"
-            description="Hãy tạo chủ đề thảo luận đầu tiên để đoàn viên, học sinh cùng trao đổi và chia sẻ ý kiến."
+            title={t("cms.fo.emptyTitle")}
+            description={t("cms.fo.emptyDesc")}
             action={
               <Link href="/cms/dien-dan/new" className={buttonClass()}>
                 <Plus className="size-4" />
-                Tạo chủ đề đầu tiên
+                {t("cms.fo.createFirst")}
               </Link>
             }
           />
@@ -105,7 +109,7 @@ export default async function CmsForumPage({
             items={items.map((a) => ({
               id: a.id,
               title: a.title,
-              subtitle: `${formatDate(a.publishedAt ?? a.createdAt)} · ${a.viewCount} lượt xem · ${commentCounts.get(a.id) ?? 0} thảo luận`,
+              subtitle: t("cms.fo.sub", { d: formatDate(a.publishedAt ?? a.createdAt), v: a.viewCount, c: commentCounts.get(a.id) ?? 0 }),
               badge: <ArticleStatus published={a.published} pending={!a.published && a.author?.role === "SECRETARY"} />,
               href: `/cms/dien-dan/${a.id}/edit`,
             }))}
@@ -115,12 +119,12 @@ export default async function CmsForumPage({
             <DataTable>
               <thead>
                 <tr>
-                  <Th>Tiêu đề chủ đề</Th>
-                  <Th>Người đăng</Th>
-                  <Th>Ngày đăng</Th>
-                  <Th className="text-center">Thảo luận</Th>
-                  <Th className="text-right">Lượt xem</Th>
-                  <Th>Trạng thái</Th>
+                  <Th>{t("cms.fo.thTitle")}</Th>
+                  <Th>{t("cms.fo.thAuthor")}</Th>
+                  <Th>{t("cms.fo.thDate")}</Th>
+                  <Th className="text-center">{t("cms.fo.thComments")}</Th>
+                  <Th className="text-right">{t("cms.fo.thViews")}</Th>
+                  <Th>{t("cms.fo.thStatus")}</Th>
                 </tr>
               </thead>
               <tbody>
@@ -136,7 +140,7 @@ export default async function CmsForumPage({
                     <Td className="text-center font-semibold text-primary">
                       {commentCounts.get(a.id) ?? 0}
                     </Td>
-                    <Td className="text-right">{a.viewCount.toLocaleString("vi-VN")}</Td>
+                    <Td className="text-right">{a.viewCount.toLocaleString(intlLocale(locale))}</Td>
                     <Td>
                       <ArticleStatus published={a.published} pending={!a.published && a.author?.role === "SECRETARY"} />
                     </Td>
@@ -156,7 +160,7 @@ export default async function CmsForumPage({
           <div className="mb-3 flex items-center gap-2 text-slate-800">
             <MessageSquare className="size-4 text-primary" />
             <h2 className="text-sm font-bold uppercase tracking-wide">
-              Ý kiến thảo luận gần đây của học sinh
+              {t("cms.fo.recent")}
             </h2>
           </div>
           <div className="divide-y divide-slate-100">
@@ -164,7 +168,7 @@ export default async function CmsForumPage({
               <div key={c.id} className="flex items-start justify-between gap-4 py-3 first:pt-1">
                 <div>
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="font-semibold text-slate-800">{c.contact || "Học sinh"}</span>
+                    <span className="font-semibold text-slate-800">{c.contact || t("cms.fo.student")}</span>
                     <span className="text-[11px] text-muted">{formatDateTime(c.createdAt)}</span>
                   </div>
                   <p className="mt-1 text-sm text-slate-700 leading-relaxed">{c.content}</p>
@@ -177,7 +181,7 @@ export default async function CmsForumPage({
                 >
                   <button
                     type="submit"
-                    title="Xóa bình luận vi phạm"
+                    title={t("cms.fo.delBad")}
                     className="rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
                   >
                     <Trash2 className="size-4" />

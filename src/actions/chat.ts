@@ -7,6 +7,7 @@ import { generateText, aiConfigured } from "@/lib/ai/gemini";
 import { plainText } from "@/lib/rich-html";
 import { articleHref, KIND_LABEL } from "@/lib/services/public";
 import { CHAT_RECENT_DAYS, publicFacts } from "@/lib/services/chat-facts";
+import { getT, getLocale } from "@/lib/i18n/server";
 
 /** Hạn mức chatbot công khai: mỗi địa chỉ IP và cả hệ thống (tránh cạn khóa AI dùng chung). */
 const PER_IP_HOUR = 10;
@@ -74,11 +75,13 @@ function sitePagesText(pages: { slug: string; title: string; content: string; ta
 
 export async function chatAskAction(input: unknown) {
   return run<{ answer: string; sources: ChatSource[] }>(async () => {
+    const t = await getT();
+    const locale = await getLocale();
     const d = z.object({
-      question: z.string().trim().min(2, "Hãy nhập câu hỏi").max(300, "Câu hỏi tối đa 300 ký tự"),
+      question: z.string().trim().min(2, t("community.sa.chatEnter")).max(300, t("community.sa.chatMax", { n: 300 })),
       history: z.array(z.object({ role: z.enum(["user", "bot"]), text: z.string().max(600) })).max(4).default([]),
     }).parse(input);
-    if (!aiConfigured()) throw new UserError("Trợ lý chưa được bật");
+    if (!aiConfigured()) throw new UserError(t("community.sa.chatOff"));
 
     // hạn mức
     const { ip } = await getRequestMeta();
@@ -87,8 +90,8 @@ export async function chatAskAction(input: unknown) {
       ip ? db.auditLog.count({ where: { action: "ai.chat", ipAddress: ip, createdAt: { gte: since(3600_000) } } }) : Promise.resolve(0),
       db.auditLog.count({ where: { action: "ai.chat", createdAt: { gte: since(24 * 3600_000) } } }),
     ]);
-    if (mine >= PER_IP_HOUR) throw new UserError(`Bạn đã hỏi ${PER_IP_HOUR} câu trong 1 giờ qua, vui lòng quay lại sau một lát nhé.`);
-    if (all >= GLOBAL_DAY) throw new UserError("Trợ lý đang quá tải hôm nay, bạn vui lòng thử lại vào ngày mai hoặc xem trực tiếp các mục trên trang.");
+    if (mine >= PER_IP_HOUR) throw new UserError(t("community.sa.chatLimit", { n: PER_IP_HOUR }));
+    if (all >= GLOBAL_DAY) throw new UserError(t("community.sa.chatBusy"));
 
     // tìm tài liệu liên quan trong nội dung công khai
     const keywords = (t: string) => norm(t).replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter((w) => w.length >= 2 && !STOP.has(w));
@@ -138,7 +141,7 @@ export async function chatAskAction(input: unknown) {
     const hist = d.history.map((h) => `${h.role === "user" ? "Người dùng" : "Trợ lý"}: ${h.text}`).join("\n");
 
     await audit(null, "ai.chat", "Chat", null); // ghi trước để lượt lỗi cũng được tính, tránh lạm dụng
-    const out = await generateText(SYSTEM, `Hôm nay là ${fmt(now)}.\n\nHƯỚNG DẪN SỬ DỤNG WEBSITE (thông tin chính thức, dùng khi người dùng hỏi cách làm một việc trên website):\n"""\n${GUIDE}\n"""\n\nTHÔNG TIN CÔNG KHAI CỦA HỆ THỐNG (tổng quan mới nhất: liên hệ, lịch công tác, tình nguyện, thi đua, trò chơi, Chi đoàn, mục lục bài viết):\n"""\n${facts}\n"""\n\nTÀI LIỆU:\n"""\n${docs || "(chưa có tài liệu liên quan)"}\n"""\n\n${hist ? `Hội thoại trước:\n${hist}\n\n` : ""}CÂU HỎI:\n"""\n${d.question}\n"""`, { maxTokens: 1000, temperature: 0.3 });
+    const out = await generateText(locale === "en" ? `${SYSTEM}\n- The user interface is in English: reply in English (keep Vietnamese proper names unchanged).` : SYSTEM, `Hôm nay là ${fmt(now)}.\n\nHƯỚNG DẪN SỬ DỤNG WEBSITE (thông tin chính thức, dùng khi người dùng hỏi cách làm một việc trên website):\n"""\n${GUIDE}\n"""\n\nTHÔNG TIN CÔNG KHAI CỦA HỆ THỐNG (tổng quan mới nhất: liên hệ, lịch công tác, tình nguyện, thi đua, trò chơi, Chi đoàn, mục lục bài viết):\n"""\n${facts}\n"""\n\nTÀI LIỆU:\n"""\n${docs || "(chưa có tài liệu liên quan)"}\n"""\n\n${hist ? `Hội thoại trước:\n${hist}\n\n` : ""}CÂU HỎI:\n"""\n${d.question}\n"""`, { maxTokens: 1000, temperature: 0.3 });
     const matched = picked.filter((a) => score(a) > 0 || a.kind === "EVENT" || a.kind === kindHint).slice(0, 3);
     return { data: { answer: out.slice(0, 2400), sources: matched.map((a) => ({ title: a.title, href: articleHref(a.slug) })) } };
   });

@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import { CalendarDays, Eye, MessageSquare, Pencil } from "lucide-react";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
-import { KIND_LABEL, KIND_PATH, getArticle, relatedArticles } from "@/lib/services/public";
+import { KIND_PATH, getArticle, relatedArticles } from "@/lib/services/public";
+import { kindLabelT, kindActionT } from "@/lib/i18n/kind-labels";
 import { formatDate, formatDateTime } from "@/utils";
 import { RichText } from "@/components/public/rich-text";
 import { ViewTracker } from "@/components/public/view-tracker";
@@ -13,6 +14,8 @@ import { Block, SideArticleList } from "@/components/public/blocks";
 import { ForumDiscussion } from "@/components/public/forum-discussion";
 import { getForumComments } from "@/actions/forum";
 import { kindSlug } from "@/lib/services/kind";
+import { getT, getLocale } from "@/lib/i18n/server";
+import { intlLocale } from "@/lib/i18n/format";
 
 export async function generateMetadata({
   params,
@@ -21,8 +24,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const a = await getArticle((await params).slug);
   if (!a) return {};
+  const t = await getT();
   return {
-    title: `${a.title} - Diễn đàn`,
+    title: `${a.title} - ${t("menu.dien-dan")}`,
     description: a.summary ?? undefined,
   };
 }
@@ -32,6 +36,8 @@ export default async function DienDanDetailPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  const t = await getT();
+  const locale = await getLocale();
   const slug = (await params).slug;
   const a = await getArticle(slug);
   if (!a) notFound();
@@ -53,11 +59,11 @@ export default async function DienDanDetailPage({
         <ViewTracker id={a.id} />
         <nav className="mb-3 text-[13px] text-muted">
           <Link href="/" className="hover:text-primary">
-            Trang chủ
+            {t("common.home")}
           </Link>{" "}
           ›{" "}
           <Link href="/dien-dan" className="hover:text-primary font-medium text-primary">
-            Diễn đàn
+            {t("menu.dien-dan")}
           </Link>
         </nav>
 
@@ -68,8 +74,8 @@ export default async function DienDanDetailPage({
           {canEdit && (
             <Link
               href={`/cms/${kindSlug(a.kind)}/${a.id}/edit`}
-              title="Sửa bài viết"
-              aria-label="Sửa bài viết"
+              title={t("community.forum.editPost")}
+              aria-label={t("community.forum.editPost")}
               className="mt-1 shrink-0 rounded-full border border-border bg-white p-2 text-primary shadow-xs hover:bg-primary-light"
             >
               <Pencil className="size-4" />
@@ -81,11 +87,11 @@ export default async function DienDanDetailPage({
           {a.publishedAt && <span>{formatDate(a.publishedAt)}</span>}
           <span className="inline-flex items-center gap-1">
             <Eye className="size-4" />
-            {views.toLocaleString("vi-VN")} lượt xem
+            {t("community.views", { n: views.toLocaleString(intlLocale(locale)) })}
           </span>
           <span className="inline-flex items-center gap-1 font-medium text-primary">
             <MessageSquare className="size-4" />
-            {comments.length} thảo luận
+            {t("community.forum.discussions", { n: comments.length })}
           </span>
           {a.category && (
             <span className="rounded bg-amber-100 px-1.5 py-0.5 font-medium text-amber-800">
@@ -94,10 +100,10 @@ export default async function DienDanDetailPage({
           )}
           {a.department && (
             <span className="rounded bg-primary-light px-1.5 py-0.5 font-medium text-primary-dark">
-              Chi đoàn {a.department.name}
+              {t("community.emu.chapterName", { name: a.department.name })}
             </span>
           )}
-          {a.author && <span>Đăng bởi {a.author.fullName}</span>}
+          {a.author && <span>{t("community.forum.postedBy", { name: a.author.fullName })}</span>}
         </div>
 
         {a.summary && (
@@ -127,7 +133,7 @@ export default async function DienDanDetailPage({
       {/* Cột bài viết liên quan */}
       <aside className="space-y-6">
         {related.filter((g) => g.items.length > 0).map((g) => (
-          <Block key={g.kind} title={`${KIND_LABEL[g.kind]} khác`} href={KIND_PATH[g.kind]}>
+          <Block key={g.kind} title={t("community.forum.otherKind", { kind: kindLabelT(t, g.kind) })} href={KIND_PATH[g.kind]}>
             <SideArticleList items={g.items} />
           </Block>
         ))}

@@ -4,6 +4,8 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronDown, ExternalLink, FileText, Folder, Globe, GraduationCap, Info } from "lucide-react";
 import type { MenuConfig } from "@/lib/menu-config";
 import { cn } from "@/utils";
+import { useT } from "@/lib/i18n/client";
+import { menuLabel } from "@/lib/i18n/translate";
 
 export type SidebarDept = { id: string; name: string };
 export type SidebarGrade = { grade: string; depts: SidebarDept[] };
@@ -30,18 +32,19 @@ const itemClass = (active: boolean) => cn("-ml-px flex items-center justify-betw
 
 /** Thanh bên trái của trang công khai: các nhóm do Admin sắp xếp (mặc định Giới thiệu / Báo cáo Chi đoàn / Góc học sinh / Liên kết website). */
 export function PublicSidebar({ grades, menu }: { grades: SidebarGrade[]; menu: MenuConfig }) {
+  const t = useT();
   const pathname = usePathname();
   const khoi = useSearchParams().get("khoi");
   const inReports = pathname.startsWith("/bao-cao-chi-doan");
   return (
-    <nav aria-label="Danh mục" className="space-y-0.5 rounded bg-white/70 p-[3px] shadow-sm">
+    <nav aria-label={t("common.categories")} className="space-y-0.5 rounded bg-white/70 p-[3px] shadow-sm">
       {menu.side.filter((g) => !g.hidden).map((g) => g.kind === "reports" ? (
-        <Group key={g.id} title={g.title} icon={FileText}>
-          {grades.length === 0 && <p className="px-3 py-1.5 text-sm text-muted">Chưa có Chi đoàn</p>}
+        <Group key={g.id} title={menuLabel(t, g.id, g.title)} icon={FileText}>
+          {grades.length === 0 && <p className="px-3 py-1.5 text-sm text-muted">{t("common.noChapters")}</p>}
           {grades.map((gr) => (
             <details key={gr.grade} open={inReports && (khoi === gr.grade || gr.depts.some((d) => pathname.includes(d.id)))} className="group/sub">
               <summary className="flex cursor-pointer list-none items-center gap-1 rounded-sm py-0.5 pr-1 pl-1 text-sm font-medium text-slate-700 hover:bg-primary-light/60 [&::-webkit-details-marker]:hidden">
-                <ChevronDown className="size-3.5 -rotate-90 transition-transform group-open/sub:rotate-0" />{gr.grade === "gv" ? "Chi đoàn giáo viên" : `Khối ${gr.grade}`}
+                <ChevronDown className="size-3.5 -rotate-90 transition-transform group-open/sub:rotate-0" />{gr.grade === "gv" ? t("reports.teachers") : t("reports.grade", { grade: gr.grade })}
               </summary>
               <div className="grid grid-cols-3 gap-0.5 pr-1 pb-0.5 pl-3">
                 {gr.depts.map((d) => (
@@ -52,10 +55,10 @@ export function PublicSidebar({ grades, menu }: { grades: SidebarGrade[]; menu: 
           ))}
         </Group>
       ) : (
-        <Group key={g.id} title={g.title} icon={GROUP_ICONS[g.id] ?? Folder}>
+        <Group key={g.id} title={menuLabel(t, g.id, g.title)} icon={GROUP_ICONS[g.id] ?? Folder}>
           {g.items.filter((i) => !i.hidden).map((i) => /^https?:/.test(i.href)
-            ? <a key={i.id} href={i.href} target="_blank" rel="noopener noreferrer" className={itemClass(false)}><span>{i.label}</span><ExternalLink className="size-3 text-slate-400 opacity-70" /></a>
-            : <Link key={i.id} href={i.href} className={itemClass(pathname === i.href)}>{i.label}</Link>)}
+            ? <a key={i.id} href={i.href} target="_blank" rel="noopener noreferrer" className={itemClass(false)}><span>{menuLabel(t, i.id, i.label)}</span><ExternalLink className="size-3 text-slate-400 opacity-70" /></a>
+            : <Link key={i.id} href={i.href} className={itemClass(pathname === i.href)}>{menuLabel(t, i.id, i.label)}</Link>)}
         </Group>
       ))}
     </nav>

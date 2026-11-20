@@ -1,3 +1,4 @@
+import { getT } from "@/lib/i18n/server";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth/session";
@@ -6,9 +7,10 @@ import { PageHeader } from "@/components/ui/misc";
 import { QuizForm } from "@/components/games/quiz-form";
 import type { QForm } from "@/components/games/quiz-defaults";
 
-export const metadata = { title: "Sửa trò chơi" };
+export async function generateMetadata() { return { title: (await getT())("cms.qr.editTitle") }; }
 
 export default async function EditQuizPage({ params }: { params: Promise<{ id: string }> }) {
+  const t = await getT();
   await requireRole(["ADMIN"]);
   const { id } = await params;
   const q = await db.quiz.findUnique({ where: { id }, include: { questions: { orderBy: { position: "asc" } }, _count: { select: { attempts: true } } } });
@@ -21,7 +23,7 @@ export default async function EditQuizPage({ params }: { params: Promise<{ id: s
   });
   return (
     <>
-      <PageHeader title="Sửa trò chơi" />
+      <PageHeader title={t("cms.qr.editTitle")} />
       <QuizForm id={q.id} locked={q._count.attempts > 0} departments={departments}
         initial={{ title: q.title, description: q.description ?? "", theme: q.theme, points: q.points, seconds: q.secondsPerQuestion, startsAt: q.startsAt ? toLocalInput(q.startsAt) : "", endsAt: q.endsAt ? toLocalInput(q.endsAt) : "", published: q.published, notify: false, departmentIds: q.departmentIds, questions }} />
     </>

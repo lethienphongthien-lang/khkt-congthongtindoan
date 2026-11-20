@@ -3,37 +3,39 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Input, Select } from "./form";
+import { useT } from "@/lib/i18n/client";
 import { currentWeek, schoolYearOf, weekLabel, yearLabel, type SchoolCalendar } from "@/lib/school-calendar";
 
 /** Lọc theo NĂM HỌC rồi TUẦN (hoặc học kỳ / cả năm học). Tuần hiện thị kèm ngày tháng, ví dụ "Tuần 1 (05/09 – 11/09)". */
 function SchoolWeekFilter({ calendars, nh, tuan, onChange }: { calendars: SchoolCalendar[]; nh: string; tuan: string; onChange: (nh: string, tuan: string) => void }) {
+  const t = useT();
   const cur = schoolYearOf();
   const cal = calendars.find((c) => String(c.startYear) === nh);
   const nowWeek = cal ? currentWeek(cal) : null;
   const weekNo = /^\d+$/.test(tuan) ? Number(tuan) : null;
   const cls = "max-sm:min-w-[calc(50%-0.25rem)] max-sm:flex-1";
-  const week = (n: number) => <option key={n} value={String(n)}>{weekLabel(cal!, n)}{n === nowWeek ? " · hiện tại" : ""}</option>;
+  const week = (n: number) => <option key={n} value={String(n)}>{weekLabel(cal!, n, t("misc.week"))}{n === nowWeek ? t("ui.currentDot") : ""}</option>;
   return (
     <>
-      <Select aria-label="Năm học" value={nh} onChange={(e) => onChange(e.target.value, tuan)} className="w-full sm:w-auto sm:min-w-36">
-        {calendars.map((c) => <option key={c.startYear} value={c.startYear}>Năm học {yearLabel(c.startYear)}{c.startYear === cur ? " (hiện tại)" : ""}</option>)}
+      <Select aria-label={t("ui.schoolYear")} value={nh} onChange={(e) => onChange(e.target.value, tuan)} className="w-full sm:w-auto sm:min-w-36">
+        {calendars.map((c) => <option key={c.startYear} value={c.startYear}>{t("ui.schoolYearN", { y: yearLabel(c.startYear) })}{c.startYear === cur ? t("ui.currentParen") : ""}</option>)}
       </Select>
       {/* ‹ Tuần › : nút chuyển tuần hai bên ô chọn tuần */}
       <div className="flex w-full items-center gap-1 sm:w-auto">
-        <button type="button" aria-label="Tuần trước" disabled={!cal || (weekNo !== null && weekNo <= 1)} onClick={() => onChange(nh, String(weekNo === null ? nowWeek ?? 1 : weekNo - 1))}
+        <button type="button" aria-label={t("ui.prevWeek")} disabled={!cal || (weekNo !== null && weekNo <= 1)} onClick={() => onChange(nh, String(weekNo === null ? nowWeek ?? 1 : weekNo - 1))}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-white/85 hover:bg-slate-50 disabled:opacity-40"><ChevronLeft className="size-4" /></button>
-        <Select aria-label="Tuần" value={tuan} onChange={(e) => onChange(nh, e.target.value)} className="w-auto min-w-0 flex-1 sm:min-w-52">
-          <option value="">Cả năm học</option>
+        <Select aria-label={t("misc.filter.week")} value={tuan} onChange={(e) => onChange(nh, e.target.value)} className="w-auto min-w-0 flex-1 sm:min-w-52">
+          <option value="">{t("ui.wholeYear")}</option>
           {cal && (
             <>
-              <option value="hk1">Học kỳ 1 (Tuần 1–{cal.sem1Weeks})</option>
-              <option value="hk2">Học kỳ 2 (Tuần {cal.sem1Weeks + 1}–{cal.totalWeeks})</option>
-              <optgroup label="Học kỳ 1">{Array.from({ length: cal.sem1Weeks }, (_, i) => week(i + 1))}</optgroup>
-              <optgroup label="Học kỳ 2">{Array.from({ length: cal.totalWeeks - cal.sem1Weeks }, (_, i) => week(cal.sem1Weeks + i + 1))}</optgroup>
+              <option value="hk1">{t("ui.sem1Range", { n: cal.sem1Weeks })}</option>
+              <option value="hk2">{t("ui.sem2Range", { a: cal.sem1Weeks + 1, b: cal.totalWeeks })}</option>
+              <optgroup label={t("ui.sem1")}>{Array.from({ length: cal.sem1Weeks }, (_, i) => week(i + 1))}</optgroup>
+              <optgroup label={t("ui.sem2")}>{Array.from({ length: cal.totalWeeks - cal.sem1Weeks }, (_, i) => week(cal.sem1Weeks + i + 1))}</optgroup>
             </>
           )}
         </Select>
-        <button type="button" aria-label="Tuần sau" disabled={!cal || (weekNo !== null && cal !== undefined && weekNo >= cal.totalWeeks)} onClick={() => onChange(nh, String(weekNo === null ? nowWeek ?? 1 : weekNo + 1))}
+        <button type="button" aria-label={t("ui.nextWeek")} disabled={!cal || (weekNo !== null && cal !== undefined && weekNo >= cal.totalWeeks)} onClick={() => onChange(nh, String(weekNo === null ? nowWeek ?? 1 : weekNo + 1))}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-white/85 hover:bg-slate-50 disabled:opacity-40"><ChevronRight className="size-4" /></button>
       </div>
     </>
@@ -42,6 +44,7 @@ function SchoolWeekFilter({ calendars, nh, tuan, onChange }: { calendars: School
 
 /** Lọc theo Tháng + Năm tách riêng. Chỉ chọn năm = cả năm; giá trị: `YYYY` hoặc `YYYY-MM`. */
 function MonthYearFilter({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const t = useT();
   const [year, month] = value.split("-");
   const now = new Date();
   const years = Array.from({ length: 6 }, (_, i) => String(now.getFullYear() + 1 - i));
@@ -50,12 +53,12 @@ function MonthYearFilter({ value, onChange }: { value: string; onChange: (v: str
   const cls = "max-sm:min-w-[calc(50%-0.25rem)] max-sm:flex-1";
   return (
     <>
-      <Select aria-label="Tháng" value={month ?? ""} onChange={(e) => onChange(compose(year ?? "", e.target.value))} className={`w-auto min-w-28 ${cls}`}>
-        <option value="">Tháng</option>
-        {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "0")).map((m) => <option key={m} value={m}>Tháng {+m}</option>)}
+      <Select aria-label={t("ui.month")} value={month ?? ""} onChange={(e) => onChange(compose(year ?? "", e.target.value))} className={`w-auto min-w-28 ${cls}`}>
+        <option value="">{t("ui.month")}</option>
+        {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "0")).map((m) => <option key={m} value={m}>{t("ui.monthN", { n: +m })}</option>)}
       </Select>
-      <Select aria-label="Năm" value={year ?? ""} onChange={(e) => onChange(compose(e.target.value, month ?? ""))} className={`w-auto min-w-28 ${cls}`}>
-        <option value="">Năm</option>
+      <Select aria-label={t("ui.year")} value={year ?? ""} onChange={(e) => onChange(compose(e.target.value, month ?? ""))} className={`w-auto min-w-28 ${cls}`}>
+        <option value="">{t("ui.year")}</option>
         {years.map((y) => <option key={y} value={y}>{y}</option>)}
       </Select>
     </>

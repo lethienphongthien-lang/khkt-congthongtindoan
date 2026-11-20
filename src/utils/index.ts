@@ -1,37 +1,41 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import type { Locale } from "@/lib/i18n/config";
+import { intlLocale } from "@/lib/i18n/format";
+import { makeT } from "@/lib/i18n/translate";
 
 export const cn = (...inputs: ClassValue[]) => twMerge(clsx(inputs));
 
 const TZ = "Asia/Ho_Chi_Minh";
 
-export function formatDate(d: Date | string | null | undefined) {
+export function formatDate(d: Date | string | null | undefined, locale: Locale = "vi") {
   if (!d) return "—";
-  return new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: TZ }).format(new Date(d));
+  return new Intl.DateTimeFormat(intlLocale(locale), { day: "2-digit", month: "2-digit", year: "numeric", timeZone: TZ }).format(new Date(d));
 }
-export function formatTime(d: Date | string) {
-  return new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: TZ }).format(new Date(d));
+export function formatTime(d: Date | string, locale: Locale = "vi") {
+  return new Intl.DateTimeFormat(intlLocale(locale), { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: TZ }).format(new Date(d));
 }
-export function formatDateTime(d: Date | string) {
-  return `${formatTime(d)} - ${formatDate(d)}`;
+export function formatDateTime(d: Date | string, locale: Locale = "vi") {
+  return `${formatTime(d, locale)} - ${formatDate(d, locale)}`;
 }
-export function formatDateShort(d: Date | string) {
-  return new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", timeZone: TZ }).format(new Date(d));
+export function formatDateShort(d: Date | string, locale: Locale = "vi") {
+  return new Intl.DateTimeFormat(intlLocale(locale), { day: "2-digit", month: "2-digit", timeZone: TZ }).format(new Date(d));
 }
-export const formatNumber = (n: number) => new Intl.NumberFormat("vi-VN").format(n);
+export const formatNumber = (n: number, locale: Locale = "vi") => new Intl.NumberFormat(intlLocale(locale)).format(n);
 
 export function formatHours(minutes: number) {
   const h = minutes / 60;
   return Number.isInteger(h) ? String(h) : h.toFixed(1);
 }
 
-export function relativeTime(d: Date | string) {
+export function relativeTime(d: Date | string, locale: Locale = "vi") {
+  const t = makeT(locale);
   const diff = (Date.now() - new Date(d).getTime()) / 1000;
-  if (diff < 60) return "Vừa xong";
-  if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} giờ trước`;
-  if (diff < 86400 * 7) return `${Math.floor(diff / 86400)} ngày trước`;
-  return formatDate(d);
+  if (diff < 60) return t("ui.time.now");
+  if (diff < 3600) return t("ui.time.min", { n: Math.floor(diff / 60) });
+  if (diff < 86400) return t("ui.time.hour", { n: Math.floor(diff / 3600) });
+  if (diff < 86400 * 7) return t("ui.time.day", { n: Math.floor(diff / 86400) });
+  return formatDate(d, locale);
 }
 
 /** Giá trị cho <input type="datetime-local"> theo giờ Việt Nam. */

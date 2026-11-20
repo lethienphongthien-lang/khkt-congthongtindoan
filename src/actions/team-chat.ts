@@ -9,6 +9,8 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { folderPath } from "@/lib/cloudinary";
 import { sendPushToUsers } from "@/lib/push";
 import { publishTeamEvent } from "@/lib/realtime";
+import { getT } from "@/lib/i18n/server";
+import type { TFn } from "@/lib/i18n/translate";
 import { canUseTeamChat, messageInclude, toDTO, type ChatAttachment } from "@/lib/services/team-chat";
 
 const MAX_FILES = 10;
@@ -16,25 +18,27 @@ const attachmentSchema = z.object({
   url: z.string().url().max(500), publicId: z.string().max(300), name: z.string().trim().min(1).max(200),
   size: z.number().int().min(0).max(110 * 1024 * 1024), mime: z.string().max(100), kind: z.enum(["image", "video", "file"]),
 });
-const sendSchema = z.object({ content: z.string().trim().max(4000, "Tin nhắn tối đa 4000 ký tự").optional(), attachments: z.array(attachmentSchema).max(MAX_FILES, `Tối đa ${MAX_FILES} tệp mỗi tin`).default([]) });
+const sendSchema = (t: TFn) => z.object({ content: z.string().trim().max(4000, t("community.sa.tcMax", { n: 4000 })).optional(), attachments: z.array(attachmentSchema).max(MAX_FILES, t("community.sa.tcFiles", { n: MAX_FILES })).default([]) });
 
 async function member() {
+  const t = await getT();
   const user = await getCurrentUser();
-  if (!user || user.mustChangePassword || !canUseTeamChat(user)) throw new UserError("Bạn không còn trong kênh chat này");
+  if (!user || user.mustChangePassword || !canUseTeamChat(user)) throw new UserError(t("community.sa.tcNotMember"));
   return user;
 }
 
 /** Gửi tin nhắn (chữ và/hoặc tệp đã tải lên Cloudinary). */
 export async function sendTeamMessageAction(input: unknown) {
   return run(async () => {
+    const t = await getT();
     const user = await member();
-    const d = sendSchema.parse(input);
+    const d = sendSchema(t).parse(input);
     const content = d.content || null;
-    if (!content && d.attachments.length === 0) throw new UserError("Hãy nhập nội dung hoặc đính kèm tệp");
+    if (!content && d.attachments.length === 0) throw new UserError(t("community.sa.tcEmpty"));
     // Tệp phải nằm trong thư mục chat của chính hệ thống trên Cloudinary (không nhận đường dẫn bất kỳ)
     const prefix = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/`;
     for (const a of d.attachments) {
-      if (!a.url.startsWith(prefix) || !a.publicId.startsWith(`${folderPath("chat")}/`)) throw new UserError("Tệp đính kèm không hợp lệ");
+      if (!a.url.startsWith(prefix) || !a.publicId.startsWith(`${folderPath("chat")}/`)) throw new UserError(t("community.sa.tcFileBad"));
     }
     const m = await db.teamMessage.create({ data: { authorId: user.id, content, attachments: d.attachments.length ? (d.attachments as ChatAttachment[]) : undefined }, include: messageInclude });
     const dto = toDTO(m);
@@ -62,12 +66,13 @@ export async function sendTeamMessageAction(input: unknown) {
 /** Thu hồi tin nhắn: người gửi thu hồi tin của mình; Admin thu hồi được mọi tin. */
 export async function deleteTeamMessageAction(id: string) {
   return run(async () => {
+    const t = await getT();
     const user = await member();
     const m = await db.teamMessage.findUnique({ where: { id } });
-    if (!m) throw new UserError("Không tìm thấy tin nhắn");
-    if (m.authorId !== user.id && user.role !== "ADMIN") throw new UserError("Bạn chỉ thu hồi được tin nhắn của mình");
+    if (!m) throw new UserError(t("community.sa.tcMissing"));
+    if (m.authorId !== user.id && user.role !== "ADMIN") throw new UserError(t("community.sa.tcOwnOnly"));
     const upd = await db.teamMessage.update({ where: { id }, data: { deletedAt: new Date(), content: null, attachments: Prisma.DbNull }, include: messageInclude });
     after(() => publishTeamEvent("update", toDTO(upd)));
-    return { message: "Đã thu hồi tin nhắn" };
+    return { message: t("community.sa.tcRecalled") };
   });
 }

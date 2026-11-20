@@ -1,3 +1,4 @@
+import { getT } from "@/lib/i18n/server";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth/session";
@@ -5,9 +6,10 @@ import { canManageDepartment } from "@/lib/permissions";
 import { PageHeader } from "@/components/ui/misc";
 import { ReportForm } from "@/components/cms/forms";
 
-export const metadata = { title: "Sửa báo cáo" };
+export async function generateMetadata() { return { title: (await getT())("cms.crp.editTitle") }; }
 
 export default async function EditReportPage({ params }: { params: Promise<{ id: string }> }) {
+  const t = await getT();
   const user = await requireRole(["ADMIN", "SECRETARY", "DEPARTMENT_ACCOUNT"]);
   const r = await db.chapterReport.findUnique({ where: { id: (await params).id }, include: { department: { select: { name: true } } } });
   if (!r || !canManageDepartment(user, r.departmentId)) notFound(); // bí thư không sửa được báo cáo của Chi đoàn khác
@@ -22,7 +24,7 @@ export default async function EditReportPage({ params }: { params: Promise<{ id:
 
   return (
     <>
-      <PageHeader title="Sửa báo cáo" />
+      <PageHeader title={t("cms.crp.editTitle")} />
       <ReportForm
         id={r.id}
         departments={departments}

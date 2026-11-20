@@ -1,12 +1,14 @@
+import { getT } from "@/lib/i18n/server";
 import { requireRole } from "@/lib/auth/session";
 import { PageHeader } from "@/components/ui/misc";
 import { MenuEditor } from "@/components/cms/menu-editor";
 import { getMenuConfig } from "@/lib/services/site-settings";
 
-export const metadata = { title: "Menu website" };
+export async function generateMetadata() { return { title: (await getT())("cms.sp.menuTitle") }; }
 
 export default async function CmsMenuPage() {
+  const t = await getT();
   await requireRole(["ADMIN"]);
   const menu = await getMenuConfig();
-  return (<><PageHeader title="Menu website" description="Đổi tên, ẩn/hiện, sắp xếp và thêm mục cho thanh menu trên và thanh bên trái của trang công khai" /><MenuEditor initial={menu} /></>);
+  return (<><PageHeader title={t("cms.sp.menuTitle")} description={t("cms.sp.menuDesc")} /><MenuEditor initial={menu} /></>);
 }

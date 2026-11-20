@@ -1,12 +1,16 @@
 import { PageTitle } from "@/components/public/blocks";
 import { GplxPractice } from "@/components/gplx/practice";
+import { getT } from "@/lib/i18n/server";
 
-export const metadata = { title: "Ôn thi lý thuyết giấy phép lái xe" };
+export async function generateMetadata() {
+  return { title: (await getT())("community.gplx.title") };
+}
 
-export default function Page() {
+export default async function Page() {
+  const t = await getT();
   return (
     <>
-      <PageTitle title="Ôn thi lý thuyết giấy phép lái xe" description="Bộ 600 câu hỏi sát hạch lái xe cơ giới đường bộ do Cục Cảnh sát giao thông (Bộ Công an) biên soạn, áp dụng từ 01/6/2025. Đáp án theo bản gốc của Cục." />
+      <PageTitle title={t("community.gplx.title")} description={t("community.gplx.desc")} />
       <GplxPractice />
     </>
   );

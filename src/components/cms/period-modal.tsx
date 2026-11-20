@@ -1,4 +1,5 @@
 "use client";
+import { useT } from "@/lib/i18n/client";
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -39,6 +40,7 @@ export function PeriodModalButton({
   className?: string;
 }) {
   const router = useRouter();
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -81,7 +83,7 @@ export function PeriodModalButton({
 
   const handleSubmit = async () => {
     if (!title.trim()) {
-      toast.error("Vui lòng nhập tiêu đề đợt báo cáo");
+      toast.error(t("cms.pm.needTitle"));
       return;
     }
     setBusy(true);
@@ -111,7 +113,7 @@ export function PeriodModalButton({
         {trigger ?? (
           <Button size="sm">
             <Plus className="size-4" />
-            Tạo đợt báo cáo
+            {t("cms.pm.create")}
           </Button>
         )}
       </span>
@@ -119,46 +121,46 @@ export function PeriodModalButton({
       <Modal
         open={open}
         onClose={() => !busy && setOpen(false)}
-        title={period ? "Chỉnh sửa đợt báo cáo" : "Tạo đợt báo cáo mới"}
+        title={period ? t("cms.pm.editTitle") : t("cms.pm.newTitle")}
         className="max-w-lg"
       >
         <div className="space-y-4">
-          <Field label="Tiêu đề đợt báo cáo" required>
+          <Field label={t("cms.pm.title")} required>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ví dụ: Báo cáo công tác Đoàn tháng 10/2026"
+              placeholder={t("cms.pm.titleEx")}
             />
           </Field>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Năm học">
+            <Field label={t("cms.pm.year")}>
               <Select value={academicYear} onChange={(e) => setAcademicYear(e.target.value)}>
-                <option value="">(Không chọn năm học)</option>
+                <option value="">{t("cms.pm.noYear")}</option>
                 {availableYears.map((y) => (
                   <option key={y} value={y}>
-                    Năm học {y}
+                    {t("cms.pm.yearOpt", { y })}
                   </option>
                 ))}
               </Select>
             </Field>
-            <Field label="Trạng thái">
+            <Field label={t("cms.pm.status")}>
               <Select value={status} onChange={(e) => setStatus(e.target.value)}>
-                <option value="OPEN">Đang mở (Cho phép nộp)</option>
-                <option value="CLOSED">Đã đóng (Khóa nộp)</option>
+                <option value="OPEN">{t("cms.pm.open")}</option>
+                <option value="CLOSED">{t("cms.pm.closed")}</option>
               </Select>
             </Field>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Ngày bắt đầu">
+            <Field label={t("cms.pm.start")}>
               <Input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
               />
             </Field>
-            <Field label="Hạn chót nộp">
+            <Field label={t("cms.pm.due")}>
               <Input
                 type="date"
                 value={endDate}
@@ -167,21 +169,21 @@ export function PeriodModalButton({
             </Field>
           </div>
 
-          <Field label="Hướng dẫn / Ghi chú nội dung">
+          <Field label={t("cms.pm.notes")}>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Yêu cầu các Chi đoàn báo cáo về tình hình sinh hoạt, phong trào tình nguyện, số lượng đoàn viên..."
+              placeholder={t("cms.pm.notesEx")}
               rows={3}
             />
           </Field>
 
           <div className="flex justify-end gap-2 pt-2 border-t border-border">
             <Button variant="secondary" onClick={() => setOpen(false)} disabled={busy}>
-              Hủy
+              {t("cms.c.cancel")}
             </Button>
             <Button loading={busy} onClick={handleSubmit}>
-              {period ? "Lưu thay đổi" : "Tạo đợt"}
+              {period ? t("cms.c.saveChanges") : t("cms.pm.createBtn")}
             </Button>
           </div>
         </div>
@@ -198,6 +200,7 @@ export function PeriodRowActions({
   schoolYears?: string[];
 }) {
   const router = useRouter();
+  const t = useT();
 
   const handleToggleStatus = async () => {
     const nextStatus = period.status === "OPEN" ? "CLOSED" : "OPEN";
@@ -213,7 +216,7 @@ export function PeriodRowActions({
       toast.error(res.error);
       return;
     }
-    toast.success(nextStatus === "OPEN" ? "Đã mở lại đợt báo cáo" : "Đã đóng đợt báo cáo");
+    toast.success(nextStatus === "OPEN" ? t("cms.pm.reopened") : t("cms.pm.closedMsg"));
     router.refresh();
   };
 
@@ -233,7 +236,7 @@ export function PeriodRowActions({
         period={period}
         schoolYears={schoolYears}
         trigger={
-          <Button variant="ghost" size="sm" title="Chỉnh sửa đợt">
+          <Button variant="ghost" size="sm" title={t("cms.pm.editTip")}>
             <Edit2 className="size-4" />
           </Button>
         }
@@ -243,7 +246,7 @@ export function PeriodRowActions({
         variant="ghost"
         size="sm"
         onClick={handleToggleStatus}
-        title={period.status === "OPEN" ? "Đóng đợt báo cáo" : "Mở lại đợt báo cáo"}
+        title={period.status === "OPEN" ? t("cms.pm.closeTip") : t("cms.pm.reopenTip")}
       >
         {period.status === "OPEN" ? (
           <Lock className="size-4 text-amber-600" />
@@ -258,8 +261,8 @@ export function PeriodRowActions({
           triggerVariant="ghost"
           size="sm"
           danger
-          title="Xóa đợt báo cáo"
-          description={`Bạn có chắc chắn muốn xóa đợt báo cáo "${period.title}"?`}
+          title={t("cms.pm.delTitle")}
+          description={t("cms.pm.delDesc", { title: period.title })}
           onConfirm={handleDelete}
         />
       )}

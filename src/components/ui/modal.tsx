@@ -3,10 +3,12 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/utils";
 import { Button } from "./button";
+import { useT } from "@/lib/i18n/client";
 
 export function Modal({ open, onClose, title, children, className }: {
   open: boolean; onClose: () => void; title: string; children: React.ReactNode; className?: string;
 }) {
+  const t = useT();
   const ref = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose; // luôn gọi bản onClose mới nhất mà không làm effect bên dưới chạy lại
@@ -25,7 +27,7 @@ export function Modal({ open, onClose, title, children, className }: {
         className={cn("my-8 w-full max-w-lg rounded-lg bg-white text-left shadow-xl outline-none", className)}>
         <div className="flex items-center justify-between border-b border-border px-5 py-3">
           <h2 className="font-semibold">{title}</h2>
-          <button onClick={onClose} className="rounded p-1 text-muted hover:bg-slate-100" aria-label="Đóng"><X className="size-4" /></button>
+          <button onClick={onClose} className="rounded p-1 text-muted hover:bg-slate-100" aria-label={t("app.ui.close")}><X className="size-4" /></button>
         </div>
         <div className="p-5">{children}</div>
       </div>
@@ -34,10 +36,11 @@ export function Modal({ open, onClose, title, children, className }: {
 }
 
 /** Hộp thoại xác nhận (thay cho window.confirm). */
-export function ConfirmButton({ trigger, title, description, confirmLabel = "Xác nhận", danger, onConfirm, triggerClassName, triggerVariant = "secondary", size = "sm", triggerLabel }: {
+export function ConfirmButton({ trigger, title, description, confirmLabel, danger, onConfirm, triggerClassName, triggerVariant = "secondary", size = "sm", triggerLabel }: {
   trigger: React.ReactNode; title: string; description?: React.ReactNode; confirmLabel?: string; danger?: boolean;
   onConfirm: () => Promise<void> | void; triggerClassName?: string; triggerVariant?: "secondary" | "ghost" | "danger" | "primary"; size?: "sm" | "md"; triggerLabel?: string;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   return (
@@ -46,9 +49,9 @@ export function ConfirmButton({ trigger, title, description, confirmLabel = "Xá
       <Modal open={open} onClose={() => !pending && setOpen(false)} title={title} className="max-w-md">
         {description && <div className="text-sm text-muted">{description}</div>}
         <div className="mt-5 flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => setOpen(false)} disabled={pending}>Hủy</Button>
+          <Button variant="secondary" onClick={() => setOpen(false)} disabled={pending}>{t("app.ui.cancel")}</Button>
           <Button variant={danger ? "danger" : "primary"} loading={pending}
-            onClick={() => start(async () => { await onConfirm(); setOpen(false); })}>{confirmLabel}</Button>
+            onClick={() => start(async () => { await onConfirm(); setOpen(false); })}>{confirmLabel ?? t("app.ui.confirm")}</Button>
         </div>
       </Modal>
     </>

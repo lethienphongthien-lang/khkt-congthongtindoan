@@ -9,13 +9,16 @@ import { notifyUser } from "@/lib/notify";
 import { emulationBatchSchema, emulationSchema } from "@/lib/validation";
 import { defaultCalendar, currentWeek, schoolYearOf, weekRange } from "@/lib/school-calendar";
 import { loadCalendars } from "@/lib/services/school-calendar";
+import { getT } from "@/lib/i18n/server";
+import type { MessageKey } from "@/lib/i18n/translate";
+const tr = async (key: MessageKey, p?: Record<string, string | number>) => (await getT())(key, p);
 
 export async function createEmulationRecordAction(input: unknown) {
   return run(async () => {
     const admin = await requireRole(["ADMIN"]);
     const data = emulationSchema.parse(input);
     const dept = await db.department.findUnique({ where: { id: data.departmentId } });
-    if (!dept) throw new UserError("Chi đoàn không tồn tại");
+    if (!dept) throw new UserError(await tr("act.chapterMissing"));
     const rec = await db.emulationRecord.create({ data: { ...data, createdById: admin.id } });
     if (dept.secretaryId) {
       await notifyUser(dept.secretaryId, {
@@ -24,7 +27,7 @@ export async function createEmulationRecordAction(input: unknown) {
     }
     await audit(admin.id, "emulation.create", "Department", dept.id, { recordId: rec.id, points: data.points, reason: data.reason });
     revalidatePath("/emulation");
-    return { message: "Đã ghi nhận điểm thi đua" };
+    return { message: await tr("act.e.recorded") };
   });
 }
 
@@ -32,11 +35,11 @@ export async function deleteEmulationRecordAction(id: string) {
   return run(async () => {
     const admin = await requireRole(["ADMIN"]);
     const rec = await db.emulationRecord.findUnique({ where: { id } });
-    if (!rec) throw new UserError("Không tìm thấy bản ghi");
+    if (!rec) throw new UserError(await tr("act.e.recNotFound"));
     await db.emulationRecord.delete({ where: { id } });
     await audit(admin.id, "emulation.delete", "Department", rec.departmentId, { recordId: id, points: rec.points, reason: rec.reason });
     revalidatePath("/emulation");
-    return { message: "Đã xóa bản ghi" };
+    return { message: await tr("act.e.recDeleted") };
   });
 }
 
@@ -46,7 +49,7 @@ async function weekRangeOf(date: Date) {
   const cal = (await loadCalendars()).find((c) => c.startYear === year) ?? defaultCalendar(year);
   const wk = currentWeek(cal, date);
   const range = wk ? weekRange(cal, wk) : null;
-  if (!range) throw new UserError("Ngày này nằm ngoài lịch năm học, chưa xác định được tuần");
+  if (!range) throw new UserError(await tr("act.e.outOfCal"));
   return range;
 }
 
@@ -56,7 +59,7 @@ export async function getEmulationWeekAction(year: number, week: number) {
     await requireRole(["ADMIN"]);
     const cal = (await loadCalendars()).find((c) => c.startYear === year) ?? defaultCalendar(year);
     const range = weekRange(cal, week);
-    if (!range) throw new UserError("Tuần không hợp lệ");
+    if (!range) throw new UserError(await tr("act.e.badWeek"));
     const sums = await db.emulationRecord.groupBy({ by: ["departmentId"], where: { recordedAt: { gte: range.from, lt: range.to } }, _sum: { points: true } });
     return { data: { points: Object.fromEntries(sums.map((r) => [r.departmentId, r._sum.points ?? 0])) } };
   });
@@ -71,10 +74,10 @@ export async function createEmulationBatchAction(input: unknown) {
     const admin = await requireRole(["ADMIN"]);
     const data = emulationBatchSchema.parse(input);
     const items = data.items;
-    if (!items.length) throw new UserError("Chưa nhập điểm cho Chi đoàn nào");
+    if (!items.length) throw new UserError(await tr("act.e.noPoints"));
     const depts = await db.department.findMany({ where: { id: { in: items.map((i) => i.departmentId) } }, select: { id: true, name: true, secretaryId: true } });
     const byId = new Map(depts.map((d) => [d.id, d]));
-    if (items.some((i) => !byId.has(i.departmentId))) throw new UserError("Có Chi đoàn không tồn tại");
+    if (items.some((i) => !byId.has(i.departmentId))) throw new UserError(await tr("act.e.someMissing"));
     const range = await weekRangeOf(data.recordedAt);
     const before = await db.emulationRecord.groupBy({ by: ["departmentId"], where: { departmentId: { in: items.map((i) => i.departmentId) }, recordedAt: { gte: range.from, lt: range.to } }, _sum: { points: true } });
     const had = new Map(before.map((r) => [r.departmentId, r._sum.points ?? 0]));
@@ -92,6 +95,6 @@ export async function createEmulationBatchAction(input: unknown) {
     }
     await audit(admin.id, "emulation.createBatch", "Department", null, { count: items.length, changed: changed.length, reason: data.reason });
     revalidatePath("/emulation");
-    return { message: `Đã lưu điểm tuần cho ${items.length} Chi đoàn` };
+    return { message: await tr("act.e.weekSaved", { n: items.length }) };
   });
 }

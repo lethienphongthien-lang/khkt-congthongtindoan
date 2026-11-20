@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getT } from "@/lib/i18n/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -9,10 +10,11 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
+  const t = await getT();
   const user = await getCurrentUser();
-  if (!user || user.mustChangePassword) return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
+  if (!user || user.mustChangePassword) return NextResponse.json({ error: t("misc.api.unauth") }, { status: 401 });
   const parsed = schema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Dữ liệu không hợp lệ" }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: t("misc.api.badData") }, { status: 400 });
   const { endpoint, keys } = parsed.data;
   // Một endpoint thuộc về một thiết bị: nếu đổi tài khoản trên cùng thiết bị thì chuyển quyền sở hữu.
   await db.pushSubscription.upsert({

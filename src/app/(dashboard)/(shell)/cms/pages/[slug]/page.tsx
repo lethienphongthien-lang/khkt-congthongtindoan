@@ -1,3 +1,4 @@
+import { getT } from "@/lib/i18n/server";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth/session";
@@ -6,7 +7,7 @@ import { PageHeader } from "@/components/ui/misc";
 import { SitePageForm } from "@/components/cms/forms";
 import type { AttachmentValue } from "@/components/ui/file-upload";
 
-export const metadata = { title: "Sửa trang giới thiệu" };
+export async function generateMetadata() { return { title: (await getT())("cms.sp.editPage") }; }
 
 export default async function EditSitePage({ params }: { params: Promise<{ slug: string }> }) {
   await requireRole(["ADMIN"]);

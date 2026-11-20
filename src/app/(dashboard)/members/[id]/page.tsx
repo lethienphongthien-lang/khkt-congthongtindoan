@@ -1,3 +1,4 @@
+import { getT } from "@/lib/i18n/server";
 import { getEduPolicy } from "@/lib/services/edu-policy";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth/session";
@@ -6,10 +7,11 @@ import { PageHeader } from "@/components/ui/misc";
 import { MemberProfile } from "@/components/members/member-profile";
 import { MemberAdminActions } from "@/components/members/member-admin-actions";
 
-export const metadata = { title: "Hồ sơ đoàn viên" };
+export async function generateMetadata() { const t = await getT(); return { title: t("members.profile") }; }
 
 export default async function MemberDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }> }) {
   const user = await requireRole(["ADMIN", "SECRETARY", "DEPARTMENT_ACCOUNT"]);
+  const t = await getT();
   const { id } = await params;
   const tab = (await searchParams).tab === "hoat-dong" ? "hoat-dong" : "ho-so";
   // getMemberForUser đã áp phạm vi quyền: bí thư chỉ lấy được đoàn viên Chi đoàn của mình, ngược lại -> 404.
@@ -18,7 +20,7 @@ export default async function MemberDetailPage({ params, searchParams }: { param
   const policy = await getEduPolicy();
   return (
     <>
-      <PageHeader title="Hồ sơ đoàn viên"
+      <PageHeader title={t("members.profile")}
         actions={user.role === "ADMIN" && <MemberAdminActions canDelete={policy.profiles} id={member.id} locked={member.user.status === "LOCKED"} isAdmin code={member.code} fullName={member.fullName} doanVien={member.isDoanVien} />} />
       <MemberProfile member={member} showAudit detail={user.role === "ADMIN"} tab={tab} basePath={`/members/${id}`} />
     </>

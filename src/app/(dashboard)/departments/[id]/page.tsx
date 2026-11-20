@@ -1,3 +1,5 @@
+import { getLocale, getT } from "@/lib/i18n/server";
+import { intlLocale } from "@/lib/i18n/format";
 import { getEduPolicy } from "@/lib/services/edu-policy";
 import { deputiesAvailable, listDeputies } from "@/lib/services/class-deputies";
 import { ActionsMenu } from "@/components/ui/actions-menu";
@@ -15,19 +17,20 @@ import type { Prisma } from "@prisma/client";
 import { Download } from "lucide-react";
 import { buttonClass } from "@/components/ui/button";
 import { FilterBar } from "@/components/ui/filter-bar";
-import { MEMBER_SORTS, memberOrderBy } from "@/lib/member-sort";
+import { sortOptions, memberOrderBy } from "@/lib/member-sort";
 import { inOrder, memberIdsByName } from "@/lib/services/member-name-sort";
 import { ClickRow } from "@/components/ui/click-row";
 import { MemberTable } from "@/components/members/member-table";
 import { AddMembersButton, DeleteDepartmentButton, DepartmentAccountButton, DepartmentFormButton } from "@/components/members/department-actions";
 import { Avatar, DataTable, EmptyState, PageHeader, Pagination, Section, Stat, Td, Th } from "@/components/ui/misc";
 
-export const metadata = { title: "Chi đoàn" };
+export async function generateMetadata() { const t = await getT(); return { title: t("dept.title") }; }
 
 const PAGE_SIZE = 15;
 
 export default async function DepartmentDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const user = await requireRole(["ADMIN", "DEPARTMENT_ACCOUNT"]);
+  const t = await getT(), nf = intlLocale(await getLocale());
   const { id } = await params;
   const sp = await searchParams;
   const page = pageParam(sp.page);
@@ -67,7 +70,7 @@ export default async function DepartmentDetailPage({ params, searchParams }: { p
   const members = nameIds ? inOrder(membersRaw, nameIds) : membersRaw;
   const policy = await getEduPolicy();
   const actionItems = <>
-    <a href={`/api/members/export?dept=${dept.id}`} className={buttonClass("secondary")}><Download className="size-4" />Xuất<span className="max-sm:hidden"> Excel</span></a>
+    <a href={`/api/members/export?dept=${dept.id}`} className={buttonClass("secondary")}><Download className="size-4" />{t("members.export")}<span className="max-sm:hidden"> Excel</span></a>
     {policy.profiles && policy.placement && <AddMembersButton departmentId={dept.id} departmentName={dept.name} />}
     {user.role === "ADMIN" && <DepartmentAccountButton departmentId={dept.id} account={dept.account} />}
     {user.role === "ADMIN" && (dept.isTeacher || policy.classes) && <DepartmentFormButton dept={{ id: dept.id, name: dept.name, description: dept.description, startYear: dept.startYear, isTeacher: dept.isTeacher }} />}
@@ -75,33 +78,33 @@ export default async function DepartmentDetailPage({ params, searchParams }: { p
   </>;
   return (
     <>
-      <PageHeader title={`Chi đoàn ${dept.name}`} description={`${dept.isTeacher ? "Chi đoàn giáo viên · " : ""}${dept.startYear ? `Niên khóa ${cohortLabel(dept.startYear)}` : ""}${dept.graduatedAt ? " · Đã ra trường" : ""}`}
+      <PageHeader title={t("dept.chapterName", { name: dept.name })} description={`${dept.isTeacher ? t("dept.teacherChapter") + " · " : ""}${dept.startYear ? t("dept.cohortOf", { y: cohortLabel(dept.startYear) }) : ""}${dept.graduatedAt ? " · " + t("dept.graduated2") : ""}`}
         actions={dept.graduatedAt ? undefined : <>
           <ActionsMenu>{actionItems}</ActionsMenu>
         </>} />
-      {!dept.graduatedAt && <Tabs current={`?tab=${tab}`} items={[["?tab=overview", "Tổng quan"], ["?tab=personnel", "Nhân sự"]]} />}
+      {!dept.graduatedAt && <Tabs current={`?tab=${tab}`} items={[["?tab=overview", t("dept.tabOverview")], ["?tab=personnel", t("dept.tabPersonnel")]]} />}
       {tab === "personnel" && !dept.graduatedAt ? <DepartmentPersonnel departmentId={id} deputies={deputies} deputiesEnabled={deputiesEnabled} president={president ? { id: president.member?.id ?? null, name: president.fullName } : null}
         secretary={dept.secretary ? { id: dept.secretary.id, fullName: dept.secretary.fullName } : null} monitors={dept.monitors.map((m) => ({ userId: m.userId, fullName: m.user.fullName }))}
         candidates={candidateRows.map((m) => ({ id: m.id, userId: m.userId, label: `${m.fullName} (${m.code})` }))} presidentCandidates={presidentCandidates.map((m) => ({ id: m.id, userId: m.id, label: m.fullName }))}
         showPresident={!dept.isTeacher} canEditPresident={user.role === "ADMIN"} canEdit /> : <>
       <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
-        <Stat label="Học sinh" value={dept._count.members} />
-        <Stat label="Đoàn viên" value={doanVienCount} />
-        <Stat label="Thanh niên" value={dept._count.members - doanVienCount} />
-        <Stat label="Tổng điểm" value={(points._sum.totalPoints ?? 0).toLocaleString("vi-VN")} />
+        <Stat label={t("members.students")} value={dept._count.members} />
+        <Stat label={t("members.doanVien")} value={doanVienCount} />
+        <Stat label={t("members.youth")} value={dept._count.members - doanVienCount} />
+        <Stat label={t("dept.totalPoints")} value={(points._sum.totalPoints ?? 0).toLocaleString(nf)} />
       </div>
       <div className="mt-6">
       <>
         <FilterBar oneRow slotId="member-select-slot" className="mb-3" fields={[
-          { type: "search", name: "q", placeholder: "Tìm theo tên hoặc mã..." },
-          { type: "select", name: "kind", label: "Loại", options: [{ value: "doanvien", label: "Đoàn viên" }, { value: "thanhnien", label: "Thanh niên (chưa vào Đoàn)" }] },
-          { type: "select", name: "status", label: "Trạng thái", options: [{ value: "ACTIVE", label: "Đang sinh hoạt" }, { value: "TRANSFERRED", label: "Đã chuyển sinh hoạt" }, { value: "GRADUATED", label: "Đã ra trường" }, { value: "LOCKED", label: "Tài khoản bị khóa" }] },
-          { type: "select", name: "sort", label: "Sắp xếp (mặc định: điểm cao)", options: MEMBER_SORTS },
+          { type: "search", name: "q", placeholder: t("members.searchPh") },
+          { type: "select", name: "kind", label: t("members.f.kind"), options: [{ value: "doanvien", label: t("members.doanVien") }, { value: "thanhnien", label: t("members.f.kindYouth") }] },
+          { type: "select", name: "status", label: t("members.f.status"), options: [{ value: "ACTIVE", label: t("members.st.ACTIVE") }, { value: "TRANSFERRED", label: t("members.st.TRANSFERRED") }, { value: "GRADUATED", label: t("members.st.GRADUATED") }, { value: "LOCKED", label: t("members.st.LOCKED") }] },
+          { type: "select", name: "sort", label: t("dept.sortPoints"), options: sortOptions(t) },
         ]} />
-        {members.length === 0 ? <EmptyState title={q || kind || status ? "Không có ai khớp bộ lọc" : "Chi đoàn chưa có đoàn viên"} /> : (
+        {members.length === 0 ? <EmptyState title={q || kind || status ? t("members.noMatch") : t("dept.noMembers")} /> : (
           <>
           <CompactList items={members.map((m) => ({ id: m.id, title: m.fullName, subtitle: m.code, leading: <Avatar name={m.fullName} src={m.avatarUrl} size={28} />, value: m.totalPoints,
-            href: `/members/${m.id}`, hrefLabel: "Xem hồ sơ", details: [["Mã đoàn viên", m.code], ["Ngày vào Đoàn", m.isDoanVien ? formatDate(m.joinedAt) : "Chưa vào Đoàn"], ["Điểm", m.totalPoints]] }))} />
+            href: `/members/${m.id}`, hrefLabel: t("members.viewProfile"), details: [[t("members.code"), m.code], [t("members.joinedAt"), m.isDoanVien ? formatDate(m.joinedAt) : t("members.notJoined")], [t("dept.points"), m.totalPoints]] }))} />
           <div className="max-sm:hidden">
           <MemberTable canManage canDelete={policy.profiles} showPoints allItems={allItems} rows={members.map((m) => ({
             id: m.id, code: m.code, fullName: m.fullName, avatarUrl: m.avatarUrl, isDoanVien: m.isDoanVien, joinedAt: m.joinedAt?.toISOString() ?? null,

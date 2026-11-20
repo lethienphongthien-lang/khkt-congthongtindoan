@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/form";
 import { ConfirmButton, Modal } from "@/components/ui/modal";
 import { reportResult } from "@/components/ui/submit";
+import { useT } from "@/lib/i18n/client";
 import { defaultCalendar, weekLabel, weekRange, yearLabel, type SchoolCalendar } from "@/lib/school-calendar";
 
 export function AddRecordButton({ departments, calendars, defaultYear, defaultWeek }: { departments: { id: string; name: string }[]; calendars: SchoolCalendar[]; defaultYear: number; defaultWeek: number }) {
+  const t = useT();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -32,25 +34,25 @@ export function AddRecordButton({ departments, calendars, defaultYear, defaultWe
   const filled = departments.filter((d) => pts[d.id] !== undefined && pts[d.id] !== "").length;
   return (
     <>
-      <Button onClick={() => setOpen(true)}><Plus className="size-4" />Ghi điểm<span className="max-sm:hidden"> thi đua</span></Button>
-      <Modal open={open} onClose={() => setOpen(false)} title="Ghi nhận điểm thi đua" className="max-w-xl">
+      <Button onClick={() => setOpen(true)}><Plus className="size-4" />{t("community.ra.add")}<span className="max-sm:hidden"> {t("community.ra.addSuffix")}</span></Button>
+      <Modal open={open} onClose={() => setOpen(false)} title={t("community.ra.title")} className="max-w-xl">
         <div className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-[1fr_9rem]">
-            <Field label="Nội dung" required><Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Ví dụ: Nề nếp tuần 41" /></Field>
-            <Field label="Năm học" required>
+            <Field label={t("community.ra.reason")} required><Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("community.ra.reasonPh")} /></Field>
+            <Field label={t("community.pf.year")} required>
               <Select value={year} onChange={(e) => { const y = +e.target.value; setYear(y); setWeek(Math.min(week, calOf(y).totalWeeks)); }}>
                 {years.map((y) => <option key={y} value={y}>{yearLabel(y)}</option>)}
               </Select>
             </Field>
           </div>
-          <Field label="Tuần thi đua" required hint="Điểm thi đua chỉ ghi theo tuần; thống kê tháng, học kỳ, năm học tự cộng dồn các tuần">
+          <Field label={t("community.ra.week")} required hint={t("community.ra.weekHint")}>
             <Select value={week} onChange={(e) => setWeek(+e.target.value)}>
-              {Array.from({ length: cal.totalWeeks }, (_, i) => <option key={i} value={i + 1}>{weekLabel(cal, i + 1)}</option>)}
+              {Array.from({ length: cal.totalWeeks }, (_, i) => <option key={i} value={i + 1}>{weekLabel(cal, i + 1, t("misc.week"))}</option>)}
             </Select>
           </Field>
           <div>
             <div className="mb-1 flex items-baseline justify-between text-sm font-medium">
-              <span>Điểm từng Chi đoàn</span><span className="text-xs font-normal text-muted">Điểm cả tuần (tối đa 105) · nhập mới sẽ thay điểm cũ · nhập 0 để xóa · bỏ trống thì giữ nguyên</span>
+              <span>{t("community.ra.perChapter")}</span><span className="text-xs font-normal text-muted">{t("community.ra.perChapterHint")}</span>
             </div>
             <div className="max-h-[50vh] overflow-y-auto rounded-lg border border-border">
               <ul className="divide-y divide-border">
@@ -65,16 +67,16 @@ export function AddRecordButton({ departments, calendars, defaultYear, defaultWe
             </div>
           </div>
           <div className="flex items-center justify-between gap-2 pt-1">
-            <span className="text-xs text-muted">{loading ? "Đang tải điểm hiện có…" : `${filled} Chi đoàn có điểm trong tuần này`}</span>
+            <span className="text-xs text-muted">{loading ? t("community.ra.loading") : t("community.ra.filled", { n: filled })}</span>
             <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => setOpen(false)}>Hủy</Button>
+              <Button variant="secondary" onClick={() => setOpen(false)}>{t("community.cancel")}</Button>
               <Button loading={busy} disabled={!filled || loading} onClick={async () => {
                 setBusy(true);
                 const items = departments.filter((d) => pts[d.id] !== undefined && pts[d.id] !== "").map((d) => ({ departmentId: d.id, points: pts[d.id] }));
                 const res = await createEmulationBatchAction({ reason, recordedAt: weekRange(cal, week)!.from, items });
                 setBusy(false);
                 if (reportResult(res)) { setOpen(false); setReason(""); router.refresh(); }
-              }}>Lưu</Button>
+              }}>{t("community.save")}</Button>
             </div>
           </div>
         </div>
@@ -84,7 +86,8 @@ export function AddRecordButton({ departments, calendars, defaultYear, defaultWe
 }
 
 export function DeleteRecordButton({ id }: { id: string }) {
+  const t = useT();
   const router = useRouter();
-  return <ConfirmButton trigger={<Trash2 className="size-3.5" />} triggerVariant="ghost" triggerClassName="text-danger" title="Xóa bản ghi điểm thi đua?" danger confirmLabel="Xóa"
+  return <ConfirmButton trigger={<Trash2 className="size-3.5" />} triggerVariant="ghost" triggerClassName="text-danger" title={t("community.ra.deleteTitle")} danger confirmLabel={t("community.delete")}
     onConfirm={async () => { reportResult(await deleteEmulationRecordAction(id)); router.refresh(); }} />;
 }

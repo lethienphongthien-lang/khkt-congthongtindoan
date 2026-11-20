@@ -1,16 +1,19 @@
 import Link from "next/link";
 import { Globe, LogIn, Mail, MapPin, Phone, PlayCircle } from "lucide-react";
 import { DoanLogo } from "@/components/layout/logo";
+import { getT } from "@/lib/i18n/server";
+import type { MessageKey } from "@/lib/i18n/translate";
 
-const GROUPS: { title: string; links: [string, string][] }[] = [
-  { title: "Giới thiệu", links: [["Đoàn trường", "/gioi-thieu/doan-truong"], ["Cơ cấu tổ chức", "/gioi-thieu/co-cau-to-chuc"], ["Cờ đỏ", "/gioi-thieu/co-do"], ["Nội quy", "/gioi-thieu/noi-quy"]] },
-  { title: "Thông tin", links: [["Tin tức", "/tin-tuc"], ["Kế hoạch", "/ke-hoach"], ["Thông báo", "/thong-bao"], ["Diễn đàn", "/dien-dan"], ["Lịch công tác", "/lich-cong-tac"], ["Báo cáo Chi đoàn", "/bao-cao-chi-doan"]] },
-  { title: "Dành cho học sinh", links: [["Thi đua", "/thi-dua"], ["Góc giải trí", "/tro-choi"], ["Hướng nghiệp", "/dinh-huong-nghe-nghiep"], ["Tư vấn tâm lý", "/tu-van-tam-ly"], ["Tài liệu sinh hoạt", "/tai-lieu-sinh-hoat"], ["Góp ý ẩn danh", "/gop-y"], ["Sơn Hà Confession", "/confession"]] },
+const GROUPS: { title: MessageKey; links: [MessageKey, string][] }[] = [
+  { title: "footer.intro", links: [["menu.gt-doan-truong", "/gioi-thieu/doan-truong"], ["menu.gt-co-cau", "/gioi-thieu/co-cau-to-chuc"], ["menu.gt-co-do", "/gioi-thieu/co-do"], ["menu.gt-noi-quy", "/gioi-thieu/noi-quy"]] },
+  { title: "footer.info", links: [["menu.tin-tuc", "/tin-tuc"], ["menu.ke-hoach", "/ke-hoach"], ["menu.thong-bao", "/thong-bao"], ["menu.dien-dan", "/dien-dan"], ["footer.schedule", "/lich-cong-tac"], ["menu.bao-cao", "/bao-cao-chi-doan"]] },
+  { title: "footer.students", links: [["menu.thi-dua", "/thi-dua"], ["footer.entertainment", "/tro-choi"], ["menu.dinh-huong", "/dinh-huong-nghe-nghiep"], ["menu.g-tu-van", "/tu-van-tam-ly"], ["footer.materials", "/tai-lieu-sinh-hoat"], ["footer.anonymous", "/gop-y"], ["menu.g-confession", "/confession"]] },
 ];
 
 type Props = { address: string; phone: string; email: string; facebook?: string; youtube?: string };
 
-export function SiteFooter({ address, phone, email, facebook, youtube }: Props) {
+export async function SiteFooter({ address, phone, email, facebook, youtube }: Props) {
+  const t = await getT();
   const contact = [
     address && { icon: MapPin, text: address, href: undefined as string | undefined },
     phone && { icon: Phone, text: phone, href: `tel:${phone.replace(/\s/g, "")}` },
@@ -25,8 +28,8 @@ export function SiteFooter({ address, phone, email, facebook, youtube }: Props) 
           <div className="flex items-center gap-3">
             <DoanLogo className="h-14 shrink-0 drop-shadow-lg" />
             <div>
-              <div className="text-xs tracking-wider text-blue-200 uppercase">Đoàn TNCS Hồ Chí Minh</div>
-              <div className="text-lg leading-tight font-bold text-white uppercase">Đoàn trường THPT Sơn Hà</div>
+              <div className="text-xs tracking-wider text-blue-200 uppercase">{t("site.org")}</div>
+              <div className="text-lg leading-tight font-bold text-white uppercase">{t("site.name")}</div>
             </div>
           </div>
           <ul className="mt-4 space-y-2 text-sm">
@@ -47,18 +50,18 @@ export function SiteFooter({ address, phone, email, facebook, youtube }: Props) 
           )}
         </div>
         {GROUPS.map((g) => (
-          <nav key={g.title} aria-label={g.title} className="lg:col-span-2">
-            <h3 className="mb-3 border-l-4 border-[#ffd400] pl-2.5 text-sm font-bold tracking-wide text-white uppercase">{g.title}</h3>
+          <nav key={g.title} aria-label={t(g.title)} className="lg:col-span-2">
+            <h3 className="mb-3 border-l-4 border-[#ffd400] pl-2.5 text-sm font-bold tracking-wide text-white uppercase">{t(g.title)}</h3>
             <ul className="space-y-2 text-sm">
-              {g.links.map(([label, href]) => <li key={href}><Link href={href} className="hover:text-white hover:underline">{label}</Link></li>)}
+              {g.links.map(([label, href]) => <li key={href}><Link href={href} className="hover:text-white hover:underline">{t(label)}</Link></li>)}
             </ul>
           </nav>
         ))}
       </div>
       <div className="border-t border-white/10">
         <div className="flex w-full flex-col items-center justify-between gap-2 px-4 py-3 text-xs text-blue-200 sm:flex-row lg:px-8">
-          <span>© {new Date().getFullYear()} Đoàn trường THPT Sơn Hà. Cổng thông tin điện tử chính thức của Đoàn trường.</span>
-          <Link href="/login" className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 font-medium text-white transition-colors hover:bg-white/20"><LogIn className="size-3.5" />Đăng nhập hệ thống quản lý</Link>
+          <span>© {new Date().getFullYear()} {t("site.name")}. {t("site.copyright")}</span>
+          <Link href="/login" className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 font-medium text-white transition-colors hover:bg-white/20"><LogIn className="size-3.5" />{t("common.loginAdmin")}</Link>
         </div>
       </div>
     </footer>

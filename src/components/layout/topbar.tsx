@@ -4,7 +4,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { ArrowLeft, Bell, Globe, MessagesSquare, ChevronDown, ChevronRight, KeyRound, LogOut } from "lucide-react";
 import { cn, relativeTime } from "@/utils";
-import { PAGE_TITLES, PATH_TITLES } from "@/lib/nav";
+import { useT } from "@/lib/i18n/client";
+import { LanguageSwitcher } from "@/components/ui/language-switcher";
+import { PAGE_TITLES, PATH_TITLES, navLabel } from "@/lib/nav";
 import { NotificationControls } from "@/components/notifications/controls";
 import { DoanLogo } from "./logo";
 import { ThemeMenuItem, ThemeToggle } from "./theme-toggle";
@@ -47,6 +49,7 @@ function useCanGoBack(pathname: string) {
 }
 
 function Breadcrumb() {
+  const t = useT();
   const router = useRouter();
   const pathname = usePathname();
   const canGoBack = useCanGoBack(pathname);
@@ -58,15 +61,15 @@ function Breadcrumb() {
   }).filter((c): c is { href: string; label: string } => !!c.label);
   if (!crumbs.length) return null;
   return (
-    <nav aria-label="Đường dẫn" className="flex min-w-0 items-center gap-1 text-[13px] sm:gap-1.5 sm:text-sm">
+    <nav aria-label={t("app.shell.path")} className="flex min-w-0 items-center gap-1 text-[13px] sm:gap-1.5 sm:text-sm">
       {crumbs.length > 1 && (canGoBack
-        ? <button type="button" onClick={() => router.back()} aria-label="Quay lại trang trước" title="Quay lại trang trước" className="mr-0.5 -ml-1 shrink-0 rounded-md p-1.5 text-slate-600 hover:bg-slate-100"><ArrowLeft className="size-4" /></button>
-        : <Link href={crumbs[crumbs.length - 2].href} aria-label="Quay lại" className="mr-0.5 -ml-1 shrink-0 rounded-md p-1.5 text-slate-600 hover:bg-slate-100"><ArrowLeft className="size-4" /></Link>)}
+        ? <button type="button" onClick={() => router.back()} aria-label={t("app.shell.backPrev")} title={t("app.shell.backPrev")} className="mr-0.5 -ml-1 shrink-0 rounded-md p-1.5 text-slate-600 hover:bg-slate-100"><ArrowLeft className="size-4" /></button>
+        : <Link href={crumbs[crumbs.length - 2].href} aria-label={t("app.shell.back")} className="mr-0.5 -ml-1 shrink-0 rounded-md p-1.5 text-slate-600 hover:bg-slate-100"><ArrowLeft className="size-4" /></Link>)}
       {crumbs.map((c, i) => {
         const last = i === crumbs.length - 1;
         return (
           <span key={c.href} className={cn("min-w-0 items-center gap-1 sm:gap-1.5", last ? "flex" : "flex shrink-0 text-muted", i < crumbs.length - 1 && "max-sm:hidden")}>
-            {last ? <span className="truncate font-semibold">{c.label}</span> : <><Link href={c.href} className="hover:text-primary">{c.label}</Link><ChevronRight className="size-3.5" /></>}
+            {last ? <span className="truncate font-semibold">{navLabel(t, c.label)}</span> : <><Link href={c.href} className="hover:text-primary">{navLabel(t, c.label)}</Link><ChevronRight className="size-3.5" /></>}
           </span>
         );
       })}
@@ -75,6 +78,7 @@ function Breadcrumb() {
 }
 
 function Notifications({ items, unread }: { items: NotificationItem[]; unread: number }) {
+  const tr = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -82,18 +86,18 @@ function Notifications({ items, unread }: { items: NotificationItem[]; unread: n
   useOutside(ref, () => setOpen(false));
   return (
     <div ref={ref} className="relative">
-      <button onClick={() => setOpen((o) => !o)} className="relative rounded-md p-2 text-slate-600 hover:bg-slate-100" aria-label="Thông báo">
+      <button onClick={() => setOpen((o) => !o)} className="relative rounded-md p-2 text-slate-600 hover:bg-slate-100" aria-label={tr("app.shell.notifications")}>
         <Bell className="size-[18px]" />
         {unread > 0 && <span className="absolute top-1 right-1 flex min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] leading-4 font-semibold text-white">{unread > 9 ? "9+" : unread}</span>}
       </button>
       {open && (
         <div className="absolute right-0 mt-2 w-80 max-sm:fixed max-sm:inset-x-2 max-sm:top-14 max-sm:mt-0 max-sm:w-auto rounded-lg border border-border bg-white shadow-lg">
           <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-            <span className="text-sm font-semibold">Thông báo</span>
-            {unread > 0 && <button className="text-xs text-primary hover:underline" onClick={() => start(async () => { await markAllNotificationsRead(); router.refresh(); })}>Đánh dấu đã đọc</button>}
+            <span className="text-sm font-semibold">{tr("app.shell.notifications")}</span>
+            {unread > 0 && <button className="text-xs text-primary hover:underline" onClick={() => start(async () => { await markAllNotificationsRead(); router.refresh(); })}>{tr("app.shell.markRead")}</button>}
           </div>
           <div className="max-h-96 overflow-y-auto">
-            {items.length === 0 && <p className="px-4 py-8 text-center text-sm text-muted">Chưa có thông báo</p>}
+            {items.length === 0 && <p className="px-4 py-8 text-center text-sm text-muted">{tr("app.shell.noNotifications")}</p>}
             {items.map((n) => {
               const inner = (
                 <>
@@ -123,18 +127,20 @@ function Notifications({ items, unread }: { items: NotificationItem[]; unread: n
 export function Topbar({ user, roleLabel, notifications, unread, canChat }: {
   user: { fullName: string; avatarUrl: string | null }; roleLabel: string; notifications: NotificationItem[]; unread: number; canChat?: boolean;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useOutside(ref, () => setOpen(false));
   return (
     <header className="no-print sticky top-0 z-20 flex h-14 items-center justify-between gap-3 border-b border-border bg-white/95 px-4 lg:px-6">
       <div className="flex min-w-0 items-center gap-2.5">
-        <Link href="/dashboard" className="shrink-0 md:hidden" aria-label="Trang chủ"><DoanLogo className="h-8" /></Link>
+        <Link href="/dashboard" className="shrink-0 md:hidden" aria-label={t("app.shell.home")}><DoanLogo className="h-8" /></Link>
         <Breadcrumb />
       </div>
       <div className="flex items-center gap-1">
-        <Link href="/" className="flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] font-medium text-primary hover:bg-primary-light" aria-label="Mở cổng thông tin công khai" title="Mở cổng thông tin công khai"><Globe className="size-4" /><span className="max-sm:hidden">Cổng thông tin</span></Link>
-        {canChat && <Link href="/team-chat" className="rounded-md p-2 text-primary hover:bg-primary-light md:hidden" aria-label="Kênh chat Ban chấp hành và Bí thư" title="Kênh chat"><MessagesSquare className="size-[18px]" /></Link>}
+        <Link href="/" className="flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] font-medium text-primary hover:bg-primary-light" aria-label={t("app.shell.openPortal")} title={t("app.shell.openPortal")}><Globe className="size-4" /><span className="max-sm:hidden">{t("app.nav.Cổng thông tin")}</span></Link>
+        {canChat && <Link href="/team-chat" className="rounded-md p-2 text-primary hover:bg-primary-light md:hidden" aria-label={t("app.shell.chatLong")} title={t("app.shell.chat")}><MessagesSquare className="size-[18px]" /></Link>}
+        <span className="max-sm:hidden"><LanguageSwitcher variant="light" /></span>
         <span className="max-md:hidden"><ThemeToggle /></span>
         <Notifications items={notifications} unread={unread} />
         <div ref={ref} className="relative">
@@ -148,7 +154,8 @@ export function Topbar({ user, roleLabel, notifications, unread, canChat }: {
           </button>
           {open && (
             <div className="absolute right-0 mt-2 w-52 rounded-lg border border-border bg-white py-1 shadow-lg">
-              <Link href="/settings/profile" onClick={() => setOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-50"><KeyRound className="size-4 text-muted" />Tài khoản & mật khẩu</Link>
+              <Link href="/settings/profile" onClick={() => setOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-50"><KeyRound className="size-4 text-muted" />{t("app.shell.accountPw")}</Link>
+              <div className="px-4 py-2 sm:hidden"><LanguageSwitcher variant="light" /></div>
               <div className="md:hidden"><ThemeMenuItem onDone={() => setOpen(false)} /></div>
               <LogoutForm variant="menu" />
             </div>

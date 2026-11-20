@@ -1,3 +1,5 @@
+import { getT, getLocale } from "@/lib/i18n/server";
+import { intlLocale } from "@/lib/i18n/format";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ExternalLink } from "lucide-react";
@@ -10,9 +12,11 @@ import { PageHeader } from "@/components/ui/misc";
 import { ReportRowActions } from "@/components/cms/row-actions";
 import { RichText } from "@/components/public/rich-text";
 
-export const metadata = { title: "Báo cáo Chi đoàn" };
+export async function generateMetadata() { return { title: (await getT())("cms.crp.title") }; }
 
 export default async function ReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const t = await getT();
+  const locale = await getLocale();
   const user = await requireRole(["ADMIN", "SECRETARY", "DEPARTMENT_ACCOUNT"]);
   const r = await db.chapterReport.findUnique({
     where: { id: (await params).id },
@@ -23,18 +27,18 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
   });
   if (!r || !canManageDepartment(user, r.departmentId)) notFound();
   const desc = [
-    `Chi đoàn ${r.department.name}`,
-    r.period ? `Đợt: ${r.period.title}` : null,
-    r.participantCount != null ? `${r.participantCount} đoàn viên tham gia` : null,
+    t("cms.crp.dChapter", { name: r.department.name }),
+    r.period ? t("cms.crp.dPeriod", { title: r.period.title }) : null,
+    r.participantCount != null ? t("cms.crp.dParts", { n: r.participantCount }) : null,
     formatDate(r.createdAt),
-    `${r.viewCount.toLocaleString("vi-VN")} lượt xem`,
+    t("cms.crp.dViews", { n: r.viewCount.toLocaleString(intlLocale(locale)) }),
   ].filter(Boolean).join(" · ");
 
   return (
     <>
       <PageHeader title={r.title} stackActions description={desc}
         actions={<>
-          <Link href={`/bao-cao-chi-doan/bao-cao/${r.id}`} target="_blank" className={buttonClass("secondary")}><ExternalLink className="size-4" /><span className="max-sm:hidden">Xem công khai</span></Link>
+          <Link href={`/bao-cao-chi-doan/bao-cao/${r.id}`} target="_blank" className={buttonClass("secondary")}><ExternalLink className="size-4" /><span className="max-sm:hidden">{t("cms.crp.viewPublic")}</span></Link>
           <ReportRowActions id={r.id} backToList />
         </>} />
       {r.imageUrl && (

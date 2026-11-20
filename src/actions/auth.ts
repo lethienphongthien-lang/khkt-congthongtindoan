@@ -8,6 +8,7 @@ import { run, UserError } from "@/lib/action";
 import { audit, getRequestMeta } from "@/lib/audit";
 import { createSession, destroySession, requireUser } from "@/lib/auth/session";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
+import { getT } from "@/lib/i18n/server";
 import { changePasswordSchema, loginSchema } from "@/lib/validation";
 
 // Giới hạn đăng nhập sai (bộ nhớ tiến trình; đủ cho một instance, thay bằng Redis khi scale).
@@ -18,11 +19,11 @@ const MAX_ATTEMPTS = 8;
 function throttleKey(username: string, ip: string | null) {
   return `${username.toLowerCase()}|${ip ?? "?"}`;
 }
-function checkThrottle(key: string) {
+async function checkThrottle(key: string) {
   const e = attempts.get(key);
   if (e && Date.now() - e.first > WINDOW_MS) attempts.delete(key);
   const cur = attempts.get(key);
-  if (cur && cur.count >= MAX_ATTEMPTS) throw new UserError("Đăng nhập sai quá nhiều lần, vui lòng thử lại sau 15 phút");
+  if (cur && cur.count >= MAX_ATTEMPTS) throw new UserError((await getT())("app.auth.tooMany"));
 }
 function recordFailure(key: string) {
   const cur = attempts.get(key);
@@ -35,28 +36,29 @@ export async function loginAction(input: unknown) {
     const { username, password } = loginSchema.parse(input);
     const { ip } = await getRequestMeta();
     const key = throttleKey(username, ip);
-    checkThrottle(key);
+    const t = await getT();
+    await checkThrottle(key);
 
     // Lỗi cấu hình triển khai: báo rõ để quản trị khắc phục (không lộ giá trị bí mật).
     if (!process.env.AUTH_SECRET || process.env.AUTH_SECRET.length < 32) {
       console.error("[login] AUTH_SECRET chưa cấu hình hoặc quá ngắn");
-      throw new UserError("Máy chủ chưa cấu hình AUTH_SECRET (tối thiểu 32 ký tự). Liên hệ quản trị viên.");
+      throw new UserError(t("app.auth.noSecret"));
     }
     // Đăng nhập bằng tên đăng nhập hoặc mã đoàn viên (bí thư cũ có tên đăng nhập riêng nhưng vẫn có mã đoàn viên).
     const user = await db.user.findFirst({ where: { OR: [{ username }, { member: { is: { code: username.toUpperCase() } } }] } }).catch((e) => {
       console.error("[login] Không truy vấn được database", e);
-      throw new UserError("Không kết nối được cơ sở dữ liệu. Kiểm tra biến DATABASE_URL trên máy chủ.");
+      throw new UserError(t("app.auth.noDb"));
     });
     // So sánh hash cả khi không có user để giảm lộ thông tin qua thời gian phản hồi.
     const ok = await verifyPassword(password, user?.passwordHash ?? "$2b$11$invalidinvalidinvalidinvalidinvalidinvalidinvalidinvalidinv");
     if (!user || !ok) {
       recordFailure(key);
-      throw new UserError("Tên đăng nhập hoặc mật khẩu không đúng");
+      throw new UserError(t("app.auth.badCreds"));
     }
-    if (user.status !== "ACTIVE") throw new UserError("Tài khoản đã bị khóa. Vui lòng liên hệ Ban chấp hành Đoàn trường");
-    if (await db.member.count({ where: { userId: user.id, deletedAt: { not: null } } })) throw new UserError("Tài khoản không còn tồn tại. Vui lòng liên hệ nhà trường");
+    if (user.status !== "ACTIVE") throw new UserError(t("app.auth.locked"));
+    if (await db.member.count({ where: { userId: user.id, deletedAt: { not: null } } })) throw new UserError(t("app.auth.gone"));
     // Tài khoản dùng chung với EduConnect nhưng không thuộc Cổng thông tin Đoàn: mật khẩu đúng nhưng không được vào.
-    if (user.role === "EXTERNAL") throw new UserError("Tài khoản này không có quyền truy cập Cổng thông tin Đoàn");
+    if (user.role === "EXTERNAL") throw new UserError(t("app.auth.external"));
 
     attempts.delete(key);
     await db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
@@ -73,31 +75,33 @@ export async function logoutAction() {
 
 export async function changePasswordAction(input: unknown) {
   return run(async () => {
+    const t = await getT();
     const user = await requireUser({ allowPasswordChange: true });
     const data = changePasswordSchema.parse(input);
     const record = await db.user.findUniqueOrThrow({ where: { id: user.id } });
     if (!(await verifyPassword(data.currentPassword, record.passwordHash))) {
-      throw new UserError("Mật khẩu hiện tại không đúng");
+      throw new UserError(t("app.auth.wrongCurrent"));
     }
     await db.user.update({
       where: { id: user.id },
       data: { passwordHash: await hashPassword(data.newPassword), mustChangePassword: false },
     });
     await audit(user.id, "auth.change_password", "User", user.id);
-    return { message: "Đã đổi mật khẩu" };
+    return { message: t("app.auth.changed") };
   });
 }
 
 /** Quản trị viên tự đổi họ tên hiển thị (đoàn viên/bí thư do Admin quản lý hồ sơ). */
 export async function updateOwnNameAction(input: { fullName: string }) {
   return run(async () => {
+    const t = await getT();
     const user = await requireUser();
-    if (user.role !== "ADMIN") throw new UserError("Chỉ quản trị viên được tự đổi họ tên");
+    if (user.role !== "ADMIN") throw new UserError(t("app.auth.adminOnlyName"));
     const fullName = input.fullName.trim().replace(/\s+/g, " ");
-    if (fullName.length < 2 || fullName.length > 100) throw new UserError("Họ tên từ 2 đến 100 ký tự");
+    if (fullName.length < 2 || fullName.length > 100) throw new UserError(t("app.auth.nameLen"));
     await db.user.update({ where: { id: user.id }, data: { fullName } });
     await audit(user.id, "account.rename", "User", user.id);
     invalidatePublic();
-    return { message: "Đã cập nhật họ tên" };
+    return { message: t("app.auth.nameUpdated") };
   });
 }

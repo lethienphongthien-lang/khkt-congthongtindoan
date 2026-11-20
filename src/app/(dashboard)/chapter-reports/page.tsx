@@ -1,3 +1,5 @@
+import { getT, getLocale } from "@/lib/i18n/server";
+import { intlLocale } from "@/lib/i18n/format";
 import Link from "next/link";
 import { ClickRow } from "@/components/ui/click-row";
 import { Plus, Calendar, Clock, CheckCircle2, AlertCircle, Eye, ChevronRight, FileText, Send, ArrowRight } from "lucide-react";
@@ -10,7 +12,7 @@ import { DataTable, EmptyState, PageHeader, Pagination, Td, Th } from "@/compone
 import { ReportRowActions } from "@/components/cms/row-actions";
 import { PeriodModalButton, PeriodRowActions } from "@/components/cms/period-modal";
 
-export const metadata = { title: "Báo cáo Chi đoàn" };
+export async function generateMetadata() { return { title: (await getT())("cms.crp.title") }; }
 const PAGE_SIZE = 10;
 
 export default async function ChapterReportsPage({
@@ -18,6 +20,8 @@ export default async function ChapterReportsPage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
+  const t = await getT();
+  const locale = await getLocale();
   const user = await requireRole(["ADMIN", "SECRETARY", "DEPARTMENT_ACCOUNT"]);
   const page = pageParam((await searchParams).page);
 
@@ -63,12 +67,12 @@ export default async function ChapterReportsPage({
     return (
       <div className="space-y-8">
         <PageHeader
-          title="Báo cáo Chi đoàn"
-          description={`Chi đoàn ${user.departmentName} · Theo dõi các đợt báo cáo và nộp báo cáo hoạt động`}
+          title={t("cms.crp.title")}
+          description={t("cms.crp.secDesc", { name: user.departmentName ?? "" })}
           actions={
             <Link href="/chapter-reports/new" className={buttonClass()}>
               <Plus className="size-4" />
-              Nộp báo cáo
+              {t("cms.crp.submit")}
             </Link>
           }
         />
@@ -79,17 +83,17 @@ export default async function ChapterReportsPage({
             <div>
               <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
                 <Calendar className="size-5 text-primary" />
-                Các đợt báo cáo từ BCH Đoàn trường
+                {t("cms.crp.fromBch")}
               </h2>
               <p className="text-xs text-muted">
-                Kiểm tra các đợt yêu cầu báo cáo và nộp đúng thời hạn quy định.
+                {t("cms.crp.fromBchHint")}
               </p>
             </div>
           </div>
 
           {periods.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border bg-white/60 p-8 text-center text-sm text-muted">
-              Hiện tại chưa có đợt báo cáo nào được tạo bởi BCH Đoàn trường.
+              {t("cms.crp.noPeriods")}
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -122,22 +126,22 @@ export default async function ChapterReportsPage({
                         >
                           {report ? (
                             <>
-                              <CheckCircle2 className="size-3.5" /> Đã báo cáo
+                              <CheckCircle2 className="size-3.5" /> {t("cms.crp.reported")}
                             </>
                           ) : isClosed ? (
                             <>
-                              <Clock className="size-3.5" /> Đã đóng đợt
+                              <Clock className="size-3.5" /> {t("cms.crp.periodClosed")}
                             </>
                           ) : (
                             <>
-                              <AlertCircle className="size-3.5" /> Chưa báo cáo
+                              <AlertCircle className="size-3.5" /> {t("cms.crp.notReported")}
                             </>
                           )}
                         </span>
 
                         {period.academicYear && (
                           <span className="text-[11px] text-muted">
-                            Năm học {period.academicYear}
+                            {t("cms.crp.year", { y: period.academicYear })}
                           </span>
                         )}
                       </div>
@@ -156,7 +160,7 @@ export default async function ChapterReportsPage({
                         {period.endDate && (
                           <span className="flex items-center gap-1">
                             <Clock className="size-3.5 text-amber-500" />
-                            Hạn chót:{" "}
+                            {t("cms.crp.deadline")}{" "}
                             <strong className={deadlinePassed ? "text-rose-600" : "text-foreground"}>
                               {formatDate(period.endDate)}
                             </strong>
@@ -167,11 +171,11 @@ export default async function ChapterReportsPage({
                       {report && (
                         <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/60 p-2.5 text-xs text-foreground">
                           <div className="font-medium text-emerald-700 line-clamp-1">
-                            Bài đã nộp: {report.title}
+                            {t("cms.crp.submitted", { title: report.title })}
                           </div>
                           <div className="text-[11px] text-muted">
-                            Thời gian nộp: {formatDate(report.createdAt)}
-                            {report.participantCount != null && <> · {report.participantCount} đoàn viên tham gia</>}
+                            {t("cms.crp.submittedAt", { d: formatDate(report.createdAt) })}
+                            {report.participantCount != null && <>{t("cms.crp.nParticipants", { n: report.participantCount })}</>}
                           </div>
                         </div>
                       )}
@@ -184,17 +188,17 @@ export default async function ChapterReportsPage({
                           className={buttonClass("secondary", "sm")}
                         >
                           <Eye className="size-3.5" />
-                          Xem báo cáo
+                          {t("cms.crp.viewReport")}
                         </Link>
                       ) : isClosed ? (
-                        <span className="text-xs text-muted italic">Đã hết hạn nộp</span>
+                        <span className="text-xs text-muted italic">{t("cms.crp.expired")}</span>
                       ) : (
                         <Link
                           href={`/chapter-reports/new?periodId=${period.id}`}
                           className={buttonClass("primary", "sm")}
                         >
                           <Send className="size-3.5" />
-                          Nộp báo cáo
+                          {t("cms.crp.submit")}
                         </Link>
                       )}
                     </div>
@@ -209,16 +213,16 @@ export default async function ChapterReportsPage({
         {otherReports.length > 0 && (
           <section className="space-y-3">
             <h2 className="text-base font-bold text-foreground">
-              Báo cáo thường xuyên / định kỳ khác ({otherReports.length})
+              {t("cms.crp.others", { n: otherReports.length })}
             </h2>
             <div className="rounded-xl border border-border bg-white shadow-sm overflow-hidden">
               <DataTable>
                 <thead>
                   <tr>
-                    <Th>Tiêu đề</Th>
-                    <Th>Ngày nộp</Th>
-                    <Th>Lượt xem</Th>
-                    <Th className="text-right">Thao tác</Th>
+                    <Th>{t("cms.crp.thTitle")}</Th>
+                    <Th>{t("cms.crp.thDate")}</Th>
+                    <Th>{t("cms.crp.thViews")}</Th>
+                    <Th className="text-right">{t("cms.crp.thActions")}</Th>
                   </tr>
                 </thead>
                 <tbody>
@@ -230,7 +234,7 @@ export default async function ChapterReportsPage({
                         </Link>
                       </Td>
                       <Td className="text-xs text-muted">{formatDate(r.createdAt)}</Td>
-                      <Td className="text-xs text-muted">{r.viewCount.toLocaleString("vi-VN")}</Td>
+                      <Td className="text-xs text-muted">{r.viewCount.toLocaleString(intlLocale(locale))}</Td>
                       <Td className="text-right">
                         <ReportRowActions id={r.id} />
                       </Td>
@@ -265,20 +269,20 @@ export default async function ChapterReportsPage({
   const participation = (r: (typeof recentReports)[number]) => {
     if (r.participantCount == null) return null;
     const total = r.department._count.members;
-    return total > 0 ? `${r.participantCount}/${total} (${Math.round((r.participantCount / total) * 100)}%)` : `${r.participantCount}`;
+    return total > 0 ? t("cms.crp.pctOfSize", { a: r.participantCount, b: total, p: Math.round((r.participantCount / total) * 100) }) : `${r.participantCount}`;
   };
 
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Quản lý Báo cáo Chi đoàn"
-        description="Theo dõi tiến độ nộp báo cáo theo từng đợt và quản lý báo cáo của toàn trường"
+        title={t("cms.crp.adminTitle")}
+        description={t("cms.crp.adminDesc")}
         actions={
           <div className="flex items-center gap-2">
             <PeriodModalButton schoolYears={schoolYears} />
             <Link href="/chapter-reports/new" className={buttonClass("secondary")}>
               <Plus className="size-4" />
-              Đăng báo cáo tự do
+              {t("cms.crp.freePost")}
             </Link>
           </div>
         }
@@ -290,10 +294,10 @@ export default async function ChapterReportsPage({
           <div>
             <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
               <Calendar className="size-5 text-primary" />
-              Danh sách các đợt báo cáo ({periods.length})
+              {t("cms.crp.periodList", { n: periods.length })}
             </h2>
             <p className="text-xs text-muted">
-              Bấm vào từng đợt để xem danh sách báo cáo và trạng thái của tất cả Chi đoàn.
+              {t("cms.crp.periodListHint")}
             </p>
           </div>
         </div>
@@ -301,9 +305,9 @@ export default async function ChapterReportsPage({
         {periods.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border bg-white/70 p-8 text-center">
             <Calendar className="mx-auto size-8 text-muted mb-2" />
-            <div className="text-base font-semibold text-foreground">Chưa có đợt báo cáo nào</div>
+            <div className="text-base font-semibold text-foreground">{t("cms.crp.noPeriodTitle")}</div>
             <p className="text-xs text-muted mt-1 max-w-md mx-auto">
-              Hãy tạo đợt báo cáo đầu tiên (ví dụ: Báo cáo tháng 10, Sơ kết HK1) để các Chi đoàn nộp báo cáo.
+              {t("cms.crp.noPeriodDesc")}
             </p>
             <div className="mt-4">
               <PeriodModalButton schoolYears={schoolYears} />
@@ -330,7 +334,7 @@ export default async function ChapterReportsPage({
                             : "bg-emerald-100 text-emerald-800"
                         }`}
                       >
-                        {isClosed ? "Đã đóng đợt" : "Đang mở nhận báo cáo"}
+                        {isClosed ? t("cms.crp.periodClosed") : t("cms.crp.openForReports")}
                       </span>
 
                       <PeriodRowActions period={p} schoolYears={schoolYears} />
@@ -343,7 +347,7 @@ export default async function ChapterReportsPage({
                     </Link>
 
                     {p.academicYear && (
-                      <div className="text-xs text-muted mt-0.5">Năm học {p.academicYear}</div>
+                      <div className="text-xs text-muted mt-0.5">{t("cms.crp.year", { y: p.academicYear })}</div>
                     )}
 
                     {p.description && (
@@ -353,9 +357,9 @@ export default async function ChapterReportsPage({
                     {/* Tiến độ nộp */}
                     <div className="mt-4 rounded-lg bg-slate-50 p-3 border border-border">
                       <div className="flex items-center justify-between text-xs mb-1.5">
-                        <span className="text-muted">Tiến độ nộp:</span>
+                        <span className="text-muted">{t("cms.crp.progress")}</span>
                         <span className="font-bold text-primary">
-                          {submittedCount} / {totalDepts} Chi đoàn ({percent}%)
+                          {t("cms.crp.progressVal", { a: submittedCount, b: totalDepts, p: percent })}
                         </span>
                       </div>
                       <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
@@ -371,10 +375,10 @@ export default async function ChapterReportsPage({
                     <div className="mt-3 flex items-center justify-between text-xs text-muted">
                       {p.endDate ? (
                         <span>
-                          Hạn chót: <strong>{formatDate(p.endDate)}</strong>
+                          {t("cms.crp.deadline")} <strong>{formatDate(p.endDate)}</strong>
                         </span>
                       ) : (
-                        <span>Không giới hạn hạn chót</span>
+                        <span>{t("cms.crp.noDeadline")}</span>
                       )}
                     </div>
                   </div>
@@ -384,14 +388,14 @@ export default async function ChapterReportsPage({
                       href={`/chapter-reports/period/${p.id}`}
                       className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
                     >
-                      Xem danh sách Chi đoàn
+                      {t("cms.crp.viewChapters")}
                       <ArrowRight className="size-3.5" />
                     </Link>
 
                     <Link
                       href={`/chapter-reports/new?periodId=${p.id}`}
                       className={buttonClass("ghost", "sm")}
-                      title="Đăng báo cáo thay"
+                      title={t("cms.crp.postFor")}
                     >
                       <Plus className="size-3.5" />
                     </Link>
@@ -409,15 +413,15 @@ export default async function ChapterReportsPage({
           <div>
             <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
               <FileText className="size-5 text-primary" />
-              Tất cả báo cáo đã nộp ({totalReports})
+              {t("cms.crp.allReports", { n: totalReports })}
             </h2>
-            <p className="text-xs text-muted">Danh sách các bài báo cáo gần đây của các Chi đoàn</p>
+            <p className="text-xs text-muted">{t("cms.crp.allReportsHint")}</p>
           </div>
         </div>
 
         {recentReports.length === 0 ? (
           <div className="rounded-xl border border-border bg-white/85 p-8 text-center text-sm text-muted">
-            Chưa có báo cáo nào được nộp.
+            {t("cms.crp.noReports")}
           </div>
         ) : (
           <>
@@ -425,7 +429,7 @@ export default async function ChapterReportsPage({
               items={recentReports.map((r) => ({
                 id: r.id,
                 title: r.title,
-                subtitle: `Chi đoàn ${r.department.name} · ${r.period ? `[${r.period.title}] · ` : ""}${participation(r) ? `${participation(r)} đoàn viên tham gia · ` : ""}${formatDate(r.createdAt)}`,
+                subtitle: `${t("cms.crp.itemSub", { name: r.department.name })}${r.period ? `[${r.period.title}] · ` : ""}${participation(r) ? t("cms.crp.itemPart", { p: participation(r) ?? "" }) : ""}${formatDate(r.createdAt)}`,
                 href: `/chapter-reports/${r.id}`,
               }))}
             />
@@ -433,12 +437,12 @@ export default async function ChapterReportsPage({
               <DataTable>
                 <thead>
                   <tr>
-                    <Th>Tiêu đề</Th>
-                    <Th>Chi đoàn</Th>
-                    <Th>Đợt báo cáo</Th>
-                    <Th>Đoàn viên tham gia</Th>
-                    <Th>Ngày nộp</Th>
-                    <Th className="text-right">Thao tác</Th>
+                    <Th>{t("cms.crp.thTitle")}</Th>
+                    <Th>{t("cms.crp.thChapter")}</Th>
+                    <Th>{t("cms.crp.thPeriod")}</Th>
+                    <Th>{t("cms.crp.thPart")}</Th>
+                    <Th>{t("cms.crp.thDate")}</Th>
+                    <Th className="text-right">{t("cms.crp.thActions")}</Th>
                   </tr>
                 </thead>
                 <tbody>
@@ -456,11 +460,11 @@ export default async function ChapterReportsPage({
                             {r.period.title}
                           </span>
                         ) : (
-                          <span className="italic text-slate-400">Tự do</span>
+                          <span className="italic text-slate-400">{t("cms.crp.free")}</span>
                         )}
                       </Td>
                       <Td className="whitespace-nowrap text-xs font-semibold tabular-nums text-foreground">
-                        {participation(r) ?? <span className="font-normal italic text-slate-400">Chưa ghi nhận</span>}
+                        {participation(r) ?? <span className="font-normal italic text-slate-400">{t("cms.crp.notRecorded")}</span>}
                       </Td>
                       <Td className="whitespace-nowrap text-xs text-muted">
                         {formatDate(r.createdAt)}

@@ -1,23 +1,27 @@
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { intlLocale } from "@/lib/i18n/format";
 import { formatDateTime, pageParam, str } from "@/utils";
 import { CompactList } from "@/components/ui/compact-list";
 import { DataTable, EmptyState, Pagination, StatusBadge, Td, Th } from "@/components/ui/misc";
 import { FilterBar } from "@/components/ui/filter-bar";
-import { AUDIT_GROUPS, TARGET_LABELS, actionLabel, actionTone, metaSummary } from "@/lib/audit-labels";
+import { getT, getLocale } from "@/lib/i18n/server";
+import type { TFn } from "@/lib/i18n/translate";
+import type { Locale } from "@/lib/i18n/config";
+import { AUDIT_GROUPS, actionLabelT, actionTone, auditGroupLabelT, metaSummaryT, targetLabelT } from "@/lib/audit-labels";
 
 const PAGE_SIZE = 20;
-const ROLE: Record<string, string> = { ADMIN: "Quản trị", SECRETARY: "Bí thư", MONITOR: "Cờ đỏ", MEMBER: "Đoàn viên", DEPARTMENT_ACCOUNT: "Tài khoản Chi đoàn" };
-const RANGES = [{ value: "today", label: "Hôm nay" }, { value: "7", label: "7 ngày qua" }, { value: "30", label: "30 ngày qua" }];
+const ROLES = ["ADMIN", "SECRETARY", "MONITOR", "MEMBER", "DEPARTMENT_ACCOUNT"] as const;
+const RANGE_VALUES = ["today", "7", "30"] as const;
 
-const ago = (d: Date) => {
+const ago = (t: TFn, d: Date) => {
   const s = Math.max(0, (Date.now() - d.getTime()) / 1000);
-  if (s < 60) return "vừa xong"; if (s < 3600) return `${Math.floor(s / 60)} phút trước`; if (s < 86400) return `${Math.floor(s / 3600)} giờ trước`;
-  return `${Math.floor(s / 86400)} ngày trước`;
+  if (s < 60) return t("ui.time.nowLower"); if (s < 3600) return t("ui.time.min", { n: Math.floor(s / 60) }); if (s < 86400) return t("ui.time.hour", { n: Math.floor(s / 3600) });
+  return t("ui.time.day", { n: Math.floor(s / 86400) });
 };
 
 /** Tên đối tượng bị tác động (người, hoạt động, bài viết…) lấy theo id; đối tượng đã bị xóa thì dùng thông tin ghi kèm trong nhật ký. */
-async function resolveTargets(logs: { target: string; targetId: string | null }[]) {
+async function resolveTargets(logs: { target: string; targetId: string | null }[], t: TFn) {
   const ids = (t: string) => [...new Set(logs.filter((l) => l.target === t && l.targetId).map((l) => l.targetId!))];
   const [users, members, activities, articles, depts, quizzes, polls, reports, badges, cats, actCats] = await Promise.all([
     db.user.findMany({ where: { id: { in: ids("User") } }, select: { id: true, fullName: true } }),
@@ -35,7 +39,7 @@ async function resolveTargets(logs: { target: string; targetId: string | null }[
   const map = new Map<string, string>();
   users.forEach((x) => map.set(`User:${x.id}`, x.fullName)); members.forEach((x) => map.set(`Member:${x.id}`, `${x.fullName} (${x.code})`));
   activities.forEach((x) => map.set(`Activity:${x.id}`, x.title)); articles.forEach((x) => map.set(`Article:${x.id}`, x.title));
-  depts.forEach((x) => map.set(`Department:${x.id}`, `Chi đoàn ${x.name}`)); quizzes.forEach((x) => map.set(`Quiz:${x.id}`, x.title));
+  depts.forEach((x) => map.set(`Department:${x.id}`, t("ui.au.chapter", { name: x.name }))); quizzes.forEach((x) => map.set(`Quiz:${x.id}`, x.title));
   polls.forEach((x) => map.set(`Poll:${x.id}`, x.question)); reports.forEach((x) => map.set(`ChapterReport:${x.id}`, x.title));
   badges.forEach((x) => map.set(`Badge:${x.id}`, x.name)); cats.forEach((x) => map.set(`ArticleCategory:${x.id}`, x.name)); actCats.forEach((x) => map.set(`ActivityCategory:${x.id}`, x.name));
   return map;
@@ -43,6 +47,9 @@ async function resolveTargets(logs: { target: string; targetId: string | null }[
 
 /** Nhật ký hoạt động dễ đọc: mô tả hành động bằng tiếng Việt, hiện tên người và đối tượng thật, có lọc theo nhóm, người thực hiện, thời gian. */
 export async function AuditLog({ searchParams, basePath }: { searchParams: Record<string, string | string[] | undefined>; basePath: string }) {
+  const t = await getT();
+  const locale: Locale = await getLocale();
+  const RANGES = RANGE_VALUES.map((v) => ({ value: v, label: t(`ui.au.${v}`) }));
   const group = AUDIT_GROUPS.find((g) => g.value === str(searchParams.group));
   const who = (str(searchParams.q) ?? "").trim().slice(0, 60);
   const range = RANGES.find((r) => r.value === str(searchParams.range))?.value;
@@ -59,36 +66,36 @@ export async function AuditLog({ searchParams, basePath }: { searchParams: Recor
     db.auditLog.findMany({ where, orderBy: { createdAt: "desc" }, skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE, include: { user: { select: { fullName: true, username: true, role: true } } } }),
     db.auditLog.count({ where }),
   ]);
-  const names = await resolveTargets(logs);
+  const names = await resolveTargets(logs, t);
   const rows = logs.map((l) => {
     const meta = l.metadata as Record<string, unknown> | null;
     const resolved = l.targetId ? names.get(`${l.target}:${l.targetId}`) : undefined;
     const fallback = (meta && (meta.title ?? meta.name ?? meta.code ?? meta.question ?? meta.username)) as string | undefined;
-    const object = resolved ?? (fallback ? String(fallback) : l.targetId ? "(đã bị xóa)" : "");
+    const object = resolved ?? (fallback ? String(fallback) : l.targetId ? t("ui.au.deleted") : "");
     return {
-      id: l.id, time: l.createdAt, action: actionLabel(l.action), raw: l.action, tone: actionTone(l.action),
-      who: l.user ? l.user.fullName : "Khách (không đăng nhập)", role: l.user ? ROLE[l.user.role] ?? "" : "",
-      type: TARGET_LABELS[l.target] ?? l.target, object, detail: metaSummary(meta), ip: l.ipAddress ?? "",
+      id: l.id, time: l.createdAt, action: actionLabelT(t, l.action), raw: l.action, tone: actionTone(l.action),
+      who: l.user ? l.user.fullName : t("ui.au.guest"), role: l.user && (ROLES as readonly string[]).includes(l.user.role) ? t(`ui.role.${l.user.role as (typeof ROLES)[number]}`) : "",
+      type: targetLabelT(t, l.target), object, detail: metaSummaryT(t, meta), ip: l.ipAddress ?? "",
     };
   });
   return (
     <>
-      <p className="mb-3 text-sm text-muted">Ghi lại ai đã làm gì, vào lúc nào. Dùng để kiểm tra khi có thay đổi bất thường. Tổng cộng {total.toLocaleString("vi-VN")} dòng{group || who || range ? " khớp bộ lọc" : ""}.</p>
+      <p className="mb-3 text-sm text-muted">{t("ui.au.intro", { total: total.toLocaleString(intlLocale(locale)), filtered: group || who || range ? t("ui.au.filtered") : "" })}</p>
       <FilterBar oneRow fields={[
-        { type: "search", name: "q", placeholder: "Tìm theo tên người thực hiện..." },
-        { type: "select", name: "group", label: "Nhóm hành động", options: AUDIT_GROUPS.map((g) => ({ value: g.value, label: g.label })) },
-        { type: "select", name: "range", label: "Mọi thời gian", options: RANGES },
+        { type: "search", name: "q", placeholder: t("ui.au.searchWho") },
+        { type: "select", name: "group", label: t("ui.au.group"), options: AUDIT_GROUPS.map((g) => ({ value: g.value, label: auditGroupLabelT(t, g.value) })) },
+        { type: "select", name: "range", label: t("ui.au.range"), options: RANGES },
       ]} />
-      {rows.length === 0 ? <div className="rounded-lg border border-border bg-white/85"><EmptyState title="Không có thao tác nào" description="Thử bỏ bớt bộ lọc." /></div> : (
+      {rows.length === 0 ? <div className="rounded-lg border border-border bg-white/85"><EmptyState title={t("ui.au.emptyTitle")} description={t("ui.au.emptyDesc")} /></div> : (
         <>
-        <CompactList items={rows.map((r) => ({ id: r.id, title: r.action, subtitle: `${r.who} · ${ago(r.time)}`, badge: undefined, value: undefined,
-          details: [["Thời gian", formatDateTime(r.time)], ["Người thực hiện", `${r.who}${r.role ? ` (${r.role})` : ""}`], ["Hành động", r.action], ["Đối tượng", r.object ? `${r.type}: ${r.object}` : r.type], ...(r.detail ? [["Chi tiết", r.detail] as [string, string]] : []), ...(r.ip ? [["Địa chỉ IP", r.ip] as [string, string]] : [])] }))} />
+        <CompactList items={rows.map((r) => ({ id: r.id, title: r.action, subtitle: `${r.who} · ${ago(t, r.time)}`, badge: undefined, value: undefined,
+          details: [[t("ui.au.time"), formatDateTime(r.time, locale)], [t("ui.au.actor"), `${r.who}${r.role ? ` (${r.role})` : ""}`], [t("ui.au.action"), r.action], [t("ui.au.object"), r.object ? `${r.type}: ${r.object}` : r.type], ...(r.detail ? [[t("ui.au.detail"), r.detail] as [string, string]] : []), ...(r.ip ? [[t("ui.au.ip"), r.ip] as [string, string]] : [])] }))} />
         <div className="max-sm:hidden">
         <DataTable>
-          <thead><tr><Th>Thời gian</Th><Th>Người thực hiện</Th><Th>Hành động</Th><Th>Đối tượng</Th><Th>Chi tiết</Th></tr></thead>
+          <thead><tr><Th>{t("ui.au.time")}</Th><Th>{t("ui.au.actor")}</Th><Th>{t("ui.au.action")}</Th><Th>{t("ui.au.object")}</Th><Th>{t("ui.au.detail")}</Th></tr></thead>
           <tbody>{rows.map((r) => (
             <tr key={r.id}>
-              <Td className="whitespace-nowrap"><div>{formatDateTime(r.time)}</div><div className="text-xs text-muted">{ago(r.time)}</div></Td>
+              <Td className="whitespace-nowrap"><div>{formatDateTime(r.time, locale)}</div><div className="text-xs text-muted">{ago(t, r.time)}</div></Td>
               <Td><div className="font-medium">{r.who}</div>{r.role && <div className="text-xs text-muted">{r.role}</div>}</Td>
               <Td><StatusBadge tone={r.tone}>{r.action}</StatusBadge></Td>
               <Td>{r.object ? <><div className="font-medium break-words">{r.object}</div><div className="text-xs text-muted">{r.type}</div></> : <span className="text-muted">{r.type}</span>}</Td>

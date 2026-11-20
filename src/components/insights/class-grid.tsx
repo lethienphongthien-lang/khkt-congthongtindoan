@@ -1,15 +1,19 @@
 "use client";
 import { useState } from "react";
 import { cn } from "@/utils";
+import { useLocale, useT } from "@/lib/i18n/client";
+import { intlLocale } from "@/lib/i18n/format";
 
 export type GridMetric = { key: string; label: string; unit?: string; agg: "sum" | "avg" };
 export type GridRow = { id: string; name: string; values: Record<string, number> };
 
-const fmt = (n: number) => n.toLocaleString("vi-VN", { maximumFractionDigits: 1 });
-const gradeOf = (name: string) => (/^(\d{2})/.exec(name)?.[1] ? `Khối ${/^(\d{2})/.exec(name)![1]}` : "Khác");
+const gradeOf = (name: string) => /^(\d{2})/.exec(name)?.[1] ?? "";
 
 /** Lưới ô theo từng lớp, gom theo khối; chọn chỉ số bằng nút. Ô càng đậm màu thì chỉ số càng cao. */
 export function ClassGrid({ rows, metrics }: { rows: GridRow[]; metrics: GridMetric[] }) {
+  const t = useT();
+  const locale = useLocale();
+  const fmt = (n: number) => n.toLocaleString(intlLocale(locale), { maximumFractionDigits: 1 });
   const [key, setKey] = useState(metrics[0].key);
   const m = metrics.find((x) => x.key === key)!;
   const max = Math.max(...rows.map((r) => r.values[key] ?? 0), 1);
@@ -32,10 +36,10 @@ export function ClassGrid({ rows, metrics }: { rows: GridRow[]; metrics: GridMet
           return (
             <div key={g} className="rounded-lg border border-border bg-white/90 p-3 shadow-sm">
               <div className="mb-2 flex items-end justify-between">
-                <div className="font-semibold text-primary-dark">{g}</div>
+                <div className="font-semibold text-primary-dark">{g ? t("dash.grid.grade", { n: g }) : t("dash.grid.other")}</div>
                 <div className="text-right">
                   <span className="text-2xl font-bold text-primary tabular-nums">{fmt(sum)}</span><span className="text-sm text-muted">{unit}</span>
-                  <div className="text-[11px] text-muted">{m.agg === "sum" ? "tổng" : "trung bình"}</div>
+                  <div className="text-[11px] text-muted">{m.agg === "sum" ? t("dash.grid.sum") : t("dash.grid.avg")}</div>
                 </div>
               </div>
               <div className="grid grid-cols-4 gap-1.5">

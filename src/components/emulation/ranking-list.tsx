@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { buttonClass } from "@/components/ui/button";
+import { useT } from "@/lib/i18n/client";
 
 export type RankItem = {
   id: string; rank: number; name: string; members: number; schoolScore: number; total: number; mine: boolean; canOpen: boolean;
@@ -10,11 +11,12 @@ export type RankItem = {
 
 /** Danh sách gọn cho mobile: chỉ hạng, tên, tổng điểm; bấm để xem chi tiết trong hộp thoại. */
 export function RankingList({ items }: { items: RankItem[] }) {
+  const t = useT();
   const [sel, setSel] = useState<RankItem | null>(null);
   const max = Math.max(1, ...items.map((i) => Math.abs(i.total)));
   const rows: [string, React.ReactNode][] = sel ? [
-    ["Hạng", sel.rank], ["Số đoàn viên", sel.members],
-    ["Điểm thi đua", <b key="t">{sel.total}</b>],
+    [t("community.rk.rank"), sel.rank], [t("community.rk.members"), sel.members],
+    [t("community.rk.score"), <b key="t">{sel.total}</b>],
   ] : [];
   return (
     <>
@@ -24,7 +26,7 @@ export function RankingList({ items }: { items: RankItem[] }) {
             <button onClick={() => setSel(r)} className={`block w-full px-3 py-2.5 text-left ${r.mine ? "bg-primary-light/50" : ""}`}>
               <div className="flex items-center gap-3">
                 <span className={`flex size-7 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold ${r.rank <= 3 ? "bg-primary text-white" : "bg-slate-100 text-slate-600"}`}>{r.rank}</span>
-                <span className="min-w-0 flex-1 truncate font-medium">Chi đoàn {r.name}</span>
+                <span className="min-w-0 flex-1 truncate font-medium">{t("community.emu.chapterName", { name: r.name })}</span>
                 <span className="text-lg font-semibold tabular-nums">{r.total}</span>
               </div>
               <div className="mt-2 ml-10 h-1 overflow-hidden rounded-full bg-slate-100"><div className={`h-full ${r.total < 0 ? "bg-danger" : "bg-primary"}`} style={{ width: `${(Math.abs(r.total) / max) * 100}%` }} /></div>
@@ -32,11 +34,11 @@ export function RankingList({ items }: { items: RankItem[] }) {
           </li>
         ))}
       </ul>
-      <Modal open={!!sel} onClose={() => setSel(null)} title={sel ? `Chi đoàn ${sel.name}` : ""} className="max-w-sm">
+      <Modal open={!!sel} onClose={() => setSel(null)} title={sel ? t("community.emu.chapterName", { name: sel.name }) : ""} className="max-w-sm">
         <dl className="divide-y divide-border text-sm">
           {rows.map(([k, v]) => <div key={k} className="flex justify-between gap-4 py-2"><dt className="text-muted">{k}</dt><dd className="text-right tabular-nums">{v}</dd></div>)}
         </dl>
-        {sel?.canOpen && <Link href={`/departments/${sel.id}`} className={buttonClass("secondary", "md", "mt-4 w-full")}>Xem Chi đoàn</Link>}
+        {sel?.canOpen && <Link href={`/departments/${sel.id}`} className={buttonClass("secondary", "md", "mt-4 w-full")}>{t("community.rk.view")}</Link>}
       </Modal>
     </>
   );

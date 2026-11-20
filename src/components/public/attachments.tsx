@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Download, Eye, EyeOff, FileSpreadsheet, FileText, Presentation } from "lucide-react";
+import { useT } from "@/lib/i18n/client";
 
 export type PublicAttachment = { id: string; name: string; url: string; size: number };
 
@@ -25,11 +26,12 @@ function Icon({ name }: { name: string }) {
 }
 
 export function Attachments({ files }: { files: PublicAttachment[] }) {
+  const t = useT();
   const [open, setOpen] = useState<string | null>(null);
   if (!files.length) return null;
   return (
     <section className="mt-6">
-      <h2 className="mb-2 border-l-4 border-primary pl-3 text-[15px] font-bold tracking-wide text-primary-dark uppercase">Tệp đính kèm</h2>
+      <h2 className="mb-2 border-l-4 border-primary pl-3 text-[15px] font-bold tracking-wide text-primary-dark uppercase">{t("public.attach.title")}</h2>
       <ul className="divide-y divide-border rounded border border-border bg-white/85">
         {files.map((f) => (
           <li key={f.id} className="p-3">
@@ -40,14 +42,14 @@ export function Attachments({ files }: { files: PublicAttachment[] }) {
                 <div className="text-xs text-muted">{ext(f.name).toUpperCase()} · {size(f.size)}</div>
               </div>
               <button onClick={() => setOpen(open === f.id ? null : f.id)} className="inline-flex h-8 items-center gap-1.5 rounded-sm border border-border bg-white px-3 text-[13px] hover:bg-slate-50">
-                {open === f.id ? <><EyeOff className="size-4" /><span className="max-sm:hidden">Ẩn</span></> : <><Eye className="size-4" /><span className="max-sm:hidden">Xem</span></>}
+                {open === f.id ? <><EyeOff className="size-4" /><span className="max-sm:hidden">{t("public.attach.hide")}</span></> : <><Eye className="size-4" /><span className="max-sm:hidden">{t("public.attach.view")}</span></>}
               </button>
-              <a href={downloadUrl(f.url)} className="inline-flex h-8 items-center gap-1.5 rounded-sm bg-primary px-3 text-[13px] text-white hover:bg-primary-dark"><Download className="size-4" /><span className="max-sm:hidden">Tải về</span></a>
+              <a href={downloadUrl(f.url)} className="inline-flex h-8 items-center gap-1.5 rounded-sm bg-primary px-3 text-[13px] text-white hover:bg-primary-dark"><Download className="size-4" /><span className="max-sm:hidden">{t("public.attach.download")}</span></a>
             </div>
             {open === f.id && (
               <div className="mt-3">
                 <iframe src={previewUrl(f)} title={f.name} className="h-[70vh] w-full rounded-sm border border-border bg-white" loading="lazy" />
-                <p className="mt-1 text-xs text-muted">Nếu không hiển thị, hãy dùng nút “Tải về”.</p>
+                <p className="mt-1 text-xs text-muted">{t("public.attach.fallback")}</p>
               </div>
             )}
           </li>

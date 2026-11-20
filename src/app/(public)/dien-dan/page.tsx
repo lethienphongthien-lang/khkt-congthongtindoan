@@ -8,11 +8,12 @@ import { db } from "@/lib/db";
 import { CalendarDays, Eye, MessageSquare } from "lucide-react";
 import { formatDate } from "@/utils";
 import { cdnImage } from "@/lib/image-url";
+import { getT } from "@/lib/i18n/server";
 
-export const metadata: Metadata = {
-  title: "Diễn đàn thanh niên",
-  description: "Diễn đàn trao đổi, thảo luận các chủ đề học đường, kỹ năng sống và phong trào Đoàn trường THPT Sơn Hà.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return { title: t("community.forum.title"), description: t("community.forum.metaDesc") };
+}
 
 const PAGE_SIZE = 10;
 
@@ -21,6 +22,7 @@ export default async function DienDanPage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
+  const t = await getT();
   const page = pageParam((await searchParams).page);
   const { items, total } = await listForumArticles(page, PAGE_SIZE);
 
@@ -45,13 +47,13 @@ export default async function DienDanPage({
   return (
     <div className="space-y-6">
       <PageTitle
-        title="Diễn đàn thanh niên"
-        description="Không gian bài viết và thảo luận đa chiều về các vấn đề học đường, kỹ năng sống, phong trào Đoàn và những chủ đề học sinh quan tâm."
+        title={t("community.forum.title")}
+        description={t("community.forum.desc")}
       />
 
       {items.length === 0 ? (
         <div className="rounded-xl border border-border bg-white/85 p-6">
-          <EmptyPublic text="Chưa có chủ đề thảo luận nào trong Diễn đàn. Các bài viết và chủ đề trao đổi mới sẽ được Đoàn trường đăng tải tại đây." />
+          <EmptyPublic text={t("community.forum.empty")} />
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
@@ -87,7 +89,7 @@ export default async function DienDanPage({
                     </span>
                     <span className="inline-flex items-center gap-1 font-medium text-primary">
                       <MessageSquare className="size-3.5" />
-                      {commentsCount} thảo luận
+                      {t("community.forum.discussions", { n: commentsCount })}
                     </span>
                   </div>
 
@@ -108,7 +110,7 @@ export default async function DienDanPage({
                       href={`/dien-dan/${a.slug}`}
                       className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
                     >
-                      Xem bài viết & Tham gia thảo luận →
+                      {t("community.forum.readMore")}
                     </Link>
                   </div>
                 </div>

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { generateAuthenticationOptions, generateRegistrationOptions, verifyAuthenticationResponse, verifyRegistrationResponse } from "@simplewebauthn/server";
 import type { AuthenticationResponseJSON, AuthenticatorTransport, RegistrationResponseJSON } from "@simplewebauthn/server";
+import { getT } from "@/lib/i18n/server";
 import { db } from "@/lib/db";
 import { run, UserError } from "@/lib/action";
 import { audit } from "@/lib/audit";
@@ -34,15 +35,15 @@ export async function finishPasskeyRegistrationAction(response: RegistrationResp
   return run(async () => {
     const user = await requireUser();
     const saved = await takeChallenge("reg");
-    if (!saved || saved.userId !== user.id) throw new UserError("Phiên đăng ký đã hết hạn, hãy thử lại");
+    if (!saved || saved.userId !== user.id) throw new UserError((await getT())("app.pk.expired"));
     const { rpID, origin } = await relyingParty();
     let verification;
     try {
       verification = await verifyRegistrationResponse({ response, expectedChallenge: saved.challenge, expectedOrigin: origin, expectedRPID: rpID, requireUserVerification: false });
     } catch {
-      throw new UserError("Không xác thực được thiết bị, hãy thử lại");
+      throw new UserError((await getT())("app.pk.verifyFail"));
     }
-    if (!verification.verified) throw new UserError("Không xác thực được thiết bị, hãy thử lại");
+    if (!verification.verified) throw new UserError((await getT())("app.pk.verifyFail"));
     const cred = verification.registrationInfo.credential;
     await db.passkey.create({
       data: {
@@ -52,7 +53,7 @@ export async function finishPasskeyRegistrationAction(response: RegistrationResp
     });
     await audit(user.id, "passkey.add", "User", user.id);
     revalidatePath("/settings");
-    return { message: "Đã bật đăng nhập nhanh trên thiết bị này" };
+    return { message: (await getT())("app.pk.enabled") };
   });
 }
 
@@ -60,10 +61,10 @@ export async function deletePasskeyAction(id: string) {
   return run(async () => {
     const user = await requireUser();
     const r = await db.passkey.deleteMany({ where: { id, userId: user.id } });
-    if (!r.count) throw new UserError("Không tìm thấy thiết bị");
+    if (!r.count) throw new UserError((await getT())("app.pk.notFound"));
     await audit(user.id, "passkey.remove", "User", user.id);
     revalidatePath("/settings");
-    return { message: "Đã xóa thiết bị đăng nhập nhanh" };
+    return { message: (await getT())("app.pk.removed") };
   });
 }
 
@@ -82,9 +83,9 @@ export async function startPasskeyLoginAction() {
 export async function finishPasskeyLoginAction(response: AuthenticationResponseJSON) {
   return run<{ mustChangePassword: boolean }>(async () => {
     const saved = await takeChallenge("auth");
-    if (!saved) throw new UserError("Phiên đăng nhập đã hết hạn, hãy thử lại");
+    if (!saved) throw new UserError((await getT())("app.pk.loginExpired"));
     const pk = await db.passkey.findUnique({ where: { credentialId: response.id }, include: { user: true } });
-    if (!pk) throw new UserError("Thiết bị này chưa được đăng ký đăng nhập nhanh. Hãy đăng nhập bằng mật khẩu rồi bật ở Cài đặt");
+    if (!pk) throw new UserError((await getT())("app.pk.notRegistered"));
     const { rpID, origin } = await relyingParty();
     let verification;
     try {
@@ -93,10 +94,10 @@ export async function finishPasskeyLoginAction(response: AuthenticationResponseJ
         credential: { id: pk.credentialId, publicKey: fromB64(pk.publicKey), counter: pk.counter, transports: (pk.transports?.split(",").filter(Boolean) ?? []) as AuthenticatorTransport[] },
       });
     } catch {
-      throw new UserError("Không xác thực được, hãy thử lại hoặc đăng nhập bằng mật khẩu");
+      throw new UserError((await getT())("app.pk.authFail"));
     }
-    if (!verification.verified) throw new UserError("Không xác thực được, hãy thử lại hoặc đăng nhập bằng mật khẩu");
-    if (pk.user.status !== "ACTIVE") throw new UserError("Tài khoản đã bị khóa. Vui lòng liên hệ Ban chấp hành Đoàn trường");
+    if (!verification.verified) throw new UserError((await getT())("app.pk.authFail"));
+    if (pk.user.status !== "ACTIVE") throw new UserError((await getT())("app.auth.locked"));
     await db.$transaction([
       db.passkey.update({ where: { id: pk.id }, data: { counter: verification.authenticationInfo.newCounter, lastUsedAt: new Date() } }),
       db.user.update({ where: { id: pk.userId }, data: { lastLoginAt: new Date() } }),

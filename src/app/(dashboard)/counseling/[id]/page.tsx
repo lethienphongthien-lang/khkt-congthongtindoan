@@ -1,3 +1,4 @@
+import { getT } from "@/lib/i18n/server";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth/session";
@@ -6,9 +7,10 @@ import { PageHeader } from "@/components/ui/misc";
 import { FeedbackActions } from "@/components/feedback/feedback-actions";
 import { HeartHandshake, Phone, Shield } from "lucide-react";
 
-export const metadata = { title: "Chi tiết yêu cầu tư vấn tâm lý" };
+export async function generateMetadata() { return { title: (await getT())("cms.counsel.detail") }; }
 
 export default async function CounselingDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const t = await getT();
   await requireRole(["ADMIN"]);
   const { id } = await params;
   let f = await db.feedback.findUnique({ where: { id } });
@@ -22,14 +24,14 @@ export default async function CounselingDetailPage({ params }: { params: Promise
   return (
     <>
       <PageHeader
-        title="Tư vấn tâm lý học đường"
-        description={`Học sinh gửi tâm sự lúc ${formatDateTime(f.createdAt)}`}
+        title={t("cms.counsel.title")}
+        description={t("cms.counsel.sentAt", { time: formatDateTime(f.createdAt) })}
       />
 
       <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
         <div className="flex items-center gap-2 text-xs font-semibold text-blue-800">
           <Shield className="size-4 text-blue-600" />
-          <span>Thông tin người gửi & Cách liên hệ lại:</span>
+          <span>{t("cms.counsel.senderInfo")}</span>
         </div>
         <p className="mt-1 text-sm font-medium text-slate-800">
           {f.contact ? (
@@ -38,14 +40,14 @@ export default async function CounselingDetailPage({ params }: { params: Promise
               {f.contact}
             </span>
           ) : (
-            <span className="italic text-slate-500">Học sinh chọn gửi ẩn danh (không để lại thông tin liên hệ).</span>
+            <span className="italic text-slate-500">{t("cms.counsel.anonNote")}</span>
           )}
         </p>
       </div>
 
       <div className="mb-6 rounded-xl border border-border bg-white p-5 shadow-xs">
         <h3 className="mb-2 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-          Nội dung tâm sự của học sinh:
+          {t("cms.counsel.msgHeading")}
         </h3>
         <div className="whitespace-pre-wrap text-[15px] leading-relaxed text-slate-800">
           {f.content}

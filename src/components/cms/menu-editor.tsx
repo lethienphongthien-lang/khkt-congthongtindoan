@@ -1,4 +1,5 @@
 "use client";
+import { useT } from "@/lib/i18n/client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ArrowDown, ArrowUp, Eye, EyeOff, Plus, RotateCcw, Trash2 } from "lucide-react";
@@ -24,22 +25,23 @@ function move<T>(arr: T[], i: number, dir: -1 | 1): T[] {
 function Row<T extends NavLink>({ item, i, n, onChange, onMove, onDelete, extra, indent }: {
   item: T; i: number; n: number; onChange: (v: T) => void; onMove: (d: -1 | 1) => void; onDelete: () => void; extra?: React.ReactNode; indent?: boolean;
 }) {
+  const t = useT();
   return (
     <div className={cn("flex flex-wrap items-center gap-1.5 py-1", indent && "ml-6 border-l-2 border-primary/25 pl-2", item.hidden && "opacity-55")}>
       <div className="flex shrink-0">
-        <button type="button" disabled={i === 0} onClick={() => onMove(-1)} className="rounded p-1 text-muted hover:bg-slate-100 disabled:opacity-30" aria-label="Lên"><ArrowUp className="size-4" /></button>
-        <button type="button" disabled={i === n - 1} onClick={() => onMove(1)} className="rounded p-1 text-muted hover:bg-slate-100 disabled:opacity-30" aria-label="Xuống"><ArrowDown className="size-4" /></button>
+        <button type="button" disabled={i === 0} onClick={() => onMove(-1)} className="rounded p-1 text-muted hover:bg-slate-100 disabled:opacity-30" aria-label={t("cms.menu.up")}><ArrowUp className="size-4" /></button>
+        <button type="button" disabled={i === n - 1} onClick={() => onMove(1)} className="rounded p-1 text-muted hover:bg-slate-100 disabled:opacity-30" aria-label={t("cms.c.down")}><ArrowDown className="size-4" /></button>
       </div>
-      <input value={item.label} maxLength={40} onChange={(e) => onChange({ ...item, label: e.target.value })} className={cn(inp, "w-44 font-medium sm:w-56")} aria-label="Tên mục" />
+      <input value={item.label} maxLength={40} onChange={(e) => onChange({ ...item, label: e.target.value })} className={cn(inp, "w-44 font-medium sm:w-56")} aria-label={t("cms.menu.itemName")} />
       {item.custom
-        ? <input value={item.href} onChange={(e) => onChange({ ...item, href: e.target.value })} placeholder="/duong-dan hoặc https://..." className={cn(inp, "w-44 sm:w-60")} aria-label="Liên kết" />
+        ? <input value={item.href} onChange={(e) => onChange({ ...item, href: e.target.value })} placeholder={t("cms.menu.linkEx")} className={cn(inp, "w-44 sm:w-60")} aria-label={t("cms.menu.link")} />
         : <span className="hidden max-w-60 truncate text-xs text-muted sm:inline">{item.href}</span>}
       {extra}
-      <button type="button" onClick={() => onChange({ ...item, hidden: !item.hidden })} className="ml-auto rounded p-1.5 text-muted hover:bg-slate-100" title={item.hidden ? "Đang ẩn — bấm để hiện" : "Đang hiện — bấm để ẩn"} aria-label={item.hidden ? "Hiện" : "Ẩn"}>
+      <button type="button" onClick={() => onChange({ ...item, hidden: !item.hidden })} className="ml-auto rounded p-1.5 text-muted hover:bg-slate-100" title={item.hidden ? t("cms.menu.hiddenTitle") : t("cms.menu.shownTitle")} aria-label={item.hidden ? t("cms.menu.show") : t("cms.menu.hide")}>
         {item.hidden ? <EyeOff className="size-4" /> : <Eye className="size-4 text-primary" />}
       </button>
       {item.custom
-        ? <button type="button" onClick={onDelete} className="rounded p-1.5 text-danger hover:bg-red-50" aria-label="Xóa mục"><Trash2 className="size-4" /></button>
+        ? <button type="button" onClick={onDelete} className="rounded p-1.5 text-danger hover:bg-red-50" aria-label={t("cms.menu.delItem")}><Trash2 className="size-4" /></button>
         : <span className="size-7" aria-hidden />}
     </div>
   );
@@ -47,6 +49,7 @@ function Row<T extends NavLink>({ item, i, n, onChange, onMove, onDelete, extra,
 
 export function MenuEditor({ initial }: { initial: MenuConfig }) {
   const router = useRouter();
+  const t = useT();
   const [cfg, setCfg] = useState<MenuConfig>(initial);
   const [busy, setBusy] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -64,19 +67,19 @@ export function MenuEditor({ initial }: { initial: MenuConfig }) {
   return (
     <div className="space-y-6 pb-4">
       <div className="sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-white/95 px-3 py-2 shadow-sm backdrop-blur">
-        <Button loading={busy} disabled={!dirty} onClick={save}>Lưu thay đổi</Button>
-        <ConfirmButton triggerVariant="ghost" triggerLabel="Khôi phục mặc định" trigger={<RotateCcw className="size-3.5" />} title="Khôi phục menu mặc định?" confirmLabel="Khôi phục"
-          description="Mọi đổi tên, sắp xếp và mục tự thêm sẽ bị xóa; menu trở về như ban đầu." onConfirm={async () => { if (reportResult(await saveMenuConfigAction(null))) { router.refresh(); location.reload(); } }} />
-        {dirty && <span className="text-xs text-amber-700">Có thay đổi chưa lưu</span>}
+        <Button loading={busy} disabled={!dirty} onClick={save}>{t("cms.c.saveChanges")}</Button>
+        <ConfirmButton triggerVariant="ghost" triggerLabel={t("cms.menu.reset")} trigger={<RotateCcw className="size-3.5" />} title={t("cms.menu.resetTitle")} confirmLabel={t("cms.menu.restore")}
+          description={t("cms.menu.resetDesc")} onConfirm={async () => { if (reportResult(await saveMenuConfigAction(null))) { router.refresh(); location.reload(); } }} />
+        {dirty && <span className="text-xs text-amber-700">{t("cms.menu.dirty")}</span>}
       </div>
 
       <section className="rounded-lg border border-border bg-white/85 p-4">
-        <h2 className="text-[15px] font-semibold">Thanh menu phía trên</h2>
-        <p className="mb-2 text-xs text-muted">Nút Trang chủ (biểu tượng ngôi nhà) luôn ở đầu. Mục có mục con sẽ hiện danh sách thả xuống. Dùng nút mắt để ẩn/hiện; mục có sẵn không xóa được, chỉ ẩn.</p>
+        <h2 className="text-[15px] font-semibold">{t("cms.menu.topTitle")}</h2>
+        <p className="mb-2 text-xs text-muted">{t("cms.menu.topNote")}</p>
         <div className="divide-y divide-border">
           {cfg.top.map((it, i) => (
             <div key={it.id}>
-              <Row item={it} i={i} n={cfg.top.length} onChange={(v) => setTop(i, { ...it, ...v })} onMove={(d) => edit((c) => { c.top = move(c.top, i, d); return c; })} onDelete={() => edit((c) => { c.top.splice(i, 1); return c; })} extra={<button type="button" onClick={() => edit((c) => { (c.top[i].children ??= []).push({ id: uid(), label: "Mục mới", href: "/", custom: true }); return c; })} className="inline-flex items-center gap-1 rounded px-1.5 py-1 text-xs font-medium text-primary hover:bg-primary-light"><Plus className="size-3.5" />Mục con</button>} />
+              <Row item={it} i={i} n={cfg.top.length} onChange={(v) => setTop(i, { ...it, ...v })} onMove={(d) => edit((c) => { c.top = move(c.top, i, d); return c; })} onDelete={() => edit((c) => { c.top.splice(i, 1); return c; })} extra={<button type="button" onClick={() => edit((c) => { (c.top[i].children ??= []).push({ id: uid(), label: "Mục mới", href: "/", custom: true }); return c; })} className="inline-flex items-center gap-1 rounded px-1.5 py-1 text-xs font-medium text-primary hover:bg-primary-light"><Plus className="size-3.5" />{t("cms.menu.child")}</button>} />
               {(it.children ?? []).map((ch, j) => (
                 <Row key={ch.id} indent item={ch} i={j} n={it.children!.length} onChange={(v) => setChild(i, j, v)} onMove={(d) => edit((c) => { c.top[i].children = move(c.top[i].children!, j, d); return c; })}
                   onDelete={() => edit((c) => { c.top[i].children!.splice(j, 1); if (!c.top[i].children!.length) delete c.top[i].children; return c; })} />
@@ -84,27 +87,27 @@ export function MenuEditor({ initial }: { initial: MenuConfig }) {
             </div>
           ))}
         </div>
-        <Button variant="secondary" className="mt-2" onClick={() => edit((c) => { c.top.push({ id: uid(), label: "Mục mới", href: "/", custom: true }); return c; })}><Plus className="size-4" />Thêm mục vào thanh menu</Button>
+        <Button variant="secondary" className="mt-2" onClick={() => edit((c) => { c.top.push({ id: uid(), label: "Mục mới", href: "/", custom: true }); return c; })}><Plus className="size-4" />{t("cms.menu.addTop")}</Button>
       </section>
 
       <section className="rounded-lg border border-border bg-white/85 p-4">
-        <h2 className="text-[15px] font-semibold">Thanh bên trái (các nhóm)</h2>
-        <p className="mb-2 text-xs text-muted">Nhóm “Báo cáo Chi đoàn” tự liệt kê Khối và lớp theo dữ liệu thật nên chỉ đổi tên, ẩn hoặc di chuyển được. Chọn “Chuyển sang” để đưa một mục sang nhóm khác.</p>
+        <h2 className="text-[15px] font-semibold">{t("cms.menu.sideTitle")}</h2>
+        <p className="mb-2 text-xs text-muted">{t("cms.menu.sideNote")}</p>
         <div className="space-y-3">
           {cfg.side.map((g, gi) => (
             <div key={g.id} className={cn("rounded-md border border-border bg-white p-2.5", g.hidden && "opacity-60")}>
               <div className="flex flex-wrap items-center gap-1.5">
                 <div className="flex shrink-0">
-                  <button type="button" disabled={gi === 0} onClick={() => edit((c) => { c.side = move(c.side, gi, -1); return c; })} className="rounded p-1 text-muted hover:bg-slate-100 disabled:opacity-30" aria-label="Nhóm lên"><ArrowUp className="size-4" /></button>
-                  <button type="button" disabled={gi === cfg.side.length - 1} onClick={() => edit((c) => { c.side = move(c.side, gi, 1); return c; })} className="rounded p-1 text-muted hover:bg-slate-100 disabled:opacity-30" aria-label="Nhóm xuống"><ArrowDown className="size-4" /></button>
+                  <button type="button" disabled={gi === 0} onClick={() => edit((c) => { c.side = move(c.side, gi, -1); return c; })} className="rounded p-1 text-muted hover:bg-slate-100 disabled:opacity-30" aria-label={t("cms.menu.groupUp")}><ArrowUp className="size-4" /></button>
+                  <button type="button" disabled={gi === cfg.side.length - 1} onClick={() => edit((c) => { c.side = move(c.side, gi, 1); return c; })} className="rounded p-1 text-muted hover:bg-slate-100 disabled:opacity-30" aria-label={t("cms.menu.groupDown")}><ArrowDown className="size-4" /></button>
                 </div>
-                <input value={g.title} maxLength={40} onChange={(e) => setGroup(gi, { ...g, title: e.target.value })} className={cn(inp, "w-56 font-semibold")} aria-label="Tên nhóm" />
-                {g.kind === "reports" && <span className="text-xs text-muted">Khối → lớp tự động</span>}
-                <button type="button" onClick={() => setGroup(gi, { ...g, hidden: !g.hidden })} className="ml-auto rounded p-1.5 text-muted hover:bg-slate-100" aria-label={g.hidden ? "Hiện nhóm" : "Ẩn nhóm"} title={g.hidden ? "Đang ẩn — bấm để hiện" : "Đang hiện — bấm để ẩn"}>
+                <input value={g.title} maxLength={40} onChange={(e) => setGroup(gi, { ...g, title: e.target.value })} className={cn(inp, "w-56 font-semibold")} aria-label={t("cms.menu.groupName")} />
+                {g.kind === "reports" && <span className="text-xs text-muted">{t("cms.menu.auto")}</span>}
+                <button type="button" onClick={() => setGroup(gi, { ...g, hidden: !g.hidden })} className="ml-auto rounded p-1.5 text-muted hover:bg-slate-100" aria-label={g.hidden ? t("cms.menu.showGroup") : t("cms.menu.hideGroup")} title={g.hidden ? t("cms.menu.hiddenTitle") : t("cms.menu.shownTitle")}>
                   {g.hidden ? <EyeOff className="size-4" /> : <Eye className="size-4 text-primary" />}
                 </button>
                 {g.id.startsWith("c-")
-                  ? <button type="button" onClick={() => edit((c) => { c.side.splice(gi, 1); return c; })} className="rounded p-1.5 text-danger hover:bg-red-50" aria-label="Xóa nhóm"><Trash2 className="size-4" /></button>
+                  ? <button type="button" onClick={() => edit((c) => { c.side.splice(gi, 1); return c; })} className="rounded p-1.5 text-danger hover:bg-red-50" aria-label={t("cms.menu.delGroup")}><Trash2 className="size-4" /></button>
                   : <span className="size-7" aria-hidden />}
               </div>
               {g.kind !== "reports" && (
@@ -112,19 +115,19 @@ export function MenuEditor({ initial }: { initial: MenuConfig }) {
                   {g.items.map((it, j) => (
                     <Row key={it.id} item={it} i={j} n={g.items.length} onChange={(v) => edit((c) => { c.side[gi].items[j] = v; return c; })} onMove={(d) => edit((c) => { c.side[gi].items = move(c.side[gi].items, j, d); return c; })} onDelete={() => edit((c) => { c.side[gi].items.splice(j, 1); return c; })}
                       extra={
-                        <select aria-label="Chuyển sang nhóm" value="" onChange={(e) => { const to = e.target.value; if (!to) return; edit((c) => { const [m] = c.side[gi].items.splice(j, 1); c.side.find((x) => x.id === to)!.items.push(m); return c; }); }} className="h-8 rounded-md border border-border bg-white px-1.5 text-xs">
-                          <option value="">Chuyển sang…</option>
+                        <select aria-label={t("cms.menu.moveTo")} value="" onChange={(e) => { const to = e.target.value; if (!to) return; edit((c) => { const [m] = c.side[gi].items.splice(j, 1); c.side.find((x) => x.id === to)!.items.push(m); return c; }); }} className="h-8 rounded-md border border-border bg-white px-1.5 text-xs">
+                          <option value="">{t("cms.menu.moveToOpt")}</option>
                           {cfg.side.filter((x) => x.id !== g.id && x.kind !== "reports").map((x) => <option key={x.id} value={x.id}>{x.title}</option>)}
                         </select>
                       } />
                   ))}
-                  <div className="pt-1.5"><button type="button" onClick={() => edit((c) => { c.side[gi].items.push({ id: uid(), label: "Mục mới", href: "/", custom: true }); return c; })} className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"><Plus className="size-3.5" />Thêm mục</button></div>
+                  <div className="pt-1.5"><button type="button" onClick={() => edit((c) => { c.side[gi].items.push({ id: uid(), label: "Mục mới", href: "/", custom: true }); return c; })} className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"><Plus className="size-3.5" />{t("cms.menu.addItem")}</button></div>
                 </div>
               )}
             </div>
           ))}
         </div>
-        <Button variant="secondary" className="mt-3" onClick={() => edit((c) => { c.side.push({ id: uid(), title: "Nhóm mới", items: [] }); return c; })}><Plus className="size-4" />Thêm nhóm</Button>
+        <Button variant="secondary" className="mt-3" onClick={() => edit((c) => { c.side.push({ id: uid(), title: "Nhóm mới", items: [] }); return c; })}><Plus className="size-4" />{t("cms.menu.addGroup")}</Button>
       </section>
     </div>
   );

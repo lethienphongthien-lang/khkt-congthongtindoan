@@ -9,6 +9,7 @@ import { memberDetailSchema, memberSchema } from "@/lib/validation";
 import { MIN_BIRTH, nameOnly, todayVN } from "@/lib/validation/rules";
 import { downloadCsv } from "@/components/members/credentials";
 import { createMemberAction, updateMemberAction, type Credential } from "@/actions/members";
+import { useT } from "@/lib/i18n/client";
 import { HeaderActions } from "@/components/ui/header-actions";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/form";
@@ -22,6 +23,7 @@ type In = z.input<typeof memberSchema>;
 type Initial = Partial<Record<keyof In, string | number | boolean>> & { avatar?: UploadedImage };
 
 export function MemberForm({ id, departments, initial, detail, lock }: { id?: string; /** Nhóm dữ liệu dùng chung đang do EduConnect quản lý (chỉ xem). */ lock?: { profile?: boolean; placement?: boolean }; departments: { id: string; name: string }[]; initial?: Initial; /** Hồ sơ chi tiết (Sổ đoàn viên điện tử) đã có của đoàn viên khi sửa. */ detail?: DetailValues }) {
+  const t = useT();
   const router = useRouter();
   const [avatar, setAvatar] = useState<UploadedImage>(initial?.avatar ?? null);
   const [d, setD] = useState<DetailValues>(() => detail ?? Object.fromEntries(ALL_DETAIL_FIELDS.map((f) => [f.key, f.type === "bool" ? false : ""])));
@@ -39,7 +41,7 @@ export function MemberForm({ id, departments, initial, detail, lock }: { id?: st
     const chk = memberDetailSchema.safeParse(d);
     if (!chk.success) {
       setDetailErrors(Object.fromEntries(chk.error.issues.map((i) => [String(i.path[0]), i.message])));
-      return void toast.error("Hồ sơ chi tiết có thông tin chưa hợp lệ, vui lòng kiểm tra các ô báo đỏ");
+      return void toast.error(t("mf.detailInvalid"));
     }
     const payload = { ...values, avatarUrl: avatar?.imageUrl ?? "", avatarPublicId: avatar?.publicId ?? "", detail: d };
     if (id) {
@@ -60,50 +62,50 @@ export function MemberForm({ id, departments, initial, detail, lock }: { id?: st
   return (
     <>
       <form id="member-form" onSubmit={onSubmit} className="w-full space-y-5" noValidate>
-        {(lock?.profile || lock?.placement) && <Alert tone="amber">Do EduConnect quản lý: {[lock?.profile && "họ tên, ngày sinh, giới tính", lock?.placement && "chi đoàn"].filter(Boolean).join(", ")} (chỉ xem). Các thông tin riêng của Đoàn vẫn sửa được.</Alert>}
+        {(lock?.profile || lock?.placement) && <Alert tone="amber">{t("mf.locked", { what: [lock?.profile && t("mf.lockProfile"), lock?.placement && t("mf.lockPlacement")].filter(Boolean).join(", ") })}</Alert>}
         <div className="flex flex-col gap-5 sm:flex-row">
-          <Field label="Ảnh đại diện" group className="shrink-0"><ImageUpload folder="members" shape="square" value={avatar} onChange={setAvatar} /></Field>
+          <Field label={t("mf.avatar")} group className="shrink-0"><ImageUpload folder="members" shape="square" value={avatar} onChange={setAvatar} /></Field>
           <div className="min-w-0 flex-1 space-y-3">
-            <Field label="Loại" group hint="Học sinh chưa vào Đoàn vẫn dùng được hệ thống (xem thông tin, chơi trò chơi, tích điểm) và có thể được kết nạp sau.">
+            <Field label={t("members.f.kind")} group hint={t("mf.kindHint")}>
               <div className="inline-flex overflow-hidden rounded-md border border-border">
-                {[{ v: true, label: "Đoàn viên" }, { v: false, label: "Thanh niên (chưa vào Đoàn)" }].map((o) => (
+                {[{ v: true, label: t("members.doanVien") }, { v: false, label: t("members.f.kindYouth") }].map((o) => (
                   <button key={String(o.v)} type="button" onClick={() => setValue("isDoanVien", o.v)} className={`px-4 py-2 text-sm font-medium ${doanVien === o.v ? "bg-primary text-white" : "bg-white hover:bg-slate-50"}`}>{o.label}</button>
                 ))}
               </div>
             </Field>
             <div className="grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-4">
-              <Field label="Họ và tên" required error={errors.fullName?.message} className="col-span-2"><Input maxLength={100} autoComplete="name" readOnly={lock?.profile} {...register("fullName", { onChange: (e) => { e.target.value = nameOnly(e.target.value); } })} /></Field>
-              <Field label="Ngày sinh" error={errors.dateOfBirth?.message}><Input type="date" min={MIN_BIRTH} max={todayVN()} readOnly={lock?.profile} className={lock?.profile ? "pointer-events-none opacity-60" : undefined} {...register("dateOfBirth")} /></Field>
-              <Field label="Giới tính">
-                <Select {...register("gender")} tabIndex={lock?.profile ? -1 : undefined} className={lock?.profile ? "pointer-events-none opacity-60" : undefined}><option value="">—</option><option>Nam</option><option>Nữ</option><option>Khác</option></Select>
+              <Field label={t("members.fullName")} required error={errors.fullName?.message} className="col-span-2"><Input maxLength={100} autoComplete="name" readOnly={lock?.profile} {...register("fullName", { onChange: (e) => { e.target.value = nameOnly(e.target.value); } })} /></Field>
+              <Field label={t("members.dob")} error={errors.dateOfBirth?.message}><Input type="date" min={MIN_BIRTH} max={todayVN()} readOnly={lock?.profile} className={lock?.profile ? "pointer-events-none opacity-60" : undefined} {...register("dateOfBirth")} /></Field>
+              <Field label={t("members.gender")}>
+                <Select {...register("gender")} tabIndex={lock?.profile ? -1 : undefined} className={lock?.profile ? "pointer-events-none opacity-60" : undefined}><option value="">—</option><option value="Nam">{t("members.male")}</option><option value="Nữ">{t("members.female")}</option><option value="Khác">{t("vio.type.other")}</option></Select>
               </Field>
-              <Field label="Chi đoàn" required error={errors.departmentId?.message}>
-                <Select {...register("departmentId")} tabIndex={lock?.placement ? -1 : undefined} className={lock?.placement ? "pointer-events-none opacity-60" : undefined}><option value="">Chọn Chi đoàn</option>{departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</Select>
+              <Field label={t("members.f.dept")} required error={errors.departmentId?.message}>
+                <Select {...register("departmentId")} tabIndex={lock?.placement ? -1 : undefined} className={lock?.placement ? "pointer-events-none opacity-60" : undefined}><option value="">{t("mf.pickDept")}</option>{departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</Select>
               </Field>
-              <Field label="Khóa (năm nhập học)" error={errors.cohort?.message}><Input type="number" inputMode="numeric" min={2000} max={2100} {...register("cohort")} /></Field>
-              {doanVien && <Field label="Ngày vào Đoàn" error={errors.joinedAt?.message}><Input type="date" min="1990-01-01" max={todayVN()} {...register("joinedAt")} /></Field>}
-              <Field label="Trạng thái sinh hoạt">
-                <Select {...register("status")}><option value="ACTIVE">Đang sinh hoạt</option><option value="TRANSFERRED">Đã chuyển sinh hoạt</option><option value="GRADUATED">Đã ra trường</option></Select>
+              <Field label={t("mf.cohort")} error={errors.cohort?.message}><Input type="number" inputMode="numeric" min={2000} max={2100} {...register("cohort")} /></Field>
+              {doanVien && <Field label={t("members.joinedAt")} error={errors.joinedAt?.message}><Input type="date" min="1990-01-01" max={todayVN()} {...register("joinedAt")} /></Field>}
+              <Field label={t("mf.status")}>
+                <Select {...register("status")}><option value="ACTIVE">{t("members.st.ACTIVE")}</option><option value="TRANSFERRED">{t("members.st.TRANSFERRED")}</option><option value="GRADUATED">{t("members.st.GRADUATED")}</option></Select>
               </Field>
             </div>
           </div>
         </div>
-        <div className="border-t border-border pt-5"><h2 className="mb-3 text-[15px] font-semibold">Hồ sơ chi tiết</h2><DetailFields values={d} onChange={(k, v) => setD((p) => ({ ...p, [k]: v }))} errors={detailErrors} /></div>
+        <div className="border-t border-border pt-5"><h2 className="mb-3 text-[15px] font-semibold">{t("mf.detail")}</h2><DetailFields values={d} onChange={(k, v) => setD((p) => ({ ...p, [k]: v }))} errors={detailErrors} /></div>
         <HeaderActions>
-          <Button type="submit" form="member-form" loading={isSubmitting}>{id ? "Lưu thay đổi" : doanVien ? "Thêm đoàn viên" : "Thêm thanh niên"}</Button>
-          <Button variant="secondary" onClick={() => router.back()}>Hủy</Button>
+          <Button type="submit" form="member-form" loading={isSubmitting}>{id ? t("mf.saveChanges") : doanVien ? t("members.addTitle") : t("mf.addYouth")}</Button>
+          <Button variant="secondary" onClick={() => router.back()}>{t("members.cancel")}</Button>
         </HeaderActions>
       </form>
-      <Modal open={!!created} onClose={() => { setCreated(null); router.push("/members"); router.refresh(); }} title="Đã tạo tài khoản">
+      <Modal open={!!created} onClose={() => { setCreated(null); router.push("/members"); router.refresh(); }} title={t("mf.created")}>
         {created && (
           <div className="space-y-3 text-sm">
-            <Alert tone="green">Mật khẩu tạm thời chỉ hiển thị một lần. Người dùng phải đổi mật khẩu ở lần đăng nhập đầu tiên.</Alert>
+            <Alert tone="green">{t("mf.createdNote")}</Alert>
             <dl className="grid grid-cols-[130px_1fr] gap-y-1.5">
-              <dt className="text-muted">Họ tên</dt><dd>{created.fullName}</dd>
-              <dt className="text-muted">Tên đăng nhập</dt><dd className="font-mono">{created.code}</dd>
-              <dt className="text-muted">Mật khẩu tạm</dt><dd className="font-mono">{created.password}</dd>
+              <dt className="text-muted">{t("acc.fullName")}</dt><dd>{created.fullName}</dd>
+              <dt className="text-muted">{t("dact.username")}</dt><dd className="font-mono">{created.code}</dd>
+              <dt className="text-muted">{t("members.tempPw")}</dt><dd className="font-mono">{created.password}</dd>
             </dl>
-            <div className="flex justify-end"><Button onClick={() => { setCreated(null); router.push("/members"); router.refresh(); }}>Đóng</Button></div>
+            <div className="flex justify-end"><Button onClick={() => { setCreated(null); router.push("/members"); router.refresh(); }}>{t("members.close")}</Button></div>
           </div>
         )}
       </Modal>

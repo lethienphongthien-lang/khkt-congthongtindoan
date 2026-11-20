@@ -1,12 +1,14 @@
+import { getT } from "@/lib/i18n/server";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth/session";
 import { PageHeader } from "@/components/ui/misc";
 import { ReportForm } from "@/components/cms/forms";
 import { redirect } from "next/navigation";
 
-export const metadata = { title: "Nộp báo cáo Chi đoàn" };
+export async function generateMetadata() { return { title: (await getT())("cms.crp.newTitle") }; }
 
 export default async function NewReportPage({ searchParams }: { searchParams: Promise<{ periodId?: string }> }) {
+  const t = await getT();
   const user = await requireRole(["ADMIN", "SECRETARY", "DEPARTMENT_ACCOUNT"]);
   const { periodId } = await searchParams;
 
@@ -33,7 +35,7 @@ export default async function NewReportPage({ searchParams }: { searchParams: Pr
 
   return (
     <>
-      <PageHeader title="Nộp báo cáo Chi đoàn" description={user.role !== "ADMIN" ? `Chi đoàn ${user.departmentName}` : "Đăng báo cáo cho Chi đoàn"} />
+      <PageHeader title={t("cms.crp.newTitle")} description={user.role !== "ADMIN" ? t("cms.crp.newChapter", { name: user.departmentName ?? "" }) : t("cms.crp.newAdmin")} />
       <ReportForm
         departments={departments}
         periods={periods}

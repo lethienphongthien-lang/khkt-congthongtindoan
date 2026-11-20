@@ -7,10 +7,14 @@ import { PeriodFilter } from "@/components/emulation/period-filter";
 import { RankingList } from "@/components/emulation/ranking-list";
 import { RankGroups } from "@/components/emulation/rank-groups";
 import { EmptyState } from "@/components/ui/misc";
+import { getT } from "@/lib/i18n/server";
 
-export const metadata = { title: "Bảng thi đua" };
+export async function generateMetadata() {
+  return { title: (await getT())("menu.thi-dua-thang") };
+}
 
 export default async function PublicEmulationPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const t = await getT();
   const sp = await searchParams;
   const raw = str(sp.type);
   const type: PeriodType = raw && raw in PERIOD_LABEL ? (raw as PeriodType) : "week";
@@ -19,15 +23,15 @@ export default async function PublicEmulationPage({ searchParams }: { searchPara
   const ranking = await cachedRanking(period.type, period.value);
   return (
     <>
-      <PageTitle title="Bảng thi đua Chi đoàn" description={period.label} />
+      <PageTitle title={t("community.emu.title")} description={period.label} />
       <PeriodFilter type={period.type} value={period.value} calendars={calendars} />
-      {ranking.length === 0 ? <div className="rounded border border-border bg-white/85"><EmptyState title="Chưa có dữ liệu thi đua" /></div> : (
+      {ranking.length === 0 ? <div className="rounded border border-border bg-white/85"><EmptyState title={t("community.emu.empty")} /></div> : (
         <>
           <RankingList items={ranking.map((r) => ({ ...r, mine: false, canOpen: false }))} />
           <div className="max-sm:hidden"><RankGroups rows={ranking} /></div>
         </>
       )}
-      <p className="mt-2 text-xs text-muted">Bảng trên xếp hạng theo Điểm thi đua do Đoàn trường ghi nhận theo tuần.</p>
+      <p className="mt-2 text-xs text-muted">{t("community.emu.note")}</p>
     </>
   );
 }

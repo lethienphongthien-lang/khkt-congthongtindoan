@@ -1,12 +1,16 @@
 import { PageTitle } from "@/components/public/blocks";
 import { FeedbackForm } from "@/components/feedback/feedback-form";
+import { getT } from "@/lib/i18n/server";
 
-export const metadata = { title: "Góp ý – Hộp thư ẩn danh" };
+export async function generateMetadata() {
+  return { title: (await getT())("community.fb.metaTitle") };
+}
 
-export default function FeedbackPage() {
+export default async function FeedbackPage() {
+  const t = await getT();
   return (
     <>
-      <PageTitle title="Hộp thư góp ý" description="Gửi ý kiến, đề xuất cho Đoàn trường. Bạn không cần đăng nhập và không bị lộ danh tính." />
+      <PageTitle title={t("community.fb.title")} description={t("community.fb.desc")} />
       <div className="max-w-2xl"><FeedbackForm /></div>
     </>
   );

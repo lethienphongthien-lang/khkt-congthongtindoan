@@ -6,9 +6,11 @@ import { db } from "@/lib/db";
 import { run, UserError } from "@/lib/action";
 import { audit } from "@/lib/audit";
 import { getCurrentUser } from "@/lib/auth/session";
+import { getT } from "@/lib/i18n/server";
+import type { TFn } from "@/lib/i18n/translate";
 
-const commentSchema = z.object({
-  content: z.string().trim().min(2, "Bình luận quá ngắn (tối thiểu 2 ký tự)").max(1000, "Tối đa 1000 ký tự"),
+const commentSchema = (t: TFn) => z.object({
+  content: z.string().trim().min(2, t("community.sa.commentShort")).max(1000, t("community.v.max", { n: 1000 })),
   authorName: z.string().trim().max(50).optional(),
 });
 
@@ -22,6 +24,7 @@ export type ForumCommentDTO = {
 
 /** Lấy danh sách ý kiến thảo luận của một bài viết diễn đàn */
 export async function getForumComments(articleId: string): Promise<ForumCommentDTO[]> {
+  const t = await getT();
   const user = await getCurrentUser();
   const isAdmin = user?.role === "ADMIN";
 
@@ -34,7 +37,7 @@ export async function getForumComments(articleId: string): Promise<ForumCommentD
   return rows.map((r) => ({
     id: r.id,
     content: r.content,
-    authorName: r.contact || "Đoàn viên/Học sinh",
+    authorName: r.contact || t("community.sa.defaultAuthor"),
     createdAt: r.createdAt.toISOString(),
     canDelete: isAdmin || (!!user && r.note === user.id),
   }));
@@ -43,7 +46,8 @@ export async function getForumComments(articleId: string): Promise<ForumCommentD
 /** Gửi bình luận thảo luận cho bài viết diễn đàn */
 export async function addForumCommentAction(articleId: string, input: unknown) {
   return run<ForumCommentDTO>(async () => {
-    const d = commentSchema.parse(input);
+    const t = await getT();
+    const d = commentSchema(t).parse(input);
     const user = await getCurrentUser();
 
     // Nếu đã đăng nhập, lấy họ tên và chi đoàn (nếu có)
@@ -67,7 +71,7 @@ export async function addForumCommentAction(articleId: string, input: unknown) {
       },
     });
     if (recent >= 20) {
-      throw new UserError("Hệ thống đang nhận nhiều bình luận, vui lòng thử lại sau giây lát");
+      throw new UserError(t("community.sa.forumBusy"));
     }
 
     const row = await db.feedback.create({
@@ -88,7 +92,7 @@ export async function addForumCommentAction(articleId: string, input: unknown) {
         createdAt: row.createdAt.toISOString(),
         canDelete: true,
       },
-      message: "Đã gửi ý kiến thảo luận thành công",
+      message: t("community.sa.forumSent"),
     };
   });
 }
@@ -96,14 +100,15 @@ export async function addForumCommentAction(articleId: string, input: unknown) {
 /** Xóa bình luận thảo luận (Admin hoặc người đăng) */
 export async function deleteForumCommentAction(commentId: string) {
   return run(async () => {
+    const t = await getT();
     const user = await getCurrentUser();
-    if (!user) throw new UserError("Bạn cần đăng nhập để thực hiện");
+    if (!user) throw new UserError(t("community.sa.needLogin"));
 
     const row = await db.feedback.findUnique({ where: { id: commentId } });
-    if (!row || !row.category?.startsWith("forum:")) throw new UserError("Bình luận không tồn tại");
+    if (!row || !row.category?.startsWith("forum:")) throw new UserError(t("community.sa.commentMissing"));
 
     if (user.role !== "ADMIN" && row.note !== user.id) {
-      throw new UserError("Bạn không có quyền xóa bình luận này");
+      throw new UserError(t("community.sa.noDeletePerm"));
     }
 
     await db.feedback.delete({ where: { id: commentId } });
@@ -111,7 +116,7 @@ export async function deleteForumCommentAction(commentId: string) {
       await audit(user.id, "forum.comment.delete", "Feedback", commentId);
     }
     revalidatePath("/dien-dan");
-    return { message: "Đã xóa bình luận" };
+    return { message: t("community.sa.commentDeleted") };
   });
 }
 

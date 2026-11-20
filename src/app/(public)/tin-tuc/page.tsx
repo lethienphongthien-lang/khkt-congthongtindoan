@@ -2,16 +2,21 @@ import { listArticles } from "@/lib/services/public";
 import { pageParam } from "@/utils";
 import { ArticleRow, EmptyPublic, PageTitle } from "@/components/public/blocks";
 import { Pagination } from "@/components/ui/misc";
+import { getT } from "@/lib/i18n/server";
 
-export const metadata = { title: "Tin tức" };
 const PAGE_SIZE = 10;
 
+export async function generateMetadata() {
+  return { title: (await getT())("public.news.title") };
+}
+
 export default async function Page({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const t = await getT();
   const page = pageParam((await searchParams).page);
   const { items, total } = await listArticles("NEWS", page, PAGE_SIZE);
   return (
     <>
-      <PageTitle title="Tin tức" description="Tin tức và hoạt động của Đoàn trường" />
+      <PageTitle title={t("public.news.title")} description={t("public.news.desc")} />
       <div className="rounded border border-border bg-white/85 px-1.5">
         {items.length === 0 ? <EmptyPublic /> : items.map((a) => <ArticleRow key={a.id} a={a} />)}
       </div>

@@ -5,12 +5,14 @@ import { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import type { Role } from "@prisma/client";
 import { cn } from "@/utils";
-import { navFor, settingsNavItem, isConfigWebsitePath, type NavItem } from "@/lib/nav";
+import { useT } from "@/lib/i18n/client";
+import { navFor, settingsNavItem, isConfigWebsitePath, navLabel, type NavItem } from "@/lib/nav";
 import { LogoutForm } from "./logout-button";
 import { DoanLogo } from "./logo";
 
 function NavGroup({ item, labels }: { item: NavItem; labels: string }) {
   const pathname = usePathname();
+  const t = useT();
   const children = item.children ?? [];
   const inside = !isConfigWebsitePath(pathname) && (children.some((c) => pathname === c.href || pathname.startsWith(c.href + "/")) || pathname.startsWith((item.match ?? item.href) + "/"));
   // Nhóm mở sẵn nếu được đánh dấu `open` hoặc đang ở một mục bên trong; vẫn bấm để mở/thu gọn thủ công.
@@ -21,9 +23,9 @@ function NavGroup({ item, labels }: { item: NavItem; labels: string }) {
     <div>
       <div className={cn("flex items-center rounded-md text-sm transition-colors", inside ? "bg-white/15 font-medium text-white" : "text-blue-50 hover:bg-white/10")}>
         {/* Tablet (thanh bên thu gọn): bấm icon để vào mục con đầu tiên */}
-        <Link href={children[0]?.href ?? item.href} title={item.label} className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2 lg:hidden"><item.icon className="size-[18px] shrink-0" /></Link>
+        <Link href={children[0]?.href ?? item.href} title={navLabel(t, item.label)} className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2 lg:hidden"><item.icon className="size-[18px] shrink-0" /></Link>
         <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="hidden min-w-0 flex-1 items-center gap-3 px-3 py-2 text-left lg:flex">
-          <item.icon className="size-[18px] shrink-0" /><span className="flex-1">{item.label}</span>
+          <item.icon className="size-[18px] shrink-0" /><span className="flex-1">{navLabel(t, item.label)}</span>
           <ChevronDown className={cn("size-4 shrink-0 transition-transform", open && "rotate-180")} />
         </button>
       </div>
@@ -31,7 +33,7 @@ function NavGroup({ item, labels }: { item: NavItem; labels: string }) {
         <div className={cn("mt-0.5 mb-1 space-y-0.5 border-l border-white/20 pl-2", labels === "inline" ? "ml-5" : "ml-5 max-lg:hidden")}>
           {children.map((c) => {
             const active = pathname === c.href || pathname.startsWith(c.href + "/");
-            return <Link key={c.href} href={c.href} className={cn("block rounded-md px-3 py-1.5 text-[13px] transition-colors", active ? "bg-white font-medium text-primary-dark" : "text-blue-100 hover:bg-white/10")}>{c.label}</Link>;
+            return <Link key={c.href} href={c.href} className={cn("block rounded-md px-3 py-1.5 text-[13px] transition-colors", active ? "bg-white font-medium text-primary-dark" : "text-blue-100 hover:bg-white/10")}>{navLabel(t, c.label)}</Link>;
           })}
         </div>
       )}
@@ -41,6 +43,7 @@ function NavGroup({ item, labels }: { item: NavItem; labels: string }) {
 
 function NavLinks({ items, labels, onNavigate, badges }: { items: NavItem[]; labels: string; onNavigate?: () => void; badges?: Record<string, number> }) {
   const pathname = usePathname();
+  const t = useT();
   const active = (it: NavItem) => {
     if (it.href === "/settings") return pathname === "/settings" || isConfigWebsitePath(pathname);
     const h = it.match ?? it.href;
@@ -48,11 +51,11 @@ function NavLinks({ items, labels, onNavigate, badges }: { items: NavItem[]; lab
     return pathname === h || (h !== "/dashboard" && pathname.startsWith(h + "/"));
   };
   const link = (it: NavItem) => (
-    <Link key={it.href} href={it.href} onClick={onNavigate} title={it.label}
+    <Link key={it.href} href={it.href} onClick={onNavigate} title={navLabel(t, it.label)}
       className={cn("relative flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
         active(it) ? "bg-white font-medium text-primary-dark" : "text-blue-50 hover:bg-white/10")}>
       <it.icon className="size-[18px] shrink-0" />
-      <span className={labels}>{it.label}</span>
+      <span className={labels}>{navLabel(t, it.label)}</span>
       {!!badges?.[it.href] && <span className={cn("ml-auto rounded-full bg-[#ffd400] px-1.5 text-[11px] leading-5 font-bold text-[#073a70] max-lg:absolute max-lg:top-0.5 max-lg:right-0.5 max-lg:ml-0 max-lg:leading-4", "")}>{badges[it.href]}</span>}
     </Link>
   );
@@ -60,16 +63,17 @@ function NavLinks({ items, labels, onNavigate, badges }: { items: NavItem[]; lab
 }
 
 function SidebarBody({ role, items, labels, onNavigate, badges }: { role: Role; items: NavItem[]; labels: string; onNavigate?: () => void; badges?: Record<string, number> }) {
+  const t = useT();
   return (
     <>
       <div className="flex items-center gap-3 border-b border-white/15 px-4 py-4">
         <DoanLogo className="h-10 shrink-0 drop-shadow" />
         <div className={cn("min-w-0 leading-tight", labels)}>
-          <div className="text-[13px] font-semibold text-white">Trường THPT Sơn Hà</div>
-          <div className="text-xs text-blue-100">Đoàn TNCS Hồ Chí Minh</div>
+          <div className="text-[13px] font-semibold text-white">{t("app.shell.schoolName")}</div>
+          <div className="text-xs text-blue-100">{t("app.shell.union")}</div>
         </div>
       </div>
-      <nav className="flex-1 space-y-0.5 overflow-y-auto p-3" aria-label="Điều hướng chính">
+      <nav className="flex-1 space-y-0.5 overflow-y-auto p-3" aria-label={t("app.shell.mainNav")}>
         <NavLinks items={[...items.filter((i) => !i.footer), ...items.filter((i) => i.footer && i.href === "/accounts"), settingsNavItem(role), ...items.filter((i) => i.footer && i.href !== "/accounts")]} labels={labels} onNavigate={onNavigate} badges={badges} />
       </nav>
       <div className="space-y-0.5 border-t border-white/15 p-3">

@@ -6,13 +6,16 @@ import { articleHref } from "@/lib/services/public";
 import { formatDate, cn } from "@/utils";
 import { Thumb } from "./thumb";
 import type { CardArticle } from "./blocks";
+import { getT, getLocale } from "@/lib/i18n/server";
+import { intlLocale } from "@/lib/i18n/format";
 
 /** Tiêu đề chuyên mục kiểu cổng tin: vạch xanh đậm phía trên, chữ in hoa, liên kết "Xem tất cả" bên phải. */
-export function SectionHead({ title, href }: { title: string; href?: string }) {
+export async function SectionHead({ title, href }: { title: string; href?: string }) {
+  const t = await getT();
   return (
     <div className="mb-1.5 flex items-baseline justify-between border-t-2 border-primary-dark pt-1">
       <h2 className="text-[17px] font-bold tracking-wide text-primary-dark uppercase">{title}</h2>
-      {href && <Link href={href} className="text-[13px] font-medium text-primary hover:underline">Xem tất cả</Link>}
+      {href && <Link href={href} className="text-[13px] font-medium text-primary hover:underline">{t("public.viewAll")}</Link>}
     </div>
   );
 }
@@ -39,7 +42,8 @@ export function LeadStory({ a, badge, textFirst, className, imageClass = "aspect
 }
 
 /** Dòng bài gọn: ảnh nhỏ bên trái, tiêu đề + ngày bên phải. */
-export function ThumbItem({ a, thumbClass = "h-[72px] w-28", showViews, className }: { className?: string; a: CardArticle; thumbClass?: string; showViews?: boolean }) {
+export async function ThumbItem({ a, thumbClass = "h-[72px] w-28", showViews, className }: { className?: string; a: CardArticle; thumbClass?: string; showViews?: boolean }) {
+  const nf = intlLocale(await getLocale());
   return (
     <article className={cn("group flex gap-2 border-b border-border py-1.5 first:pt-0 last:border-0 last:pb-0", className)}>
       <Thumb a={a} always className={thumbClass} />
@@ -47,7 +51,7 @@ export function ThumbItem({ a, thumbClass = "h-[72px] w-28", showViews, classNam
         <Link href={articleHref(a.slug)} className="line-clamp-3 text-sm leading-snug font-semibold group-hover:text-primary">{a.title}</Link>
         <p className="mt-0.5 flex items-center gap-2 text-xs text-muted">
           {a.publishedAt && formatDate(a.publishedAt)}
-          {showViews && a.viewCount !== undefined && <span className="inline-flex items-center gap-1"><Eye className="size-3" />{a.viewCount.toLocaleString("vi-VN")}</span>}
+          {showViews && a.viewCount !== undefined && <span className="inline-flex items-center gap-1"><Eye className="size-3" />{a.viewCount.toLocaleString(nf)}</span>}
         </p>
       </div>
     </article>

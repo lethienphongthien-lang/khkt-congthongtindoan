@@ -1,9 +1,12 @@
+"use client";
+import { useT } from "@/lib/i18n/client";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /** Khung chờ cho trang xem theo tuần: tiêu đề, hàng chọn năm học/tuần và 7 hàng ngày. */
 export function WeekSkeleton() {
+  const t = useT();
   return (
-    <div aria-busy="true" aria-label="Đang tải">
+    <div aria-busy="true" aria-label={t("ui.loading")}>
       <Skeleton className="mb-2 h-7 w-56" />
       <Skeleton className="mb-5 h-4 w-72 max-w-full" />
       <div className="mb-4 flex flex-wrap gap-2">

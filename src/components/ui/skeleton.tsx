@@ -1,11 +1,14 @@
+"use client";
 import { cn } from "@/utils";
+import { useT } from "@/lib/i18n/client";
 
 export const Skeleton = ({ className, style }: { className?: string; style?: React.CSSProperties }) => <div style={style} className={cn("animate-pulse rounded bg-slate-200/70", className)} />;
 
 /** Khung chờ chung cho trang trong dashboard: tiêu đề, hàng số liệu, bảng. */
 export function PageSkeleton() {
+  const t = useT();
   return (
-    <div aria-busy="true" aria-label="Đang tải" className="skel-delay">
+    <div aria-busy="true" aria-label={t("ui.loading")} className="skel-delay">
       <Skeleton className="mb-2 h-6 w-48" />
       <Skeleton className="mb-6 h-4 w-72" />
       <div className="mb-8 grid max-w-xl grid-cols-3 gap-6">
@@ -25,8 +28,9 @@ export function PageSkeleton() {
 
 /** Khung chờ cho trang biểu mẫu (tạo/sửa): tiêu đề, các ô nhập, ô nội dung lớn, nút. */
 export function FormSkeleton() {
+  const t = useT();
   return (
-    <div aria-busy="true" aria-label="Đang tải" className="skel-delay w-full">
+    <div aria-busy="true" aria-label={t("ui.loading")} className="skel-delay w-full">
       <Skeleton className="mb-2 h-6 w-48" />
       <Skeleton className="mb-6 h-4 w-72 max-w-full" />
       <div className="space-y-4">
@@ -42,8 +46,9 @@ export function FormSkeleton() {
 
 /** Khung chờ cho trang chi tiết bài viết/báo cáo: tiêu đề, dòng thông tin, nội dung. */
 export function DetailSkeleton() {
+  const t = useT();
   return (
-    <div aria-busy="true" aria-label="Đang tải" className="skel-delay w-full">
+    <div aria-busy="true" aria-label={t("ui.loading")} className="skel-delay w-full">
       <Skeleton className="mb-2 h-7 w-4/5" />
       <Skeleton className="mb-5 h-4 w-60" />
       <Skeleton className="mb-5 h-4 w-3/5" />
@@ -56,8 +61,9 @@ export function DetailSkeleton() {
 
 /** Khung chờ cho trang soạn trò chơi: cột câu hỏi bên trái, cột thiết lập bên phải. */
 export function QuizFormSkeleton() {
+  const t = useT();
   return (
-    <div aria-busy="true" aria-label="Đang tải" className="skel-delay w-full">
+    <div aria-busy="true" aria-label={t("ui.loading")} className="skel-delay w-full">
       <Skeleton className="mb-2 h-6 w-48" />
       <Skeleton className="mb-6 h-4 w-72 max-w-full" />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -79,8 +85,9 @@ export function QuizFormSkeleton() {
 
 /** Khung chờ cho trang công khai: tiêu đề và danh sách bài có ảnh. */
 export function PublicSkeleton() {
+  const t = useT();
   return (
-    <div aria-busy="true" aria-label="Đang tải" className="skel-delay">
+    <div aria-busy="true" aria-label={t("ui.loading")} className="skel-delay">
       <Skeleton className="mb-2 h-7 w-56" />
       <Skeleton className="mb-5 h-4 w-80 max-w-full" />
       <div className="rounded border border-border bg-white/85 p-4">

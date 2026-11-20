@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useT } from "@/lib/i18n/client";
 
 /**
  * Màn hình chờ khi mở ứng dụng đã cài lên màn hình chính (PWA): nền xanh Đoàn + huy hiệu + tên hệ thống,
@@ -7,6 +8,7 @@ import { useEffect, useState } from "react";
  * Chỉ hiện ở chế độ "standalone" (đã cài), trình duyệt thường không thấy.
  */
 export function AppSplash() {
+  const t = useT();
   const [hide, setHide] = useState(false); // bắt đầu mờ dần
   const [gone, setGone] = useState(false); // đã gỡ khỏi cây React (không đụng DOM trực tiếp để tránh lỗi khi chuyển trang)
   useEffect(() => {
@@ -26,8 +28,8 @@ export function AppSplash() {
     <div id="app-splash" className={hide ? "hide" : undefined} aria-hidden="true">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/logo-doan.webp" alt="" width={102} height={112} />
-      <b>Đoàn trường THPT Sơn Hà</b>
-      <span>Đoàn TNCS Hồ Chí Minh</span>
+      <b>{t("ui.splashName")}</b>
+      <span>{t("ui.splashOrg")}</span>
       <i />
     </div>
   );

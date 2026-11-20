@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Crown, Medal } from "lucide-react";
+import { getT } from "@/lib/i18n/server";
 
 export type GroupRow = { id: string; rank: number; name: string; members: number; total: number };
 
@@ -13,7 +14,8 @@ const TONE: Record<number, { chip: string; box: string; text: string; bar: strin
  * Bảng xếp hạng dạng thẻ: mỗi Chi đoàn một thẻ có hạng (huy hiệu vàng, bạc, đồng), tên lớp, điểm riêng và thanh điểm.
  * Chia 2 cột theo chiều dọc (đọc hết cột trái rồi sang cột phải) để danh sách ngắn gọn.
  */
-export function RankGroups({ rows, mineId, linkBase }: { rows: GroupRow[]; mineId?: string | null; linkBase?: string }) {
+export async function RankGroups({ rows, mineId, linkBase }: { rows: GroupRow[]; mineId?: string | null; linkBase?: string }) {
+  const t0 = await getT();
   const max = Math.max(1, ...rows.map((r) => Math.abs(r.total)));
   return (
     <ol className="gap-x-3 space-y-2 md:columns-2 md:[&>li]:break-inside-avoid">
@@ -21,17 +23,17 @@ export function RankGroups({ rows, mineId, linkBase }: { rows: GroupRow[]; mineI
         const t = TONE[r.rank];
         const body = (
           <>
-            <span className={`flex size-10 shrink-0 items-center justify-center rounded-full text-base font-bold shadow-sm ${t ? t.chip : "bg-slate-100 text-slate-600"}`} title={`Hạng ${r.rank}`}>
+            <span className={`flex size-10 shrink-0 items-center justify-center rounded-full text-base font-bold shadow-sm ${t ? t.chip : "bg-slate-100 text-slate-600"}`} title={t0("community.rank", { n: r.rank })}>
               {r.rank === 1 ? <Crown className="size-5" /> : r.rank <= 3 ? <Medal className="size-5" /> : r.rank}
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline justify-between gap-2">
-                <span className="truncate font-semibold">Chi đoàn {r.name}</span>
-                <span className={`shrink-0 text-xl leading-none font-extrabold tabular-nums ${t ? t.text : "text-primary-dark"}`}>{r.total}<span className="ml-0.5 text-[10px] font-medium text-muted uppercase"> điểm</span></span>
+                <span className="truncate font-semibold">{t0("community.emu.chapterName", { name: r.name })}</span>
+                <span className={`shrink-0 text-xl leading-none font-extrabold tabular-nums ${t ? t.text : "text-primary-dark"}`}>{r.total}<span className="ml-0.5 text-[10px] font-medium text-muted uppercase"> {t0("community.emu.points")}</span></span>
               </div>
               <div className="mt-1.5 flex items-center gap-2">
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200/70"><div className={`h-full rounded-full ${r.total < 0 ? "bg-danger" : t ? t.bar : "bg-primary"}`} style={{ width: `${(Math.abs(r.total) / max) * 100}%` }} /></div>
-                <span className="shrink-0 text-xs text-muted">{r.members} đoàn viên</span>
+                <span className="shrink-0 text-xs text-muted">{t0("community.emu.membersCount", { n: r.members })}</span>
               </div>
             </div>
           </>

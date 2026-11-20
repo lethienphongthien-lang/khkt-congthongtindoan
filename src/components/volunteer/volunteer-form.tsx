@@ -8,14 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/form";
 import { volunteerSchema } from "@/lib/validation";
 import { toLocalInput } from "@/utils";
+import { useT } from "@/lib/i18n/client";
 
-const SUGGEST = ["Quét sân", "Vệ sinh khu vực lớp", "Nhặt rác", "Chăm sóc cây xanh", "Lau dọn hành lang", "Sắp xếp bàn ghế"];
+const SUGGEST = ["community.vf.s0", "community.vf.s1", "community.vf.s2", "community.vf.s3", "community.vf.s4", "community.vf.s5"] as const;
 type Errors = Record<string, string>;
 
 /** Biểu mẫu bí thư đăng ký tình nguyện cho cả Chi đoàn: chọn công việc, ngày giờ, khu vực, số giờ và điểm mỗi em. */
 export type VolunteerInitial = { id: string; task: string; date: string; startTime: string; endTime: string; location: string; hours: number; points: number; note: string };
 
 export function VolunteerForm({ departments, initial }: { departments?: { id: string; name: string }[]; initial?: VolunteerInitial }) {
+  const t = useT();
   const router = useRouter();
   const [v, setV] = useState(initial ? { ...initial, hours: String(initial.hours), points: String(initial.points), departmentId: "" } : { task: "", date: toLocalInput(new Date()).slice(0, 10), startTime: "07:00", endTime: "08:00", location: "", hours: "1", points: "2", note: "", departmentId: "" });
   const [hoursTouched, setHoursTouched] = useState(!!initial);
@@ -48,36 +50,36 @@ export function VolunteerForm({ departments, initial }: { departments?: { id: st
 
   return (
     <div className="w-full space-y-4">
-      <p className="rounded-md bg-primary-light px-3 py-2 text-sm text-primary-dark">Đăng ký tình nguyện cho <b>cả Chi đoàn</b>. Đăng ký được gửi cho <b>Ban chấp hành duyệt</b>; duyệt xong buổi hiện trên lịch tình nguyện và các đoàn viên nhận thông báo. Có thể chọn cả ngày đã qua (đăng ký bổ sung). Làm xong, bạn bấm <b>Hoàn thành</b> để hệ thống tự cộng <b>điểm</b> cho từng đoàn viên của Chi đoàn (không cần điểm danh).</p>
+      <p className="rounded-md bg-primary-light px-3 py-2 text-sm text-primary-dark">{t("community.vf.intro1")} <b>{t("community.vf.intro2")}</b>. {t("community.vf.intro3")} <b>{t("community.vf.intro4")}</b>{t("community.vf.intro5")} <b>{t("community.vf.intro6")}</b> {t("community.vf.intro7")} <b>{t("community.vf.intro8")}</b> {t("community.vf.intro9")}</p>
       <div className="grid gap-x-8 gap-y-4 lg:grid-cols-2">
         <div className="space-y-4">
           {departments && (
-            <Field label="Chi đoàn" required error={errors.departmentId}>
-              <Select value={v.departmentId} onChange={(e) => set("departmentId", e.target.value)}><option value="">Chọn Chi đoàn</option>{departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</Select>
+            <Field label={t("community.vf.chapter")} required error={errors.departmentId}>
+              <Select value={v.departmentId} onChange={(e) => set("departmentId", e.target.value)}><option value="">{t("community.vf.pickChapter")}</option>{departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</Select>
             </Field>
           )}
-          <Field label="Công việc tình nguyện" required error={errors.task}>
-            <Input value={v.task} maxLength={100} placeholder="Ví dụ: Quét sân" onChange={(e) => set("task", e.target.value)} />
-            <div className="mt-2 flex flex-wrap gap-1.5">{SUGGEST.map((s) => <button key={s} type="button" onClick={() => set("task", s)} className="rounded-full border border-border bg-white/85 px-2.5 py-1 text-xs hover:border-primary hover:text-primary">{s}</button>)}</div>
+          <Field label={t("community.vf.task")} required error={errors.task}>
+            <Input value={v.task} maxLength={100} placeholder={t("community.vf.taskPh")} onChange={(e) => set("task", e.target.value)} />
+            <div className="mt-2 flex flex-wrap gap-1.5">{SUGGEST.map((k) => <button key={k} type="button" onClick={() => set("task", t(k))} className="rounded-full border border-border bg-white/85 px-2.5 py-1 text-xs hover:border-primary hover:text-primary">{t(k)}</button>)}</div>
           </Field>
-          <Field label="Khu vực / địa điểm" required error={errors.location}><Input value={v.location} maxLength={150} placeholder="Ví dụ: Sân trường khu A" onChange={(e) => set("location", e.target.value)} /></Field>
-          <Field label="Ghi chú" error={errors.note}><Textarea className="min-h-24" maxLength={500} value={v.note} onChange={(e) => set("note", e.target.value)} /></Field>
+          <Field label={t("community.vf.location")} required error={errors.location}><Input value={v.location} maxLength={150} placeholder={t("community.vf.locationPh")} onChange={(e) => set("location", e.target.value)} /></Field>
+          <Field label={t("community.vf.note")} error={errors.note}><Textarea className="min-h-24" maxLength={500} value={v.note} onChange={(e) => set("note", e.target.value)} /></Field>
         </div>
         <div className="space-y-4">
-          <Field label="Ngày" required error={errors.date}><Input type="date" value={v.date} onChange={(e) => set("date", e.target.value)} /></Field>
+          <Field label={t("community.vf.date")} required error={errors.date}><Input type="date" value={v.date} onChange={(e) => set("date", e.target.value)} /></Field>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Từ giờ" required error={errors.startTime}><Input type="time" value={v.startTime} onChange={(e) => set("startTime", e.target.value)} /></Field>
-            <Field label="Đến giờ" required error={errors.endTime}><Input type="time" value={v.endTime} onChange={(e) => set("endTime", e.target.value)} /></Field>
+            <Field label={t("community.vf.from")} required error={errors.startTime}><Input type="time" value={v.startTime} onChange={(e) => set("startTime", e.target.value)} /></Field>
+            <Field label={t("community.vf.to")} required error={errors.endTime}><Input type="time" value={v.endTime} onChange={(e) => set("endTime", e.target.value)} /></Field>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Giờ tình nguyện mỗi em" required error={errors.hours} hint="Tự tính theo khung giờ, sửa được (tối đa 12 giờ)."><Input type="number" step="0.25" min="0.25" max="12" value={v.hours} onChange={(e) => { setHoursTouched(true); set("hours", e.target.value); }} /></Field>
-            <Field label="Điểm mỗi em" required error={errors.points} hint="Cộng cho mỗi đoàn viên khi bạn bấm Hoàn thành (tối đa 20)."><Input type="number" min="0" max="20" value={v.points} onChange={(e) => set("points", e.target.value)} /></Field>
+            <Field label={t("community.vf.hours")} required error={errors.hours} hint={t("community.vf.hoursHint")}><Input type="number" step="0.25" min="0.25" max="12" value={v.hours} onChange={(e) => { setHoursTouched(true); set("hours", e.target.value); }} /></Field>
+            <Field label={t("community.vf.points")} required error={errors.points} hint={t("community.vf.pointsHint")}><Input type="number" min="0" max="20" value={v.points} onChange={(e) => set("points", e.target.value)} /></Field>
           </div>
         </div>
       </div>
       <HeaderActions>
-        <Button loading={busy} onClick={submit}>{initial ? "Lưu thay đổi" : "Gửi đăng ký"}</Button>
-        <Button variant="secondary" onClick={() => router.back()}>Hủy</Button>
+        <Button loading={busy} onClick={submit}>{initial ? t("community.vf.saveChanges") : t("community.vf.submit")}</Button>
+        <Button variant="secondary" onClick={() => router.back()}>{t("community.cancel")}</Button>
       </HeaderActions>
     </div>
   );

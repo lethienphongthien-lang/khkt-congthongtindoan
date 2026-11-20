@@ -8,8 +8,12 @@ import { Avatar } from "@/components/ui/misc";
 import { cdnImage } from "@/lib/image-url";
 import { cn } from "@/utils";
 import type { ChatMessageDTO } from "@/lib/services/team-chat";
+import { useT, useLocale } from "@/lib/i18n/client";
+import { intlLocale } from "@/lib/i18n/format";
 
 export function TeamChatButton() {
+  const t = useT();
+  const locale = useLocale();
   const [canChat, setCanChat] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ id: string; fullName: string; role: string } | null>(null);
   const [open, setOpen] = useState(false);
@@ -179,20 +183,20 @@ export function TeamChatButton() {
       {open && (
         <div
           role="dialog"
-          aria-label="Kênh chat Ban Chấp Hành & Bí thư"
+          aria-label={t("community.tc.dialog")}
           className="flex h-[min(42rem,calc(100dvh-8rem))] w-[min(28rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-border bg-white shadow-2xl"
         >
           {/* Header */}
           <div className="flex items-center gap-2 bg-[#005ba6] px-3.5 py-2.5 text-white">
             <MessagesSquare className="size-4 shrink-0" />
             <div className="flex-1 min-w-0">
-              <div className="truncate text-sm font-semibold">Kênh chat BCH & Bí thư</div>
-              <div className="text-[10px] text-blue-100 opacity-90">Kênh nội bộ bảo mật</div>
+              <div className="truncate text-sm font-semibold">{t("community.tc.title")}</div>
+              <div className="text-[10px] text-blue-100 opacity-90">{t("community.tc.private")}</div>
             </div>
             <Link
               href="/team-chat"
               target="_blank"
-              title="Mở toàn màn hình"
+              title={t("community.tc.fullscreen")}
               className="rounded p-1 hover:bg-white/15"
             >
               <ExternalLink className="size-4" />
@@ -200,7 +204,7 @@ export function TeamChatButton() {
             <button
               type="button"
               onClick={handleClose}
-              aria-label="Đóng"
+              aria-label={t("community.chat.close")}
               className="rounded p-1 hover:bg-white/15"
             >
               <X className="size-4" />
@@ -212,11 +216,11 @@ export function TeamChatButton() {
             {loading && messages.length === 0 ? (
               <div className="flex h-full items-center justify-center text-muted">
                 <Loader2 className="size-5 animate-spin mr-2" />
-                <span>Đang tải tin nhắn...</span>
+                <span>{t("community.tc.loading")}</span>
               </div>
             ) : messages.length === 0 ? (
               <div className="rounded-lg bg-white p-4 text-center text-xs text-muted shadow-xs">
-                Chưa có tin nhắn nào trong kênh. Hãy gửi lời chào đầu tiên!
+                {t("community.tc.empty")}
               </div>
             ) : (
               messages.map((m) => {
@@ -244,7 +248,7 @@ export function TeamChatButton() {
                         )}
                       >
                         {m.deleted ? (
-                          <span className="italic text-slate-400">Tin nhắn đã bị thu hồi</span>
+                          <span className="italic text-slate-400">{t("community.tc.recalled")}</span>
                         ) : (
                           m.content
                         )}
@@ -279,7 +283,7 @@ export function TeamChatButton() {
                         )}
                       </div>
                       <div className="mt-0.5 px-1 text-[10px] text-slate-400">
-                        {new Date(m.createdAt).toLocaleTimeString("vi-VN", {
+                        {new Date(m.createdAt).toLocaleTimeString(intlLocale(locale), {
                           hour: "2-digit",
                           minute: "2-digit",
                         })}
@@ -301,15 +305,15 @@ export function TeamChatButton() {
               type="text"
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Nhập tin nhắn..."
-              aria-label="Tin nhắn"
+              placeholder={t("community.tc.placeholder")}
+              aria-label={t("community.tc.message")}
               maxLength={4000}
               className="h-9 min-w-0 flex-1 rounded-md border border-border px-3 text-sm focus:border-[#005ba6] focus:outline-none focus:ring-1 focus:ring-[#005ba6]"
             />
             <button
               type="submit"
               disabled={sending || !text.trim()}
-              aria-label="Gửi"
+              aria-label={t("community.chat.send")}
               className="flex size-9 items-center justify-center rounded-md bg-[#005ba6] text-white hover:bg-[#004785] disabled:opacity-40"
             >
               {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
@@ -322,8 +326,8 @@ export function TeamChatButton() {
       <button
         type="button"
         onClick={toggleOpen}
-        title={open ? "Đóng khung chat" : "Kênh chat Ban Chấp Hành & Bí thư"}
-        aria-label={open ? "Đóng khung chat" : "Kênh chat Ban Chấp Hành và Bí thư"}
+        title={open ? t("community.tc.closeChat") : t("community.tc.dialog")}
+        aria-label={open ? t("community.tc.closeChat") : t("community.tc.dialog")}
         className="group relative flex size-12 items-center justify-center rounded-full bg-[#005ba6] text-white shadow-lg transition-transform hover:scale-105 hover:bg-[#004785] active:scale-95"
       >
         {open ? (
@@ -333,7 +337,7 @@ export function TeamChatButton() {
         )}
         {!open && (
           <span className="pointer-events-none absolute right-full mr-2 hidden whitespace-nowrap rounded-md bg-slate-900/90 px-2.5 py-1 text-xs font-medium text-white shadow-md sm:group-hover:block">
-            Kênh chat BCH & Bí thư
+            {t("community.tc.title")}
           </span>
         )}
       </button>

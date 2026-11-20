@@ -17,10 +17,12 @@ import { formatDate } from "@/utils";
 import { EmptyPublic } from "@/components/public/blocks";
 import { Countdown } from "@/components/public/countdown";
 import { getSiteSettings } from "@/lib/services/site-settings";
+import { getT } from "@/lib/i18n/server";
 
 export const revalidate = 60; // trang chủ cache 60 giây
 
 export default async function HomePage() {
+  const t = await getT();
   const calendars = await loadCalendars();
   const period = resolvePeriod("week", currentValue("week", new Date(), calendars), calendars)!; // thi đua tính theo tuần
   const [allNews, announcements, plans, stories, careers, quizzes, popular, weekRanking, settings, covers, web] = await Promise.all([
@@ -57,10 +59,10 @@ export default async function HomePage() {
       {countdownTarget && countdownTarget.getTime() > Date.now() && <Countdown title={settings.countdownTitle} target={countdownTarget.toISOString()} link={settings.countdownLink || undefined} />}
       {/* Đầu trang: tin nổi bật (2/3) + tab Tin mới / Xem nhiều (1/3), dưới là hàng 4 thẻ ảnh */}
       <section className="rounded bg-white/85 p-2 shadow-sm">
-        {!lead ? <EmptyPublic text="Chưa có tin tức." /> : (
+        {!lead ? <EmptyPublic text={t("public.home.noNews")} /> : (
           <>
             <div className="grid gap-3 lg:grid-cols-3">
-              <LeadStory a={lead} badge="Tin nổi bật" textFirst className="lg:col-span-2" imageClass="aspect-[16/9] lg:aspect-auto lg:min-h-[320px] lg:flex-1" />
+              <LeadStory a={lead} badge={t("public.home.featured")} textFirst className="lg:col-span-2" imageClass="aspect-[16/9] lg:aspect-auto lg:min-h-[320px] lg:flex-1" />
               <NewsTabs latest={sideLatest.map(toTab)} popular={popular.map(toTab)} />
             </div>
             <div className="mt-3"><CardRow items={cardRow} /></div>
@@ -68,37 +70,37 @@ export default async function HomePage() {
         )}
       </section>
 
-      <Reveal><FeatureSection title="Thông báo" href="/thong-bao" items={announcementsX} empty="Chưa có thông báo." /></Reveal>
-      <Reveal><FeatureSection title="Kế hoạch" href="/ke-hoach" items={plansX} empty="Chưa có kế hoạch." /></Reveal>
+      <Reveal><FeatureSection title={t("public.home.announcements")} href="/thong-bao" items={announcementsX} empty={t("public.home.noAnnouncements")} /></Reveal>
+      <Reveal><FeatureSection title={t("public.home.plans")} href="/ke-hoach" items={plansX} empty={t("public.home.noPlans")} /></Reveal>
 
       <Reveal><PhotoStrip photos={covers} /></Reveal>
 
       <div className="grid gap-2 lg:grid-cols-2">
         <Reveal><section className="h-full rounded bg-white/85 p-2 shadow-sm">
-          <SectionHead title={`Top 5 nổi bật · ${(web?.period.label ?? period.label).split(" · ")[0]}`} href="/thi-dua" />
+          <SectionHead title={t("public.home.top5", { period: (web?.period.label ?? period.label).split(" · ")[0] })} href="/thi-dua" />
           {web && web.top.length > 0 ? (
             <>
-              {web.fallback && <p className="mb-1.5 text-xs text-muted">Tuần này chưa có điểm, đang hiển thị kết quả tuần gần nhất.</p>}
+              {web.fallback && <p className="mb-1.5 text-xs text-muted">{t("public.home.fallbackWeek")}</p>}
               <TopPeople rows={web.top} />
             </>
-          ) : <EmptyPublic text="Tuần này chưa có điểm. Đăng nhập, chơi trò chơi để lên bảng!" />}
+          ) : <EmptyPublic text={t("public.home.noPoints")} />}
         </section></Reveal>
-        <Reveal delay={80}><TopChapters title={`Chi đoàn tiêu biểu · ${rankPeriod.label.split(" · ")[0]}`} note={rankPeriod.value !== period.value ? `Tuần này chưa có điểm, đang hiển thị kết quả ${rankPeriod.label.split(" (")[0].toLowerCase()}.` : undefined} items={ranking.map((x) => ({ id: x.id, name: x.name, rank: x.rank, total: x.total }))} /></Reveal>
+        <Reveal delay={80}><TopChapters title={t("public.home.topChapters", { period: rankPeriod.label.split(" · ")[0] })} note={rankPeriod.value !== period.value ? t("public.home.fallbackPeriod", { period: rankPeriod.label.split(" (")[0].toLowerCase() }) : undefined} items={ranking.map((x) => ({ id: x.id, name: x.name, rank: x.rank, total: x.total }))} /></Reveal>
       </div>
 
-      <Reveal><FeatureSection title="Câu chuyện đẹp" href="/cau-chuyen-dep" items={storiesX} empty="Chưa có câu chuyện." /></Reveal>
+      <Reveal><FeatureSection title={t("public.home.stories")} href="/cau-chuyen-dep" items={storiesX} empty={t("public.home.noStories")} /></Reveal>
 
       <div className="grid gap-2 lg:grid-cols-3">
         <Reveal delay={80}><section className="h-full rounded bg-white/85 p-2 shadow-sm">
-          <SectionHead title="Trò chơi" href="/tro-choi" />
-          {quizzes.map((q) => { const th = themeOf(q.theme); return (
+          <SectionHead title={t("public.home.games")} href="/tro-choi" />
+          {quizzes.map((q) => { const th = themeOf(q.theme, t); return (
             <Link key={q.id} href={quizHref(q.id)} className="flex items-center gap-2 border-b border-border py-1 hover:bg-primary-light/40">
               <span className={`flex h-16 w-24 shrink-0 items-center justify-center rounded bg-gradient-to-br text-3xl text-white ${th.grad}`}>{th.emoji}</span>
-              <span className="min-w-0"><span className="line-clamp-2 font-semibold">{q.title}</span><span className="block text-xs text-emerald-600">🎮 Chơi tích điểm{q.points ? ` · +${q.points} điểm` : ""}</span></span>
+              <span className="min-w-0"><span className="line-clamp-2 font-semibold">{q.title}</span><span className="block text-xs text-emerald-600">{t("public.home.playForPoints")}{q.points ? t("public.home.plusPoints", { n: q.points }) : ""}</span></span>
             </Link>); })}
-          {quizzes.length === 0 && <EmptyPublic text="Chưa có trò chơi." />}
+          {quizzes.length === 0 && <EmptyPublic text={t("public.home.noGames")} />}
         </section></Reveal>
-        <Reveal className="lg:col-span-2" delay={160}><FeatureSection title="Định hướng nghề nghiệp" href="/dinh-huong-nghe-nghiep" items={careersX} empty="Chưa có bài hướng nghiệp." /></Reveal>
+        <Reveal className="lg:col-span-2" delay={160}><FeatureSection title={t("public.home.careers")} href="/dinh-huong-nghe-nghiep" items={careersX} empty={t("public.home.noCareers")} /></Reveal>
       </div>
     </div>
   );

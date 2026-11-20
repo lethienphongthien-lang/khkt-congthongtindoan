@@ -1,4 +1,5 @@
 "use client";
+import { useT } from "@/lib/i18n/client";
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -45,6 +46,7 @@ export function PeriodDetailTracker({
   };
   items: DeptReportItem[];
 }) {
+  const t = useT();
   const [filter, setFilter] = useState<"ALL" | "SUBMITTED" | "MISSING">("ALL");
   const [gradeFilter, setGradeFilter] = useState<string>("ALL");
   const [search, setSearch] = useState("");
@@ -106,14 +108,14 @@ export function PeriodDetailTracker({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
           <div className="flex items-center gap-2 text-xs font-medium text-muted uppercase tracking-wider">
-            <Users className="size-4 text-primary" /> Tổng số Chi đoàn
+            <Users className="size-4 text-primary" /> {t("cms.pt.total")}
           </div>
           <div className="mt-2 text-2xl font-bold text-foreground">{total}</div>
         </div>
 
         <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
           <div className="flex items-center gap-2 text-xs font-medium text-emerald-600 uppercase tracking-wider">
-            <CheckCircle2 className="size-4" /> Đã nộp báo cáo
+            <CheckCircle2 className="size-4" /> {t("cms.pt.submitted")}
           </div>
           <div className="mt-2 text-2xl font-bold text-emerald-600">
             {submittedCount}{" "}
@@ -123,14 +125,14 @@ export function PeriodDetailTracker({
 
         <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
           <div className="flex items-center gap-2 text-xs font-medium text-rose-600 uppercase tracking-wider">
-            <AlertCircle className="size-4" /> Chưa báo cáo
+            <AlertCircle className="size-4" /> {t("cms.pt.missing")}
           </div>
           <div className="mt-2 text-2xl font-bold text-rose-600">{missingCount}</div>
         </div>
 
         <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
           <div className="flex items-center gap-2 text-xs font-medium text-muted uppercase tracking-wider">
-            <Clock className="size-4 text-amber-500" /> Trạng thái đợt
+            <Clock className="size-4 text-amber-500" /> {t("cms.pt.periodStatus")}
           </div>
           <div className="mt-2">
             <span
@@ -140,7 +142,7 @@ export function PeriodDetailTracker({
                   : "bg-slate-100 text-slate-700"
               }`}
             >
-              {period.status === "OPEN" ? "Đang mở nhận báo cáo" : "Đã đóng đợt"}
+              {period.status === "OPEN" ? t("cms.pt.open") : t("cms.pt.closed")}
             </span>
           </div>
         </div>
@@ -149,8 +151,8 @@ export function PeriodDetailTracker({
       {/* Thanh tiến độ */}
       <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
         <div className="mb-2 flex items-center justify-between text-sm">
-          <span className="font-medium text-foreground">Tiến độ nộp báo cáo toàn trường</span>
-          <span className="font-bold text-primary">{percentage}% hoàn thành</span>
+          <span className="font-medium text-foreground">{t("cms.pt.progress")}</span>
+          <span className="font-bold text-primary">{t("cms.pt.pct", { n: percentage })}</span>
         </div>
         <div className="h-3 w-full overflow-hidden rounded-full bg-slate-100">
           <div
@@ -174,7 +176,7 @@ export function PeriodDetailTracker({
                 : "bg-slate-100 text-slate-700 hover:bg-slate-200"
             }`}
           >
-            Tất cả ({total})
+            {t("cms.pt.all", { n: total })}
           </button>
           <button
             type="button"
@@ -185,7 +187,7 @@ export function PeriodDetailTracker({
                 : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
             }`}
           >
-            Đã nộp ({submittedCount})
+            {t("cms.pt.submittedN", { n: submittedCount })}
           </button>
           <button
             type="button"
@@ -196,7 +198,7 @@ export function PeriodDetailTracker({
                 : "bg-rose-50 text-rose-700 hover:bg-rose-100"
             }`}
           >
-            Chưa báo cáo ({missingCount})
+            {t("cms.pt.missingN", { n: missingCount })}
           </button>
         </div>
 
@@ -206,10 +208,10 @@ export function PeriodDetailTracker({
             onChange={(e) => setGradeFilter(e.target.value)}
             className="h-9 w-auto min-w-[150px] shrink-0 text-xs"
           >
-            <option value="ALL">Tất cả khối lớp</option>
+            <option value="ALL">{t("cms.pt.allGrades")}</option>
             {grades.map((g) => (
               <option key={g} value={g}>
-                {g === "gv" ? "Chi đoàn giáo viên" : `Khối ${g}`}
+                {g === "gv" ? t("cms.pt.teachers") : t("cms.pt.grade", { g })}
               </option>
             ))}
           </Select>
@@ -219,7 +221,7 @@ export function PeriodDetailTracker({
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Tìm tên Chi đoàn, Bí thư..."
+              placeholder={t("cms.pt.search")}
               className="h-9 pl-8 text-xs"
             />
           </div>
@@ -229,18 +231,18 @@ export function PeriodDetailTracker({
       {/* Danh sách Chi đoàn */}
       {filteredItems.length === 0 ? (
         <div className="rounded-xl border border-border bg-white p-8 text-center text-sm text-muted">
-          Không tìm thấy Chi đoàn nào phù hợp với bộ lọc.
+          {t("cms.pt.none")}
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-border bg-white shadow-sm">
           <DataTable>
             <thead>
               <tr>
-                <Th>Chi đoàn</Th>
-                <Th>Bí thư / Phụ trách</Th>
-                <Th>Trạng thái</Th>
-                <Th>Đoàn viên tham gia</Th>
-                <Th className="text-right">Thao tác</Th>
+                <Th>{t("cms.pt.thChapter")}</Th>
+                <Th>{t("cms.pt.thSec")}</Th>
+                <Th>{t("cms.pt.thStatus")}</Th>
+                <Th>{t("cms.pt.thPart")}</Th>
+                <Th className="text-right">{t("cms.pt.thActions")}</Th>
               </tr>
             </thead>
             <tbody>
@@ -252,7 +254,7 @@ export function PeriodDetailTracker({
                       {department.name}
                       {department.isTeacher && (
                         <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-muted">
-                          Giáo viên
+                          {t("cms.pt.teacher")}
                         </span>
                       )}
                     </span>
@@ -269,7 +271,7 @@ export function PeriodDetailTracker({
                         )}
                       </div>
                     ) : (
-                      <span className="italic text-slate-400">Chưa gán</span>
+                      <span className="italic text-slate-400">{t("cms.pt.unassigned")}</span>
                     )}
                   </Td>
 
@@ -277,12 +279,12 @@ export function PeriodDetailTracker({
                     {report ? (
                       <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 border border-emerald-200">
                         <CheckCircle2 className="size-3.5 text-emerald-600" />
-                        Đã báo cáo
+                        {t("cms.pt.reported")}
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-700 border border-rose-200">
                         <AlertCircle className="size-3.5 text-rose-500" />
-                        Chưa báo cáo
+                        {t("cms.pt.missing")}
                       </span>
                     )}
                   </Td>
@@ -292,10 +294,10 @@ export function PeriodDetailTracker({
                       <div>
                         <span className="text-sm font-semibold text-foreground">{report.participantCount}</span>
                         <span className="text-muted">/{memberCount}</span>
-                        {memberCount > 0 && <div className="text-[11px] text-muted">{Math.round((report.participantCount / memberCount) * 100)}% sĩ số</div>}
+                        {memberCount > 0 && <div className="text-[11px] text-muted">{t("cms.pt.ofSize", { n: Math.round((report.participantCount / memberCount) * 100) })}</div>}
                       </div>
                     ) : (
-                      <span className="italic text-slate-400">{report ? "Chưa ghi nhận" : "—"}</span>
+                      <span className="italic text-slate-400">{report ? t("cms.pt.notRecorded") : "—"}</span>
                     )}
                   </Td>
 
@@ -305,16 +307,16 @@ export function PeriodDetailTracker({
                         <Link
                           href={`/chapter-reports/${report.id}`}
                           className={buttonClass("secondary", "sm")}
-                          title="Xem nội dung chi tiết"
+                          title={t("cms.pt.viewTitle")}
                         >
                           <Eye className="size-3.5" />
-                          Xem
+                          {t("cms.pt.view")}
                         </Link>
                         <Link
                           href={`/bao-cao-chi-doan/bao-cao/${report.id}`}
                           target="_blank"
                           className={buttonClass("ghost", "sm")}
-                          title="Xem trên trang công khai"
+                          title={t("cms.pt.viewPublic")}
                         >
                           <ExternalLink className="size-3.5 text-muted" />
                         </Link>
@@ -323,10 +325,10 @@ export function PeriodDetailTracker({
                       <Link
                         href={`/chapter-reports/new?periodId=${period.id}&departmentId=${department.id}`}
                         className={buttonClass("ghost", "sm")}
-                        title="Đăng báo cáo thay cho Chi đoàn này"
+                        title={t("cms.pt.postFor")}
                       >
                         <Send className="size-3.5" />
-                        Đăng hộ
+                        {t("cms.pt.postForBtn")}
                       </Link>
                     )}
                   </Td>

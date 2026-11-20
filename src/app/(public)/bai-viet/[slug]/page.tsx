@@ -8,15 +8,17 @@ import { CalendarDays, Eye, MapPin, Pencil } from "lucide-react";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { kindSlug } from "@/lib/services/kind";
-import { KIND_LABEL, KIND_PATH, getArticle, relatedArticles } from "@/lib/services/public";
+import { KIND_PATH, getArticle, relatedArticles } from "@/lib/services/public";
 import { formatDate, formatDateTime } from "@/utils";
 import { siteUrl } from "@/lib/site-url";
 import { RichText } from "@/components/public/rich-text";
 import { ViewTracker } from "@/components/public/view-tracker";
 import { Attachments } from "@/components/public/attachments";
-import { Block, SideArticleList } from "@/components/public/blocks";
+import { Block, SideArticleList, kindLabel } from "@/components/public/blocks";
 import { ForumDiscussion } from "@/components/public/forum-discussion";
 import { getForumComments } from "@/actions/forum";
+import { getT, getLocale } from "@/lib/i18n/server";
+import { intlLocale } from "@/lib/i18n/format";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const a = await getArticle((await params).slug);
@@ -29,6 +31,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
+  const t = await getT();
+  const nf = intlLocale(await getLocale());
   const a = await getArticle((await params).slug);
   if (!a) notFound();
   // Số lượt xem đọc trực tiếp (không qua bộ nhớ đệm) để người xem thấy số mới ngay
@@ -50,20 +54,20 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
     <article className="min-w-0 lg:col-span-2">
       <ViewTracker id={a.id} />
-      <nav className="mb-3 text-[13px] text-muted"><Link href="/" className="hover:text-primary">Trang chủ</Link> › <Link href={KIND_PATH[a.kind]} className="hover:text-primary">{KIND_LABEL[a.kind]}</Link></nav>
+      <nav className="mb-3 text-[13px] text-muted"><Link href="/" className="hover:text-primary">{t("common.home")}</Link> › <Link href={KIND_PATH[a.kind]} className="hover:text-primary">{kindLabel(t, a.kind)}</Link></nav>
       <div className="flex items-start gap-2">
         <h1 className="min-w-0 flex-1 text-2xl font-bold text-primary-dark sm:text-3xl">{a.title}</h1>
         {canEdit && (
-          <Link href={`/cms/${kindSlug(a.kind)}/${a.id}/edit`} title="Sửa bài viết" aria-label="Sửa bài viết"
+          <Link href={`/cms/${kindSlug(a.kind)}/${a.id}/edit`} title={t("public.article.edit")} aria-label={t("public.article.edit")}
             className="mt-1 shrink-0 rounded-full border border-border bg-white p-2 text-primary shadow-sm hover:bg-primary-light"><Pencil className="size-4" /></Link>
         )}
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-border pb-3 text-sm text-muted">
         {a.publishedAt && <span>{formatDate(a.publishedAt)}</span>}
-        <span className="inline-flex items-center gap-1"><Eye className="size-4" />{views.toLocaleString("vi-VN")} lượt xem</span>
+        <span className="inline-flex items-center gap-1"><Eye className="size-4" />{t("public.views", { n: views.toLocaleString(nf) })}</span>
         {a.category && <Link href={`${KIND_PATH[a.kind]}?dm=${a.category.id}`} className="rounded bg-amber-100 px-1.5 py-0.5 font-medium text-amber-800 hover:underline">{a.category.name}</Link>}
-        {a.department && <span className="rounded bg-primary-light px-1.5 py-0.5 font-medium text-primary-dark">Chi đoàn {a.department.name}</span>}
-        {a.author && <span>Đăng bởi {a.author.fullName}</span>}
+        {a.department && <span className="rounded bg-primary-light px-1.5 py-0.5 font-medium text-primary-dark">{t("public.chapterOf", { name: a.department.name })}</span>}
+        {a.author && <span>{t("public.postedBy", { name: a.author.fullName })}</span>}
         {a.eventAt && <span className="inline-flex items-center gap-1"><CalendarDays className="size-4" />{formatDateTime(a.eventAt)}</span>}
         {a.eventLocation && <span className="inline-flex items-center gap-1"><MapPin className="size-4" />{a.eventLocation}</span>}
       </div>
@@ -83,7 +87,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     </article>
     <aside className="space-y-6">
       {related.map((g) => (
-        <Block key={g.kind} title={g.kind === a.kind ? `${KIND_LABEL[g.kind]} khác` : KIND_LABEL[g.kind]} href={KIND_PATH[g.kind]}>
+        <Block key={g.kind} title={g.kind === a.kind ? t("public.kindOther", { kind: kindLabel(t, g.kind) }) : kindLabel(t, g.kind)} href={KIND_PATH[g.kind]}>
           <SideArticleList items={g.items} />
         </Block>
       ))}

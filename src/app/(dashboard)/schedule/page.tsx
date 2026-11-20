@@ -1,3 +1,4 @@
+import { getLocale, getT } from "@/lib/i18n/server";
 import { requireRole } from "@/lib/auth/session";
 import { currentWeek, defaultCalendar, schoolYearOf, weekLabel, yearLabel } from "@/lib/school-calendar";
 import { loadCalendars } from "@/lib/services/school-calendar";
@@ -6,9 +7,11 @@ import { PageHeader } from "@/components/ui/misc";
 import { WeekPicker } from "@/components/schedule/week-picker";
 import { ScheduleEditor } from "@/components/schedule/schedule-editor";
 
-export const metadata = { title: "Lịch công tác tuần" };
+export async function generateMetadata() { return { title: (await getT())("dash.sch.title") }; }
 
 export default async function SchedulePage({ searchParams }: { searchParams: Promise<{ nh?: string; tuan?: string }> }) {
+  const t = await getT();
+  const locale = await getLocale();
   await requireRole(["ADMIN"]);
   const sp = await searchParams;
   const calendars = await loadCalendars();
@@ -20,7 +23,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
   const data = (await getWeekSchedule(cal, week))!;
   return (
     <>
-      <PageHeader title="Lịch công tác tuần" stackActions description={`${weekLabel(cal, week)} · Năm học ${yearLabel(year)}`}
+      <PageHeader title={t("dash.sch.title")} stackActions description={t("dash.sch.desc", { week: weekLabel(cal, week, t("misc.week")), year: yearLabel(year) })}
         actions={<WeekPicker className="" calendars={calendars.some((c) => c.startYear === year) ? calendars : [...calendars, cal].sort((a, b) => b.startYear - a.startYear)} year={year} week={week} />} />
       <ScheduleEditor year={year} week={week} published={data.published} itemCount={data.itemCount} days={data.days} publicHref={`/lich-cong-tac?nh=${year}&tuan=${week}`} />
     </>

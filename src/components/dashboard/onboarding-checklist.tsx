@@ -3,11 +3,13 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Check, X } from "lucide-react";
 import { cn } from "@/utils";
+import { useT } from "@/lib/i18n/client";
 
 export type OnboardingStep = { label: string; hint: string; href: string; done: boolean };
 
 /** Hướng dẫn làm quen cho bí thư mới: các bước đầu tiên, tự đánh dấu hoàn thành theo dữ liệu thật; tự ẩn khi xong hết hoặc khi bấm "Để sau". */
 export function OnboardingChecklist({ userId, title, steps }: { userId: string; title: string; steps: OnboardingStep[] }) {
+  const t = useT();
   const key = `doan:onboarding:${userId}`;
   const [hidden, setHidden] = useState(true); // ẩn cho tới khi biết người dùng đã đóng chưa (tránh nháy)
   useEffect(() => { try { setHidden(localStorage.getItem(key) === "1"); } catch { setHidden(false); } }, [key]);
@@ -16,13 +18,13 @@ export function OnboardingChecklist({ userId, title, steps }: { userId: string; 
   const next = steps.findIndex((s) => !s.done);
   const close = () => { try { localStorage.setItem(key, "1"); } catch { /* bỏ qua */ } setHidden(true); };
   return (
-    <section aria-label="Hướng dẫn làm quen" className="mb-6 rounded-lg border border-primary/30 bg-primary-light/60 p-4">
+    <section aria-label={t("dash.onb.aria")} className="mb-6 rounded-lg border border-primary/30 bg-primary-light/60 p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-[15px] font-semibold text-primary-dark">{title}</h2>
-          <p className="mt-0.5 text-sm text-muted">Làm lần lượt vài bước dưới đây để dùng hệ thống thuận tay. Đã xong {done}/{steps.length} bước.</p>
+          <p className="mt-0.5 text-sm text-muted">{t("dash.onb.desc", { done, total: steps.length })}</p>
         </div>
-        <button type="button" onClick={close} className="flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-[13px] text-muted hover:bg-white/60" title="Ẩn hướng dẫn này"><X className="size-3.5" />Để sau</button>
+        <button type="button" onClick={close} className="flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-[13px] text-muted hover:bg-white/60" title={t("dash.onb.hide")}><X className="size-3.5" />{t("dash.onb.later")}</button>
       </div>
       <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/70"><div className="h-full rounded-full bg-primary transition-all" style={{ width: `${(done / steps.length) * 100}%` }} /></div>
       <ol className="mt-3 grid gap-2 sm:grid-cols-2">

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Select } from "@/components/ui/form";
 import { cn } from "@/utils";
+import { useT } from "@/lib/i18n/client";
 
 export type SettingsItem = { key?: string; label: string; icon?: React.ReactNode; /** Có href: trang quản lý riêng (vẫn hiện trong khung Cài đặt); không có: là một mục ngay trong trang Cài đặt. */ href?: string; hint?: string };
 export type SettingsGroup = { title: string; items: SettingsItem[] };
@@ -11,6 +12,7 @@ const hrefOf = (i: SettingsItem, first: boolean) => i.href ?? (first ? "/setting
 
 /** Điều hướng Cài đặt: cột dọc chia nhóm (máy tính), danh sách chọn (điện thoại). */
 export function SettingsNav({ groups }: { groups: SettingsGroup[] }) {
+  const t = useT();
   const router = useRouter();
   const pathname = usePathname();
   const tabParam = useSearchParams().get("tab");
@@ -24,7 +26,7 @@ export function SettingsNav({ groups }: { groups: SettingsGroup[] }) {
     <>
       {/* điện thoại: một ô chọn gom theo nhóm */}
       <div className="lg:hidden">
-        <Select aria-label="Mục cài đặt" value={active} onChange={(e) => { const v = e.target.value; const item = groups.flatMap((g) => g.items).find((i) => (i.key ?? i.href) === v); if (item) router.push(hrefOf(item, item.key === firstKey)); }}>
+        <Select aria-label={t("ui.st.item")} value={active} onChange={(e) => { const v = e.target.value; const item = groups.flatMap((g) => g.items).find((i) => (i.key ?? i.href) === v); if (item) router.push(hrefOf(item, item.key === firstKey)); }}>
           {groups.map((g) => (
             <optgroup key={g.title} label={g.title}>
               {g.items.map((i) => <option key={i.key ?? i.href} value={i.key ?? i.href}>{i.label}</option>)}
@@ -33,7 +35,7 @@ export function SettingsNav({ groups }: { groups: SettingsGroup[] }) {
         </Select>
       </div>
       {/* máy tính: cột dọc */}
-      <nav aria-label="Cài đặt" className="max-lg:hidden">
+      <nav aria-label={t("ui.st.nav")} className="max-lg:hidden">
         <div className="sticky top-16 max-h-[calc(100dvh-5rem)] space-y-4 overflow-y-auto overscroll-contain rounded-lg border border-border bg-white/85 p-2">
           {groups.map((g) => (
             <div key={g.title}>

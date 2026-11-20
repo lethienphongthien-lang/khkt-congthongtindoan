@@ -1,3 +1,4 @@
+import { getT } from "@/lib/i18n/server";
 import { getEduPolicy } from "@/lib/services/edu-policy";
 import Link from "next/link";
 import { ClickRow } from "@/components/ui/click-row";
@@ -7,17 +8,18 @@ import { requireRole } from "@/lib/auth/session";
 import { pageParam, str } from "@/utils";
 import type { Prisma } from "@prisma/client";
 import { FilterBar } from "@/components/ui/filter-bar";
-import { GRADE_OPTIONS, gradeOf } from "@/lib/member-sort";
+import { gradeOptions, gradeOf } from "@/lib/member-sort";
 import { DataTable, EmptyState, PageHeader, Pagination, Td, Th } from "@/components/ui/misc";
 import { cohortLabel } from "@/lib/school-year";
 import { DeleteDepartmentButton, DepartmentFormButton, SecretaryButton, SyncSchoolYearButton } from "@/components/members/department-actions";
 
-export const metadata = { title: "Chi đoàn" };
+export async function generateMetadata() { const t = await getT(); return { title: t("dept.title") }; }
 
 const PAGE_SIZE = 15;
 
 export default async function DepartmentsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const user = await requireRole(["ADMIN"]);
+  const t = await getT();
   const isAdmin = user.role === "ADMIN";
   const sp = await searchParams;
   const page = pageParam(sp.page);
@@ -50,40 +52,40 @@ export default async function DepartmentsPage({ searchParams }: { searchParams: 
 
   return (
     <>
-      <PageHeader title={isAdmin ? "Chi đoàn" : "Chi đoàn của tôi"} description={isAdmin ? `${totalDepts} Chi đoàn ${graduated ? "đã ra trường" : "đang học"}` : undefined}
+      <PageHeader title={isAdmin ? t("dept.title") : t("dept.mine")} description={isAdmin ? t("dept.count", { n: totalDepts, state: graduated ? t("dept.graduated") : t("dept.studying") }) : undefined}
         actions={isAdmin && <>{policy.placement && <SyncSchoolYearButton />}{policy.classes && <DepartmentFormButton />}</>} />
       {isAdmin && (
         <FilterBar leading={
           <div className="flex gap-1 text-sm">
-            <Link href="/departments" className={`rounded-md px-3 py-2 ${!graduated ? "bg-primary text-white" : "bg-white/85 hover:bg-slate-100"}`}>Đang học</Link>
-            <Link href="/departments?ra_truong=1" className={`rounded-md px-3 py-2 ${graduated ? "bg-primary text-white" : "bg-white/85 hover:bg-slate-100"}`}>Đã ra trường</Link>
+            <Link href="/departments" className={`rounded-md px-3 py-2 ${!graduated ? "bg-primary text-white" : "bg-white/85 hover:bg-slate-100"}`}>{t("dept.tabStudying")}</Link>
+            <Link href="/departments?ra_truong=1" className={`rounded-md px-3 py-2 ${graduated ? "bg-primary text-white" : "bg-white/85 hover:bg-slate-100"}`}>{t("dept.tabGraduated")}</Link>
           </div>
         } fields={[
-          { type: "search", name: "q", placeholder: "Tìm Chi đoàn..." },
-          { type: "select", name: "obj", label: "Đối tượng", options: [{ value: "hs", label: "Học sinh" }, { value: "gv", label: "Giáo viên" }] },
-          { type: "select", name: "khoi", label: "Khối", options: GRADE_OPTIONS },
-          { type: "select", name: "sort", label: "Sắp xếp (mặc định: tên A → Z)", options: [
-            { value: "ten_z", label: "Tên Z → A" }, { value: "sl_giam", label: "Nhiều đoàn viên nhất" }, { value: "sl_tang", label: "Ít đoàn viên nhất" },
-            { value: "khoa_moi", label: "Niên khóa mới nhất" }, { value: "khoa_cu", label: "Niên khóa cũ nhất" }] },
+          { type: "search", name: "q", placeholder: t("dept.searchPh") },
+          { type: "select", name: "obj", label: t("members.f.obj"), options: [{ value: "hs", label: t("members.students") }, { value: "gv", label: t("members.teachers") }] },
+          { type: "select", name: "khoi", label: t("members.f.grade"), options: gradeOptions(t) },
+          { type: "select", name: "sort", label: t("dept.sortLabel"), options: [
+            { value: "ten_z", label: t("dept.sort.zA") }, { value: "sl_giam", label: t("dept.sort.most") }, { value: "sl_tang", label: t("dept.sort.least") },
+            { value: "khoa_moi", label: t("dept.sort.newCohort") }, { value: "khoa_cu", label: t("dept.sort.oldCohort") }] },
         ]} />
       )}
       {departments.length === 0 ? (
-        <div className="rounded-lg border border-border bg-white/85"><EmptyState title="Chưa có Chi đoàn nào" description="Tạo Chi đoàn đầu tiên để bắt đầu thêm đoàn viên." action={isAdmin ? <DepartmentFormButton /> : undefined} /></div>
+        <div className="rounded-lg border border-border bg-white/85"><EmptyState title={t("dept.none")} description={t("dept.noneHint")} action={isAdmin ? <DepartmentFormButton /> : undefined} /></div>
       ) : (
         <>
         <CompactList items={departments.map((d, i) => ({
-          id: d.id, title: `Chi đoàn ${d.name}${d.isTeacher ? " (giáo viên)" : d.startYear ? ` (${cohortLabel(d.startYear)})` : ""}`, subtitle: d.secretary ? `Bí thư: ${d.secretary.fullName}` : graduated ? "Đã ra trường" : "Chưa phân công bí thư", value: `${d._count.members} HS`,
+          id: d.id, title: `${t("dept.chapterName", { name: d.name })}${d.isTeacher ? ` (${t("dept.teacherLc")})` : d.startYear ? ` (${cohortLabel(d.startYear)})` : ""}`, subtitle: d.secretary ? t("dept.secretaryIs", { name: d.secretary.fullName }) : graduated ? t("dept.graduated2") : t("dept.noSecretary"), value: t("dept.hs", { n: d._count.members }),
           href: `/departments/${d.id}`,
         }))} />
         <div className="max-sm:hidden">
         <DataTable>
-          <thead><tr><Th>Chi đoàn</Th><Th>Niên khóa</Th><Th>Bí thư</Th><Th className="text-right">Đoàn viên</Th>{isAdmin && <Th />}</tr></thead>
+          <thead><tr><Th>{t("members.f.dept")}</Th><Th>{t("dept.cohortYears")}</Th><Th>{t("dept.secretary")}</Th><Th className="text-right">{t("members.doanVien")}</Th>{isAdmin && <Th />}</tr></thead>
           <tbody>
             {departments.map((d, i) => (
               <ClickRow key={d.id} href={`/departments/${d.id}`}>
-                <Td><Link href={`/departments/${d.id}`} className="font-medium text-primary hover:underline">{d.name}</Link>{d.isTeacher && <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-medium text-amber-800">Giáo viên</span>}</Td>
+                <Td><Link href={`/departments/${d.id}`} className="font-medium text-primary hover:underline">{d.name}</Link>{d.isTeacher && <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-medium text-amber-800">{t("members.teachers")}</span>}</Td>
                 <Td className="whitespace-nowrap">{d.isTeacher ? "—" : cohortLabel(d.startYear) || "—"}</Td>
-                <Td>{d.secretary ? d.secretary.fullName : <span className="text-muted">Chưa phân công</span>}</Td>
+                <Td>{d.secretary ? d.secretary.fullName : <span className="text-muted">{t("dept.unassigned")}</span>}</Td>
                 <Td className="text-right tabular-nums">{d._count.members}</Td>
                 {isAdmin && (
                   <Td className="text-right whitespace-nowrap">

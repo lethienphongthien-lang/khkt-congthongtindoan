@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { formatDateTime } from "@/utils";
 import { MessageSquare, Send, Trash2, User } from "lucide-react";
+import { useT } from "@/lib/i18n/client";
 import { addForumCommentAction, deleteForumCommentAction, type ForumCommentDTO } from "@/actions/forum";
 
 export function ForumDiscussion({
@@ -14,6 +15,7 @@ export function ForumDiscussion({
   initialComments: ForumCommentDTO[];
   currentUser?: { fullName: string; role: string } | null;
 }) {
+  const t = useT();
   const [comments, setComments] = useState<ForumCommentDTO[]>(initialComments);
   const [content, setContent] = useState("");
   const [name, setName] = useState("");
@@ -34,35 +36,35 @@ export function ForumDiscussion({
         if (res.data) setComments((prev) => [...prev, res.data!]);
         setContent("");
       } else {
-        setError(res.error || "Không thể gửi bình luận lúc này.");
+        setError(res.error || t("community.fd.errSend"));
       }
     } catch {
-      setError("Lỗi kết nối. Vui lòng thử lại sau.");
+      setError(t("community.fd.errConn"));
     } finally {
       setBusy(false);
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Bạn có chắc chắn muốn xóa ý kiến này?")) return;
+    if (!confirm(t("community.fd.confirmDelete"))) return;
     try {
       const res = await deleteForumCommentAction(id);
       if (res.ok) {
         setComments((prev) => prev.filter((c) => c.id !== id));
       } else {
-        alert(res.error || "Không thể xóa bình luận.");
+        alert(res.error || t("community.fd.errDelete"));
       }
     } catch {
-      alert("Lỗi kết nối khi xóa bình luận.");
+      alert(t("community.fd.errDeleteConn"));
     }
   }
 
   return (
-    <section className="mt-8 rounded-xl border border-border bg-white/90 p-5 shadow-xs sm:p-6" aria-label="Mục thảo luận">
+    <section className="mt-8 rounded-xl border border-border bg-white/90 p-5 shadow-xs sm:p-6" aria-label={t("community.fd.section")}>
       <div className="flex items-center gap-2 border-b border-border pb-3">
         <MessageSquare className="size-5 text-primary" />
         <h2 className="text-lg font-bold text-slate-800">
-          Khu vực Thảo luận <span className="text-sm font-normal text-muted">({comments.length} ý kiến)</span>
+          {t("community.fd.heading")} <span className="text-sm font-normal text-muted">({t("community.fd.opinions", { n: comments.length })})</span>
         </h2>
       </div>
 
@@ -75,7 +77,7 @@ export function ForumDiscussion({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Tên của bạn hoặc Chi đoàn (tùy chọn)"
+              placeholder={t("community.fd.namePh")}
               maxLength={50}
               className="w-full max-w-xs rounded-md border border-slate-300 px-3 py-1.5 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             />
@@ -89,7 +91,7 @@ export function ForumDiscussion({
             maxLength={1000}
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Chia sẻ quan điểm, ý kiến hoặc câu hỏi của bạn về chủ đề này..."
+            placeholder={t("community.fd.contentPh")}
             className="w-full rounded-lg border border-slate-300 p-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </div>
@@ -97,14 +99,14 @@ export function ForumDiscussion({
         {error && <p className="text-xs text-rose-600">{error}</p>}
 
         <div className="flex items-center justify-between">
-          <span className="text-[11px] text-muted">Hãy thảo luận văn minh, tôn trọng người khác.</span>
+          <span className="text-[11px] text-muted">{t("community.fd.civil")}</span>
           <button
             type="submit"
             disabled={busy || content.trim().length < 2}
             className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-primary-dark disabled:opacity-50"
           >
             <Send className="size-3.5" />
-            {busy ? "Đang gửi..." : "Gửi ý kiến"}
+            {busy ? t("community.sending") : t("community.fd.submit")}
           </button>
         </div>
       </form>
@@ -113,7 +115,7 @@ export function ForumDiscussion({
       <div className="mt-6 space-y-3.5 divide-y divide-slate-100">
         {comments.length === 0 ? (
           <div className="py-6 text-center text-xs text-muted">
-            Chưa có ý kiến thảo luận nào. Hãy là người đầu tiên chia sẻ góc nhìn của bạn!
+            {t("community.fd.empty")}
           </div>
         ) : (
           comments.map((c) => (
@@ -127,7 +129,7 @@ export function ForumDiscussion({
                   <button
                     type="button"
                     onClick={() => handleDelete(c.id)}
-                    title="Xóa bình luận này"
+                    title={t("community.fd.deleteTitle")}
                     className="rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
                   >
                     <Trash2 className="size-3.5" />

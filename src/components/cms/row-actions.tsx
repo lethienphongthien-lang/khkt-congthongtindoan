@@ -1,4 +1,5 @@
 "use client";
+import { useT } from "@/lib/i18n/client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Pencil, Trash2 } from "lucide-react";
@@ -10,18 +11,20 @@ import { StatusBadge } from "@/components/ui/misc";
 import { reportResult } from "@/components/ui/submit";
 
 export function ArticleStatus({ published, pending }: { published: boolean; pending?: boolean }) {
-  return <StatusBadge tone={published ? "green" : pending ? "amber" : "gray"}>{published ? "Hiển thị" : pending ? "Chờ duyệt" : "Nháp"}</StatusBadge>;
+  const t = useT();
+  return <StatusBadge tone={published ? "green" : pending ? "amber" : "gray"}>{published ? t("cms.ra.shown") : pending ? t("cms.ra.pending") : t("cms.ra.draft")}</StatusBadge>;
 }
 
 export function ArticleRowActions({ id, published, base, backToList, ownerOnly }: { id: string; published: boolean; base: string; backToList?: boolean; ownerOnly?: boolean }) {
   const router = useRouter();
+  const t = useT();
   return (
     <span className="inline-flex items-center gap-1">
-      {!ownerOnly && <ConfirmButton triggerVariant="ghost" triggerLabel={published ? "Ẩn bài" : "Hiển thị bài"} trigger={published ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-        title={published ? "Ẩn bài viết?" : "Hiển thị bài viết?"} description={published ? "Bài sẽ không còn hiện trên trang công khai." : "Bài sẽ hiện công khai ngay."} confirmLabel={published ? "Ẩn" : "Hiển thị"}
+      {!ownerOnly && <ConfirmButton triggerVariant="ghost" triggerLabel={published ? t("cms.ra.hidePost") : t("cms.ra.showPost")} trigger={published ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+        title={published ? t("cms.ra.hideTitle") : t("cms.ra.showTitle")} description={published ? t("cms.ra.hideDesc") : t("cms.ra.showDesc")} confirmLabel={published ? t("cms.ra.hide") : t("cms.ra.shown")}
         onConfirm={async () => { reportResult(await setArticlePublishedAction(id, !published)); router.refresh(); }} />}
-      <Link href={`${base}/${id}/edit`} className={buttonClass("ghost", "sm")} aria-label="Sửa"><Pencil className="size-3.5" /></Link>
-      <ConfirmButton triggerVariant="ghost" triggerClassName="text-danger" triggerLabel="Xóa" trigger={<Trash2 className="size-3.5" />} title="Xóa bài viết?" danger confirmLabel="Xóa"
+      <Link href={`${base}/${id}/edit`} className={buttonClass("ghost", "sm")} aria-label={t("cms.c.edit")}><Pencil className="size-3.5" /></Link>
+      <ConfirmButton triggerVariant="ghost" triggerClassName="text-danger" triggerLabel={t("cms.c.delete")} trigger={<Trash2 className="size-3.5" />} title={t("cms.ra.delArticle")} danger confirmLabel={t("cms.c.delete")}
         onConfirm={async () => { reportResult(await deleteArticleAction(id)); if (backToList) router.push(base); else router.refresh(); }} />
     </span>
   );
@@ -29,10 +32,11 @@ export function ArticleRowActions({ id, published, base, backToList, ownerOnly }
 
 export function ReportRowActions({ id, backToList }: { id: string; backToList?: boolean }) {
   const router = useRouter();
+  const t = useT();
   return (
     <span className="inline-flex items-center gap-1">
-      <Link href={`/chapter-reports/${id}/edit`} className={buttonClass("ghost", "sm")} aria-label="Sửa"><Pencil className="size-3.5" /></Link>
-      <ConfirmButton triggerVariant="ghost" triggerClassName="text-danger" triggerLabel="Xóa" trigger={<Trash2 className="size-3.5" />} title="Xóa báo cáo?" danger confirmLabel="Xóa"
+      <Link href={`/chapter-reports/${id}/edit`} className={buttonClass("ghost", "sm")} aria-label={t("cms.c.edit")}><Pencil className="size-3.5" /></Link>
+      <ConfirmButton triggerVariant="ghost" triggerClassName="text-danger" triggerLabel={t("cms.c.delete")} trigger={<Trash2 className="size-3.5" />} title={t("cms.ra.delReport")} danger confirmLabel={t("cms.c.delete")}
         onConfirm={async () => { reportResult(await deleteReportAction(id)); if (backToList) router.push("/chapter-reports"); else router.refresh(); }} />
     </span>
   );

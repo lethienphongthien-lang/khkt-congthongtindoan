@@ -1,3 +1,4 @@
+import type { MessageKey } from "@/lib/i18n/translate";
 /** Cấu hình các trường của hồ sơ đoàn viên chi tiết (theo mẫu Sổ đoàn viên điện tử): dùng chung cho form, trang xem và kiểm tra dữ liệu. */
 export type DetailKey =
   | "ethnicity" | "religion" | "idNumber" | "idIssuedAt" | "idIssuedPlace" | "phone" | "email" | "occupation"
@@ -38,3 +39,8 @@ export const DETAIL_GROUPS: DetailGroup[] = [
   ] },
 ];
 export const ALL_DETAIL_FIELDS = DETAIL_GROUPS.flatMap((g) => g.fields);
+
+/** Nhãn đã dịch của trường / nhóm (khóa `members.df.<key>`, `members.dg.<n>`); giá trị lưu trong DB giữ nguyên tiếng Việt. */
+export const detailLabel = (t: (k: MessageKey) => string, f: DetailField) => t(`members.df.${f.key}` as MessageKey);
+export const groupTitle = (t: (k: MessageKey) => string, g: DetailGroup) => t(`members.dg.${DETAIL_GROUPS.indexOf(g)}` as MessageKey);
+export const groupNote = (t: (k: MessageKey) => string, g: DetailGroup) => (g.note ? t(`members.dgnote.${DETAIL_GROUPS.indexOf(g)}` as MessageKey) : undefined);

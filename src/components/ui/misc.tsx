@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, Inbox } from "lucide-react";
 import { cn, initials } from "@/utils";
 import { buttonClass } from "./button";
+import { getT } from "@/lib/i18n/server";
 import { ResponsiveTable } from "./responsive-table";
 
 const tones = {
@@ -106,9 +107,10 @@ export const Td = ({ children, className, colSpan }: { children?: React.ReactNod
   <td colSpan={colSpan} className={cn("border-b border-border px-4 py-2.5 align-middle", className)}>{children}</td>
 );
 
-export function Pagination({ page, pageSize, total, basePath, params }: {
+export async function Pagination({ page, pageSize, total, basePath, params }: {
   page: number; pageSize: number; total: number; basePath: string; params: Record<string, string | undefined>;
 }) {
+  const t = await getT();
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const href = (p: number) => {
     const sp = new URLSearchParams();
@@ -130,12 +132,12 @@ export function Pagination({ page, pageSize, total, basePath, params }: {
     <div className="pager mt-3 flex items-center justify-between text-[13px] text-muted">
       <span>{from}–{Math.min(page * pageSize, total)} / {total}</span>
       <div className="flex items-center gap-1">
-        {page > 1 ? <Link href={href(page - 1)} aria-label="Trang trước" className={idle}><ChevronLeft className="size-4" /></Link>
+        {page > 1 ? <Link href={href(page - 1)} aria-label={t("ui.prevPage")} className={idle}><ChevronLeft className="size-4" /></Link>
           : <span className={off}><ChevronLeft className="size-4" /></span>}
         {items.map((n, i) => n === "gap" ? <span key={`g${i}`} className="px-1">…</span>
           : n === page ? <span key={n} aria-current="page" className={`${box} border-primary bg-primary font-semibold text-white`}>{n}</span>
           : <Link key={n} href={href(n)} className={idle}>{n}</Link>)}
-        {page < pages ? <Link href={href(page + 1)} aria-label="Trang sau" className={idle}><ChevronRight className="size-4" /></Link>
+        {page < pages ? <Link href={href(page + 1)} aria-label={t("ui.nextPage")} className={idle}><ChevronRight className="size-4" /></Link>
           : <span className={off}><ChevronRight className="size-4" /></span>}
       </div>
     </div>

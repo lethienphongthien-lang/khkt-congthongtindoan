@@ -1,3 +1,4 @@
+import { getT } from "@/lib/i18n/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ExternalLink, MessageSquare, Pencil, Trash2 } from "lucide-react";
@@ -12,6 +13,7 @@ import { Attachments } from "@/components/public/attachments";
 import { deleteForumCommentAction, getForumComments } from "@/actions/forum";
 
 export default async function CmsForumDetail({ params }: { params: Promise<{ id: string }> }) {
+  const t = await getT();
   const user = await requireRole(["ADMIN", "SECRETARY"]);
   const isAdmin = user.role === "ADMIN";
   const { id } = await params;
@@ -31,17 +33,17 @@ export default async function CmsForumDetail({ params }: { params: Promise<{ id:
     <div className="space-y-6">
       <PageHeader
         title={a.title}
-        description={`Đăng bởi ${a.author?.fullName ?? "—"} · ${formatDate(a.publishedAt ?? a.createdAt)} · ${a.viewCount} lượt xem · ${comments.length} thảo luận`}
+        description={t("cms.fo.detailDesc", { who: a.author?.fullName ?? "—", d: formatDate(a.publishedAt ?? a.createdAt), v: a.viewCount, c: comments.length })}
         stackActions
         actions={
           <div className="flex items-center gap-2">
             <Link href={`/dien-dan/${a.slug}`} target="_blank" className={buttonClass("secondary")}>
               <ExternalLink className="size-4" />
-              <span className="max-sm:hidden">Xem trang công khai</span>
+              <span className="max-sm:hidden">{t("cms.k.viewPublic")}</span>
             </Link>
             <Link href={`/cms/dien-dan/${a.id}/edit`} className={buttonClass("secondary")}>
               <Pencil className="size-4" />
-              Sửa bài
+              {t("cms.fo.editPost")}
             </Link>
             {(isAdmin || !a.published) && (
               <ArticleRowActions id={a.id} published={a.published} base="/cms/dien-dan" backToList ownerOnly={!isAdmin} />
@@ -69,13 +71,13 @@ export default async function CmsForumDetail({ params }: { params: Promise<{ id:
         <div className="mb-4 flex items-center gap-2 border-b border-border pb-3">
           <MessageSquare className="size-5 text-primary" />
           <h2 className="text-base font-bold text-slate-800">
-            Ý kiến thảo luận của học sinh ({comments.length})
+            {t("cms.fo.commentsOf", { n: comments.length })}
           </h2>
         </div>
 
         {comments.length === 0 ? (
           <p className="py-4 text-center text-xs text-muted">
-            Chưa có ý kiến thảo luận nào trong chủ đề này.
+            {t("cms.fo.noComments")}
           </p>
         ) : (
           <div className="divide-y divide-slate-100">
@@ -97,7 +99,7 @@ export default async function CmsForumDetail({ params }: { params: Promise<{ id:
                   >
                     <button
                       type="submit"
-                      title="Xóa bình luận này"
+                      title={t("cms.fo.delThis")}
                       className="rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
                     >
                       <Trash2 className="size-4" />

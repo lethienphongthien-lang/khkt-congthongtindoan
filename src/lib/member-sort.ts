@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import type { MessageKey } from "@/lib/i18n/translate";
 
 /** Các tiêu chí sắp xếp danh sách thành viên (dùng chung cho trang Đoàn viên & thanh niên và trang Chi đoàn). */
 export const MEMBER_SORTS: { value: string; label: string }[] = [
@@ -23,6 +24,10 @@ export function memberOrderBy(sort: string | undefined, fallback: Prisma.MemberO
     default: return fallback;
   }
 }
+
+/** Tùy chọn sắp xếp đã dịch (giá trị giữ nguyên, nhãn theo ngôn ngữ). */
+export const sortOptions = (t: (k: MessageKey) => string) => MEMBER_SORTS.map((s) => ({ value: s.value, label: t(`members.sort.${s.value}` as MessageKey) }));
+export const gradeOptions = (t: (k: MessageKey, p?: Record<string, string | number>) => string) => GRADE_OPTIONS.map((g) => ({ value: g.value, label: t("members.gradeN", { n: g.value }) }));
 
 /** Khối lớp lọc theo tên Chi đoàn (10A1 -> khối 10). */
 export const GRADE_OPTIONS = [{ value: "10", label: "Khối 10" }, { value: "11", label: "Khối 11" }, { value: "12", label: "Khối 12" }];

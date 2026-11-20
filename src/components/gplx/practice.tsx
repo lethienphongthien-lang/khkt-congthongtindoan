@@ -5,6 +5,7 @@ import { ArrowRight, Bike, Bookmark, BookmarkCheck, Bus, Car, Check, CheckCircle
 import data from "@/data/gplx-600.json";
 import { Confetti, useSound } from "@/components/games/quiz-player";
 import { cn } from "@/utils";
+import { useT } from "@/lib/i18n/client";
 
 type Q = { number: number; chapter: number; text: string; options: string[]; correct: number; images: string[]; critical: boolean; forA: boolean; forB1: boolean };
 const ALL = data as Q[];
@@ -12,22 +13,22 @@ const BY_NUM = new Map(ALL.map((q) => [q.number, q]));
 
 const LETTER_COLORS = ["bg-sky-500", "bg-emerald-500", "bg-amber-500", "bg-rose-500"];
 const CHAPTERS = [
-  { id: 1, name: "Quy định chung và quy tắc giao thông", icon: ScrollText, grad: "from-sky-500 to-blue-600" },
-  { id: 2, name: "Văn hóa giao thông, đạo đức, PCCC, cứu hộ", icon: Handshake, grad: "from-emerald-500 to-green-600" },
-  { id: 3, name: "Kỹ thuật lái xe", icon: Car, grad: "from-amber-400 to-orange-500" },
-  { id: 4, name: "Cấu tạo và sửa chữa", icon: Wrench, grad: "from-violet-500 to-purple-600" },
-  { id: 5, name: "Báo hiệu đường bộ", icon: TrafficCone, grad: "from-rose-500 to-pink-600" },
-  { id: 6, name: "Giải thế sa hình, xử lý tình huống", icon: Route, grad: "from-cyan-500 to-teal-600" },
-];
+  { id: 1, name: "community.gp.ch1", icon: ScrollText, grad: "from-sky-500 to-blue-600" },
+  { id: 2, name: "community.gp.ch2", icon: Handshake, grad: "from-emerald-500 to-green-600" },
+  { id: 3, name: "community.gp.ch3", icon: Car, grad: "from-amber-400 to-orange-500" },
+  { id: 4, name: "community.gp.ch4", icon: Wrench, grad: "from-violet-500 to-purple-600" },
+  { id: 5, name: "community.gp.ch5", icon: TrafficCone, grad: "from-rose-500 to-pink-600" },
+  { id: 6, name: "community.gp.ch6", icon: Route, grad: "from-cyan-500 to-teal-600" },
+] as const;
 
 /** Cấu trúc đề theo Công văn 2262/CSGT-P5: số câu mỗi chương [1..6], chưa tính 1 câu điểm liệt riêng. Mô tô: 1 câu "kỹ thuật lái xe hoặc cấu tạo sửa chữa" lấy ở chương 3. */
 const EXAMS = [
-  { id: "A", label: "Hạng A1, A", sub: "Mô tô", n: 25, icon: Bike, grad: "from-amber-400 to-orange-500", pool: "forA", parts: [8, 1, 1, 0, 8, 6] },
-  { id: "B1", label: "Hạng B1", sub: "Mô tô", n: 25, icon: Motorbike, grad: "from-orange-500 to-red-500", pool: "forB1", parts: [8, 1, 1, 0, 8, 6] },
-  { id: "B", label: "Hạng B", sub: "Ô tô", n: 30, icon: Car, grad: "from-sky-500 to-blue-600", pool: "all", parts: [8, 1, 1, 1, 9, 9] },
-  { id: "C1", label: "Hạng C1", sub: "Ô tô tải nhẹ", n: 35, icon: Van, grad: "from-emerald-500 to-green-600", pool: "all", parts: [10, 1, 2, 1, 10, 10] },
-  { id: "C", label: "Hạng C", sub: "Ô tô tải", n: 40, icon: Truck, grad: "from-violet-500 to-purple-600", pool: "all", parts: [10, 1, 2, 1, 14, 11] },
-  { id: "D", label: "Hạng D, D1, D2, BE, CE…", sub: "Ô tô khách, đầu kéo", n: 45, icon: Bus, grad: "from-rose-500 to-pink-600", pool: "all", parts: [10, 1, 2, 1, 16, 14] },
+  { id: "A", label: "community.gp.lA", sub: "community.gp.sA", n: 25, icon: Bike, grad: "from-amber-400 to-orange-500", pool: "forA", parts: [8, 1, 1, 0, 8, 6] },
+  { id: "B1", label: "community.gp.lB1", sub: "community.gp.sB1", n: 25, icon: Motorbike, grad: "from-orange-500 to-red-500", pool: "forB1", parts: [8, 1, 1, 0, 8, 6] },
+  { id: "B", label: "community.gp.lB", sub: "community.gp.sB", n: 30, icon: Car, grad: "from-sky-500 to-blue-600", pool: "all", parts: [8, 1, 1, 1, 9, 9] },
+  { id: "C1", label: "community.gp.lC1", sub: "community.gp.sC1", n: 35, icon: Van, grad: "from-emerald-500 to-green-600", pool: "all", parts: [10, 1, 2, 1, 10, 10] },
+  { id: "C", label: "community.gp.lC", sub: "community.gp.sC", n: 40, icon: Truck, grad: "from-violet-500 to-purple-600", pool: "all", parts: [10, 1, 2, 1, 14, 11] },
+  { id: "D", label: "community.gp.lD", sub: "community.gp.sD", n: 45, icon: Bus, grad: "from-rose-500 to-pink-600", pool: "all", parts: [10, 1, 2, 1, 16, 14] },
 ] as const;
 
 function shuffle<T>(a: T[]): T[] {
@@ -74,54 +75,55 @@ type Session = { title: string; icon: LucideIcon; grad: string; mode: "study" | 
 
 // ===== Trang chọn =====
 function Home({ progress, onStart }: { progress: Progress; onStart: (s: Session) => void }) {
+  const t = useT();
   const wrong = Object.entries(progress.done).filter(([, ok]) => !ok).map(([n]) => BY_NUM.get(+n)!).filter(Boolean);
   const flagged = progress.flags.map((n) => BY_NUM.get(n)!).filter(Boolean);
   const doneCount = Object.keys(progress.done).length;
   const rightCount = Object.values(progress.done).filter(Boolean).length;
   const study = (title: string, icon: LucideIcon, grad: string, qs: Q[], desc: string) => qs.length && onStart({ title, icon, grad, mode: "study", qs: shuffle(qs), desc });
-  const examSession = (e: (typeof EXAMS)[number]): Session => ({ title: `Thi thử ${e.label}`, icon: e.icon, grad: e.grad, mode: "exam", qs: buildExam(e.id), desc: `${e.n} câu ngẫu nhiên đúng cấu trúc đề của Cục Cảnh sát giao thông, trong đó có 1 câu điểm liệt.`, retry: () => examSession(e) });
+  const examSession = (e: (typeof EXAMS)[number]): Session => ({ title: t("community.gp.examTitle", { label: t(e.label) }), icon: e.icon, grad: e.grad, mode: "exam", qs: buildExam(e.id), desc: t("community.gp.examDesc", { n: e.n }), retry: () => examSession(e) });
   return (
     <div className="space-y-5">
       <div className="overflow-hidden rounded-xl bg-gradient-to-br from-primary-dark to-primary p-4 text-white shadow-sm">
         <div className="flex items-end justify-between gap-3">
           <div>
-            <div className="text-sm opacity-90">Tiến độ của bạn</div>
-            <div className="text-3xl font-extrabold">{doneCount}<span className="text-lg font-semibold opacity-80">/600 câu đã làm</span></div>
+            <div className="text-sm opacity-90">{t("community.gp.progress")}</div>
+            <div className="text-3xl font-extrabold">{doneCount}<span className="text-lg font-semibold opacity-80">/600 {t("community.gp.doneSuffix")}</span></div>
           </div>
-          <div className="text-right text-sm"><div className="flex items-center justify-end gap-1"><CheckCircle2 className="size-4" />Đúng {rightCount}</div><div className="flex items-center justify-end gap-1"><XCircle className="size-4" />Sai {doneCount - rightCount}</div></div>
+          <div className="text-right text-sm"><div className="flex items-center justify-end gap-1"><CheckCircle2 className="size-4" />{t("community.gp.right", { n: rightCount })}</div><div className="flex items-center justify-end gap-1"><XCircle className="size-4" />{t("community.gp.wrong", { n: doneCount - rightCount })}</div></div>
         </div>
         <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/25"><div className="h-full rounded-full bg-[#ffd400]" style={{ width: `${doneCount / 6}%` }} /></div>
-        <div className="mt-1.5 text-xs opacity-80">Tiến độ được lưu ngay trên thiết bị này.</div>
+        <div className="mt-1.5 text-xs opacity-80">{t("community.gp.saved")}</div>
       </div>
 
       <section>
-        <SectionTitle icon={ClipboardCheck} text="Thi thử theo hạng" />
+        <SectionTitle icon={ClipboardCheck} text={t("community.gp.secExam")} />
         <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
           {EXAMS.map((e) => (
             <button key={e.id} onClick={() => onStart(examSession(e))} className="group flex flex-col overflow-hidden rounded border border-border bg-white/90 text-left transition-shadow hover:shadow-md">
-              <div className={cn("flex items-center gap-2 bg-gradient-to-br px-3 py-3 text-white", e.grad)}><e.icon className="size-8" /><span className="text-xs opacity-90">{e.sub}</span></div>
-              <div className="p-2.5"><div className="text-sm leading-tight font-bold group-hover:text-primary">{e.label}</div><div className="text-xs text-muted">{e.n} câu · có điểm liệt</div></div>
+              <div className={cn("flex items-center gap-2 bg-gradient-to-br px-3 py-3 text-white", e.grad)}><e.icon className="size-8" /><span className="text-xs opacity-90">{t(e.sub)}</span></div>
+              <div className="p-2.5"><div className="text-sm leading-tight font-bold group-hover:text-primary">{t(e.label)}</div><div className="text-xs text-muted">{t("community.gp.examMeta", { n: e.n })}</div></div>
             </button>
           ))}
         </div>
       </section>
 
       <section>
-        <SectionTitle icon={Layers} text="Ôn theo chương" />
+        <SectionTitle icon={Layers} text={t("community.gp.secChapter")} />
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {CHAPTERS.map((c) => {
             const qs = ALL.filter((q) => q.chapter === c.id);
             const done = qs.filter((q) => q.number in progress.done).length;
             const right = qs.filter((q) => progress.done[q.number]).length;
             return (
-              <button key={c.id} onClick={() => study(`Chương ${c.id}: ${c.name}`, c.icon, c.grad, qs, `${qs.length} câu của chương. Chọn đáp án là biết đúng sai ngay, có thể đánh dấu câu khó và quay lại câu trước.`)}
+              <button key={c.id} onClick={() => study(t("community.gp.chapterTitle", { id: c.id, name: t(c.name) }), c.icon, c.grad, qs, t("community.gp.chapterDesc", { n: qs.length }))}
                 className="group flex flex-col overflow-hidden rounded border border-border bg-white/90 text-left transition-shadow hover:shadow-md">
                 <div className={cn("flex items-center gap-3 bg-gradient-to-br px-3 py-4 text-white", c.grad)}>
                   <c.icon className="size-10 shrink-0" />
-                  <div className="min-w-0"><div className="text-xs opacity-90">Chương {c.id}</div><div className="line-clamp-2 leading-tight font-bold">{c.name}</div></div>
+                  <div className="min-w-0"><div className="text-xs opacity-90">{t("community.gp.chapterN", { id: c.id })}</div><div className="line-clamp-2 leading-tight font-bold">{t(c.name)}</div></div>
                 </div>
                 <div className="p-2.5">
-                  <div className="flex justify-between text-xs text-muted"><span>{qs.length} câu</span><span>Làm {done} · đúng {right}</span></div>
+                  <div className="flex justify-between text-xs text-muted"><span>{t("community.gp.nQ", { n: qs.length })}</span><span>{t("community.gp.doneRight", { done, right })}</span></div>
                   <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100"><div className="flex h-full"><div className="bg-emerald-500" style={{ width: `${(right / qs.length) * 100}%` }} /><div className="bg-rose-400" style={{ width: `${((done - right) / qs.length) * 100}%` }} /></div></div>
                 </div>
               </button>
@@ -131,12 +133,12 @@ function Home({ progress, onStart }: { progress: Progress; onStart: (s: Session)
       </section>
 
       <section>
-        <SectionTitle icon={Zap} text="Ôn nhanh" />
+        <SectionTitle icon={Zap} text={t("community.gp.secQuick")} />
         <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-          <Quick icon={Flame} title="60 câu điểm liệt" sub="Sai là rớt ngay" grad="from-red-500 to-rose-600" onClick={() => study("60 câu điểm liệt", Flame, "from-red-500 to-rose-600", ALL.filter((q) => q.critical), "Nhóm câu tình huống mất an toàn giao thông nghiêm trọng. Mỗi đề thi có 1 câu, sai là không đạt.")} />
-          <Quick icon={Dices} title="Ngẫu nhiên 20 câu" sub="Luyện nhanh" grad="from-sky-500 to-blue-600" onClick={() => study("Ngẫu nhiên 20 câu", Dices, "from-sky-500 to-blue-600", shuffle(ALL).slice(0, 20), "20 câu bất kỳ trong bộ 600 câu.")} />
-          <Quick icon={Bookmark} title="Câu đã đánh dấu" sub={`${flagged.length} câu`} grad="from-amber-400 to-orange-500" disabled={!flagged.length} onClick={() => study("Câu đã đánh dấu", Bookmark, "from-amber-400 to-orange-500", flagged, "Những câu bạn đã đánh dấu để ôn lại.")} />
-          <Quick icon={XCircle} title="Câu làm sai" sub={`${wrong.length} câu`} grad="from-slate-500 to-slate-700" disabled={!wrong.length} onClick={() => study("Câu làm sai", XCircle, "from-slate-500 to-slate-700", wrong, "Những câu lần làm gần nhất của bạn bị sai.")} />
+          <Quick icon={Flame} title={t("community.gp.critT")} sub={t("community.gp.critS")} grad="from-red-500 to-rose-600" onClick={() => study(t("community.gp.critT"), Flame, "from-red-500 to-rose-600", ALL.filter((q) => q.critical), t("community.gp.critD"))} />
+          <Quick icon={Dices} title={t("community.gp.randT")} sub={t("community.gp.randS")} grad="from-sky-500 to-blue-600" onClick={() => study(t("community.gp.randT"), Dices, "from-sky-500 to-blue-600", shuffle(ALL).slice(0, 20), t("community.gp.randD"))} />
+          <Quick icon={Bookmark} title={t("community.gp.flagT")} sub={t("community.gp.nQ", { n: flagged.length })} grad="from-amber-400 to-orange-500" disabled={!flagged.length} onClick={() => study(t("community.gp.flagT"), Bookmark, "from-amber-400 to-orange-500", flagged, t("community.gp.flagD"))} />
+          <Quick icon={XCircle} title={t("community.gp.wrongT")} sub={t("community.gp.nQ", { n: wrong.length })} grad="from-slate-500 to-slate-700" disabled={!wrong.length} onClick={() => study(t("community.gp.wrongT"), XCircle, "from-slate-500 to-slate-700", wrong, t("community.gp.wrongD"))} />
         </div>
       </section>
     </div>
@@ -158,6 +160,7 @@ function Quick({ icon: Icon, title, sub, grad, onClick, disabled }: { icon: Luci
 
 // ===== Làm bài: từng câu một =====
 function Player({ session, progress, update, onExit, onRetry }: { session: Session; progress: Progress; update: (fn: (p: Progress) => Progress) => void; onExit: () => void; onRetry: (() => void) | null }) {
+  const t = useT();
   const { qs, mode } = session;
   const sound = useSound();
   const startAt = mode === "study" ? Math.max(0, qs.findIndex((x) => !(x.number in progress.done))) : 0;
@@ -205,7 +208,7 @@ function Player({ session, progress, update, onExit, onRetry }: { session: Sessi
     const failedNow = mode === "exam" && qs.some((x) => x.critical && ans[x.number] !== x.correct);
     if (!failedNow && okCount / qs.length >= 0.6) sound.win(); else sound.lose();
   };
-  const askFinish = () => { const left = qs.length - Object.keys(ans).length; if (left === 0 || confirm(`Còn ${left} câu chưa làm. Vẫn nộp bài?`)) { setGrid(false); finish(); } };
+  const askFinish = () => { const left = qs.length - Object.keys(ans).length; if (left === 0 || confirm(t("community.gp.confirmSubmit", { n: left }))) { setGrid(false); finish(); } };
   const next = () => {
     if (idx < qs.length - 1) setIdx(idx + 1);
     else if (review) setPhase("done"), setReview(false);
@@ -240,24 +243,24 @@ function Player({ session, progress, update, onExit, onRetry }: { session: Sessi
         <div className={cn("bg-gradient-to-br px-6 py-8 text-center text-white", session.grad)}>
           <session.icon className="mx-auto size-16" />
           <h2 className="mt-2 text-2xl font-bold">{session.title}</h2>
-          <p className="mt-1 text-sm opacity-90">{mode === "exam" ? "Thi thử" : "Ôn tập"}</p>
+          <p className="mt-1 text-sm opacity-90">{mode === "exam" ? t("community.gp.modeExam") : t("community.gp.modeStudy")}</p>
         </div>
         <div className="space-y-3 p-5 text-sm">
           <p className="text-slate-700">{session.desc}</p>
           <ul className="grid grid-cols-3 gap-2 text-center">
-            <li className="rounded-lg bg-slate-50 p-2"><div className="text-lg font-bold">{qs.length}</div><div className="text-xs text-muted">câu hỏi</div></li>
-            <li className="rounded-lg bg-slate-50 p-2"><div className="text-lg font-bold text-red-600">{critCount}</div><div className="text-xs text-muted">câu điểm liệt</div></li>
-            <li className="rounded-lg bg-slate-50 p-2"><div className="text-lg font-bold">{mode === "exam" ? "Nộp bài" : "Ngay"}</div><div className="text-xs text-muted">{mode === "exam" ? "mới biết kết quả" : "biết đúng sai"}</div></li>
+            <li className="rounded-lg bg-slate-50 p-2"><div className="text-lg font-bold">{qs.length}</div><div className="text-xs text-muted">{t("community.gp.questions")}</div></li>
+            <li className="rounded-lg bg-slate-50 p-2"><div className="text-lg font-bold text-red-600">{critCount}</div><div className="text-xs text-muted">{t("community.gp.critQ")}</div></li>
+            <li className="rounded-lg bg-slate-50 p-2"><div className="text-lg font-bold">{mode === "exam" ? t("community.gp.submit") : t("community.gp.instant")}</div><div className="text-xs text-muted">{mode === "exam" ? t("community.gp.afterSubmit") : t("community.gp.knowRight")}</div></li>
           </ul>
           <ul className="list-disc space-y-1 pl-5 text-slate-600">
-            <li>Câu hỏi hiện <b>lần lượt từng câu</b>, có thể <b>quay lại câu trước</b> và <b>đánh dấu</b> câu khó.</li>
-            {mode === "exam" ? <li>Được đổi đáp án đến khi nộp bài. <b>Sai câu điểm liệt là không đạt.</b></li> : <li>Phím tắt: 1 đến 4 chọn đáp án, Enter sang câu tiếp.</li>}
-            {startAt > 0 && <li className="font-medium text-amber-700">Bạn đã làm {startAt} câu đầu: bấm tiếp tục để làm từ câu {startAt + 1}.</li>}
+            <li>{t("community.gp.i1a")} <b>{t("community.gp.i1b")}</b>{t("community.gp.i1c")} <b>{t("community.gp.i1d")}</b> {t("community.gp.i1e")} <b>{t("community.gp.i1f")}</b> {t("community.gp.i1g")}</li>
+            {mode === "exam" ? <li>{t("community.gp.i2a")} <b>{t("community.gp.i2b")}</b></li> : <li>{t("community.gp.shortcut")}.</li>}
+            {startAt > 0 && <li className="font-medium text-amber-700">{t("community.gp.resume", { a: startAt, b: startAt + 1 })}</li>}
           </ul>
           <button onClick={() => setPhase("play")} className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary text-base font-bold text-white shadow hover:bg-primary-dark">
-            {startAt > 0 ? "Tiếp tục" : "Bắt đầu"} <ArrowRight className="size-5" />
+            {startAt > 0 ? t("community.gp.continue") : t("community.gp.start")} <ArrowRight className="size-5" />
           </button>
-          <button onClick={onExit} className="block w-full text-center text-sm text-muted hover:text-primary">← Chọn bài khác</button>
+          <button onClick={onExit} className="block w-full text-center text-sm text-muted hover:text-primary">{t("community.gp.pickOther")}</button>
         </div>
       </div>
     );
@@ -269,7 +272,7 @@ function Player({ session, progress, update, onExit, onRetry }: { session: Sessi
     const stars = pct >= 0.9 ? 3 : pct >= 0.6 ? 2 : pct > 0 ? 1 : 0;
     const failed = mode === "exam" && critFail;
     const ResultIcon = failed ? Frown : pct >= 0.8 ? Trophy : pct >= 0.5 ? PartyPopper : Dumbbell;
-    const msg = failed ? "Sai câu điểm liệt, bài thi không đạt" : pct === 1 ? "Xuất sắc! Điểm tuyệt đối!" : pct >= 0.8 ? "Giỏi quá, gần như hoàn hảo!" : pct >= 0.6 ? "Khá lắm, cố gắng thêm chút nữa!" : "Đừng nản, xem lại các câu sai rồi thử lại nhé!";
+    const msg = failed ? t("community.gp.mFail") : pct === 1 ? t("community.qp.m1") : pct >= 0.8 ? t("community.qp.m2") : pct >= 0.6 ? t("community.qp.m3") : t("community.gp.mLow");
     return (
       <div className="g-pop mx-auto max-w-xl space-y-3">
         {pct >= 0.6 && !failed && <Confetti />}
@@ -280,19 +283,19 @@ function Player({ session, progress, update, onExit, onRetry }: { session: Sessi
             <div className="mt-2 flex justify-center gap-1">{[0, 1, 2].map((i) => <Star key={i} className={cn("size-8", i < stars ? "fill-[#ffd400] text-[#ffd400]" : "opacity-30")} />)}</div>
           </div>
           <div className="grid grid-cols-3 divide-x divide-border border-b border-border text-center">
-            <div className="p-3"><div className="text-2xl font-bold text-primary-dark">{right}/{qs.length}</div><div className="text-xs text-muted">câu đúng</div></div>
-            <div className="p-3"><div className="flex items-center justify-center gap-1 text-2xl font-bold text-orange-500"><Flame className="size-6" />{best}</div><div className="text-xs text-muted">chuỗi đúng dài nhất</div></div>
-            <div className="p-3"><div className="text-2xl font-bold text-slate-700">{mode === "exam" ? `${mm}:${ss}` : qs.length - doneCount}</div><div className="text-xs text-muted">{mode === "exam" ? "thời gian làm bài" : "câu bỏ qua"}</div></div>
+            <div className="p-3"><div className="text-2xl font-bold text-primary-dark">{right}/{qs.length}</div><div className="text-xs text-muted">{t("community.qp.correct")}</div></div>
+            <div className="p-3"><div className="flex items-center justify-center gap-1 text-2xl font-bold text-orange-500"><Flame className="size-6" />{best}</div><div className="text-xs text-muted">{t("community.qp.bestStreak")}</div></div>
+            <div className="p-3"><div className="text-2xl font-bold text-slate-700">{mode === "exam" ? `${mm}:${ss}` : qs.length - doneCount}</div><div className="text-xs text-muted">{mode === "exam" ? t("community.gp.time") : t("community.gp.skipped")}</div></div>
           </div>
           <div className="space-y-3 p-4">
-            {mode === "exam" && !failed && <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">Bạn không sai câu điểm liệt. Hãy đối chiếu số câu đúng tối thiểu theo quy định cho hạng giấy phép của bạn.</p>}
-            <p className="text-xs text-muted">Bấm số câu để xem lại. Xanh là đúng, đỏ là sai, xám là chưa làm, chấm vàng là câu đã đánh dấu.</p>
+            {mode === "exam" && !failed && <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">{t("community.gp.noCritFail")}</p>}
+            <p className="text-xs text-muted">{t("community.gp.legend")}</p>
             <Navigator qs={qs} ans={ans} idx={-1} flagged={flagged} showResult onPick={(i) => { setIdx(i); setReview(true); setPhase("play"); }} />
           </div>
           <div className="flex flex-wrap gap-2 border-t border-border p-4">
-            <button onClick={() => { setIdx(0); setReview(true); setPhase("play"); }} className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-medium text-white hover:bg-primary-dark">Xem lại bài làm</button>
-            {onRetry && <button onClick={onRetry} className="inline-flex h-10 items-center rounded-md border border-border px-4 text-sm hover:bg-slate-50">Làm đề khác</button>}
-            <button onClick={onExit} className="inline-flex h-10 items-center rounded-md border border-border px-4 text-sm hover:bg-slate-50">Về trang chọn</button>
+            <button onClick={() => { setIdx(0); setReview(true); setPhase("play"); }} className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-medium text-white hover:bg-primary-dark">{t("community.gp.review")}</button>
+            {onRetry && <button onClick={onRetry} className="inline-flex h-10 items-center rounded-md border border-border px-4 text-sm hover:bg-slate-50">{t("community.gp.another")}</button>}
+            <button onClick={onExit} className="inline-flex h-10 items-center rounded-md border border-border px-4 text-sm hover:bg-slate-50">{t("community.gp.backHome")}</button>
           </div>
         </div>
       </div>
@@ -305,33 +308,33 @@ function Player({ session, progress, update, onExit, onRetry }: { session: Sessi
     // Điện thoại: toàn màn hình như app (che thanh trang, chân trang, thanh dưới); màn lớn: nằm trong trang
     <div ref={root} className="fixed inset-0 z-[60] space-y-3 overflow-y-auto bg-background px-3 pb-28 lg:static lg:z-auto lg:overflow-visible lg:bg-transparent lg:p-0 lg:pb-0">
       <div className="sticky top-0 z-10 -mx-3 flex items-center gap-3 border-b border-border bg-background px-3 py-2 pt-[calc(0.5rem+env(safe-area-inset-top))] lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:p-0">
-        <button onClick={() => (review ? (setReview(false), setPhase("done")) : confirm("Thoát? Bài đang làm sẽ không được lưu lại (tiến độ các câu đã trả lời vẫn giữ).") && onExit())} aria-label="Thoát" className="rounded-md p-2 text-slate-500 hover:bg-slate-100"><X className="size-5" /></button>
+        <button onClick={() => (review ? (setReview(false), setPhase("done")) : confirm(t("community.gp.confirmExit")) && onExit())} aria-label={t("community.gp.exit")} className="rounded-md p-2 text-slate-500 hover:bg-slate-100"><X className="size-5" /></button>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2 text-sm">
-            <span className="flex min-w-0 items-center gap-1.5 truncate font-semibold"><session.icon className="size-4 shrink-0" />{review ? "Xem lại · " : ""}<span className="truncate">{session.title}</span></span>
-            <span className="shrink-0 text-muted">Câu {idx + 1}/{qs.length}</span>
+            <span className="flex min-w-0 items-center gap-1.5 truncate font-semibold"><session.icon className="size-4 shrink-0" />{review ? `${t("community.gp.reviewPrefix")} · ` : ""}<span className="truncate">{session.title}</span></span>
+            <span className="shrink-0 text-muted">{t("community.qp.qOf", { i: idx + 1, total: qs.length })}</span>
           </div>
           {qs.length <= 60 ? (
             <div className="mt-1.5 flex gap-1">{qs.map((x, i) => {
               const a = ans[x.number], st = a === undefined ? "" : (mode === "study" || review) ? (a === x.correct ? "ok" : "bad") : "picked";
-              return <button key={x.number} onClick={() => setIdx(i)} aria-label={`Tới câu ${i + 1}`} className={cn("h-2 flex-1 rounded-full", st === "ok" ? "bg-emerald-500" : st === "bad" ? "bg-rose-400" : st === "picked" ? "bg-primary/60" : "bg-slate-200", i === idx && "ring-2 ring-primary ring-offset-1")} />;
+              return <button key={x.number} onClick={() => setIdx(i)} aria-label={t("community.gp.goTo", { n: i + 1 })} className={cn("h-2 flex-1 rounded-full", st === "ok" ? "bg-emerald-500" : st === "bad" ? "bg-rose-400" : st === "picked" ? "bg-primary/60" : "bg-slate-200", i === idx && "ring-2 ring-primary ring-offset-1")} />;
             })}</div>
           ) : <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-primary transition-all" style={{ width: `${((idx + 1) / qs.length) * 100}%` }} /></div>}
         </div>
-        {mode === "study" && streak >= 2 && <span key={streak} title={`${streak} câu đúng liên tiếp`} className="g-pop flex shrink-0 items-center gap-0.5 rounded-full bg-orange-500 px-2.5 py-1 text-sm font-bold text-white tabular-nums"><Flame className="size-4" />{streak}</span>}
+        {mode === "study" && streak >= 2 && <span key={streak} title={t("community.qp.streak", { n: streak })} className="g-pop flex shrink-0 items-center gap-0.5 rounded-full bg-orange-500 px-2.5 py-1 text-sm font-bold text-white tabular-nums"><Flame className="size-4" />{streak}</span>}
         {mode === "exam" && !review && <span className="flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-sm font-bold tabular-nums"><Clock className="size-4" />{mm}:{ss}</span>}
-        <button onClick={() => setGrid(true)} aria-label="Danh sách câu" className="rounded-md lg:hidden p-2 text-slate-500 hover:bg-slate-100"><Grid3x3 className="size-5" /></button>
-        <button onClick={sound.toggle} aria-label={sound.on ? "Tắt âm thanh" : "Bật âm thanh"} className="rounded-md p-2 text-slate-500 hover:bg-slate-100">{sound.on ? <Volume2 className="size-5" /> : <VolumeX className="size-5" />}</button>
+        <button onClick={() => setGrid(true)} aria-label={t("community.gp.list")} className="rounded-md lg:hidden p-2 text-slate-500 hover:bg-slate-100"><Grid3x3 className="size-5" /></button>
+        <button onClick={sound.toggle} aria-label={sound.on ? t("community.qp.soundOff") : t("community.qp.soundOn")} className="rounded-md p-2 text-slate-500 hover:bg-slate-100">{sound.on ? <Volume2 className="size-5" /> : <VolumeX className="size-5" />}</button>
       </div>
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
       <div className="space-y-3">
       <div key={q.number} className={cn("g-slide rounded-xl border border-border bg-white p-4 shadow-sm lg:p-6", mode === "study" && answered && !isOk && "g-shake")}>
         <div className="mb-2 flex items-center gap-2 text-xs lg:shrink-0">
-          <span className="text-muted">Mã câu {q.number}</span>
-          {q.critical && <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 font-bold text-red-700"><Flame className="size-3" />Điểm liệt</span>}
+          <span className="text-muted">{t("community.gp.code", { n: q.number })}</span>
+          {q.critical && <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 font-bold text-red-700"><Flame className="size-3" />{t("community.gp.critical")}</span>}
           <button onClick={() => toggleFlag(q.number)} className={cn("ml-auto flex items-center gap-1 rounded-full border px-2.5 py-1 font-semibold", flagged(q.number) ? "border-amber-500 bg-amber-50 text-amber-700" : "border-border text-slate-600 hover:bg-slate-50")}>
-            {flagged(q.number) ? <BookmarkCheck className="size-4" /> : <Bookmark className="size-4" />}{flagged(q.number) ? "Đã đánh dấu" : "Đánh dấu"}
+            {flagged(q.number) ? <BookmarkCheck className="size-4" /> : <Bookmark className="size-4" />}{flagged(q.number) ? t("community.gp.flagged") : t("community.gp.flag")}
           </button>
         </div>
         <h3 className="text-lg leading-snug font-semibold lg:text-xl">{q.text}</h3>
@@ -339,7 +342,7 @@ function Player({ session, progress, update, onExit, onRetry }: { session: Sessi
         {q.images.length > 0 && <div className="space-y-2">
         {q.images.map((f) => (
           // eslint-disable-next-line @next/next/no-img-element -- ảnh tĩnh webp
-          <img key={f} src={`/gplx/${f}`} alt={`Hình minh họa câu ${q.number}`} className="mx-auto max-h-72 w-full rounded-lg object-contain lg:max-h-80" />
+          <img key={f} src={`/gplx/${f}`} alt={t("community.gp.imgAlt", { n: q.number })} className="mx-auto max-h-72 w-full rounded-lg object-contain lg:max-h-80" />
         ))}
         </div>}
         <div className="mt-4 lg:mt-0">
@@ -364,9 +367,9 @@ function Player({ session, progress, update, onExit, onRetry }: { session: Sessi
         {showAnswer && (
           <div className={cn("g-pop mt-4 rounded-lg border p-3", !answered ? "border-slate-200 bg-slate-50" : isOk ? "border-emerald-200 bg-emerald-50" : "border-rose-200 bg-rose-50")}>
             <div className={cn("flex items-center gap-2 text-base font-bold", !answered ? "text-slate-700" : isOk ? "text-emerald-700" : "text-rose-700")}>
-              {!answered ? <>Bạn chưa trả lời câu này</> : isOk ? <><PartyPopper className="size-5" />Chính xác!</> : <><X className="size-5" />Chưa đúng</>}
+              {!answered ? <>{t("community.gp.unanswered")}</> : isOk ? <><PartyPopper className="size-5" />{t("community.qp.right")}</> : <><X className="size-5" />{t("community.qp.wrong")}</>}
             </div>
-            {!isOk && <p className="mt-1 text-sm text-slate-700">Đáp án đúng: <b>{q.correct + 1}. {q.options[q.correct]}</b></p>}
+            {!isOk && <p className="mt-1 text-sm text-slate-700">{t("community.qp.correctAnswer")} <b>{q.correct + 1}. {q.options[q.correct]}</b></p>}
           </div>
         )}
         </div>
@@ -374,28 +377,28 @@ function Player({ session, progress, update, onExit, onRetry }: { session: Sessi
       </div>
 
       <div className="fixed inset-x-0 bottom-0 z-[61] flex gap-2 border-t border-border bg-background px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] lg:static lg:z-auto lg:mx-0 lg:border-0 lg:bg-transparent lg:p-0">
-        <button disabled={idx === 0} onClick={() => setIdx(idx - 1)} className="flex h-12 items-center justify-center gap-1 rounded-lg border-2 border-slate-200 bg-white px-4 font-bold disabled:opacity-40"><ChevronLeft className="size-5" />Câu trước</button>
+        <button disabled={idx === 0} onClick={() => setIdx(idx - 1)} className="flex h-12 items-center justify-center gap-1 rounded-lg border-2 border-slate-200 bg-white px-4 font-bold disabled:opacity-40"><ChevronLeft className="size-5" />{t("community.gp.prev")}</button>
         <button onClick={next} className={cn("flex h-12 flex-1 items-center justify-center gap-2 rounded-lg font-bold text-white hover:opacity-95", mode === "study" && !review && !answered ? "bg-slate-400" : "bg-primary")}>
-          {idx < qs.length - 1 ? (mode === "study" && !review && !answered ? "Bỏ qua câu này" : "Câu tiếp theo") : review ? "Về kết quả" : mode === "study" ? "Xem kết quả" : "Danh sách và nộp bài"} <ArrowRight className="size-5" />
+          {idx < qs.length - 1 ? (mode === "study" && !review && !answered ? t("community.gp.skip") : t("community.qp.nextQ")) : review ? t("community.gp.toResult") : mode === "study" ? t("community.qp.seeResult") : t("community.gp.listAndSubmit")} <ArrowRight className="size-5" />
         </button>
       </div>
-      {mode === "study" && !review && <p className="hidden text-center text-xs text-muted lg:block">Phím tắt: 1 đến 4 chọn đáp án, Enter sang câu tiếp</p>}
+      {mode === "study" && !review && <p className="hidden text-center text-xs text-muted lg:block">{t("community.gp.shortcut")}</p>}
       </div>
       <aside className="sticky top-4 hidden rounded-xl border border-border bg-white p-4 shadow-sm lg:block">
-        <h3 className="mb-3 text-sm font-bold text-primary-dark">Danh sách câu ({doneCount}/{qs.length} đã làm)</h3>
+        <h3 className="mb-3 text-sm font-bold text-primary-dark">{t("community.gp.listCount", { a: doneCount, b: qs.length })}</h3>
         <div className="max-h-[55vh] overflow-y-auto overscroll-contain p-1"><Navigator qs={qs} ans={ans} idx={idx} flagged={flagged} showResult={review || mode === "study"} onPick={setIdx} cols="grid-cols-5" /></div>
-        {mode === "exam" && !review && <button onClick={askFinish} className="mt-4 h-11 w-full rounded-lg bg-emerald-600 font-bold text-white hover:bg-emerald-700">Nộp bài</button>}
-        {mode === "study" && !review && <button onClick={finish} className="mt-4 h-11 w-full rounded-lg border-2 border-slate-200 font-bold hover:bg-slate-50">Kết thúc và xem kết quả</button>}
+        {mode === "exam" && !review && <button onClick={askFinish} className="mt-4 h-11 w-full rounded-lg bg-emerald-600 font-bold text-white hover:bg-emerald-700">{t("community.gp.submit")}</button>}
+        {mode === "study" && !review && <button onClick={finish} className="mt-4 h-11 w-full rounded-lg border-2 border-slate-200 font-bold hover:bg-slate-50">{t("community.gp.finish")}</button>}
       </aside>
       </div>
 
       {grid && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center" onClick={() => setGrid(false)}>
           <div className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white p-4 sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-3 flex items-center justify-between"><h3 className="font-bold text-primary-dark">Danh sách câu hỏi ({doneCount}/{qs.length} đã làm)</h3><button onClick={() => setGrid(false)} aria-label="Đóng"><X className="size-5" /></button></div>
+            <div className="mb-3 flex items-center justify-between"><h3 className="font-bold text-primary-dark">{t("community.gp.listQ", { a: doneCount, b: qs.length })}</h3><button onClick={() => setGrid(false)} aria-label={t("community.chat.close")}><X className="size-5" /></button></div>
             <Navigator qs={qs} ans={ans} idx={idx} flagged={flagged} showResult={review || mode === "study"} onPick={(i) => { setIdx(i); setGrid(false); }} />
-            {mode === "exam" && !review && <button onClick={askFinish} className="mt-4 h-12 w-full rounded-lg bg-emerald-600 font-bold text-white hover:bg-emerald-700">Nộp bài</button>}
-            {mode === "study" && !review && <button onClick={() => { setGrid(false); finish(); }} className="mt-4 h-12 w-full rounded-lg border-2 border-slate-200 font-bold">Kết thúc và xem kết quả</button>}
+            {mode === "exam" && !review && <button onClick={askFinish} className="mt-4 h-12 w-full rounded-lg bg-emerald-600 font-bold text-white hover:bg-emerald-700">{t("community.gp.submit")}</button>}
+            {mode === "study" && !review && <button onClick={() => { setGrid(false); finish(); }} className="mt-4 h-12 w-full rounded-lg border-2 border-slate-200 font-bold">{t("community.gp.finish")}</button>}
           </div>
         </div>
       )}

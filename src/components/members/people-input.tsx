@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import { useT } from "@/lib/i18n/client";
 import { Textarea } from "@/components/ui/form";
 import { cn } from "@/utils";
 
@@ -19,6 +20,7 @@ export function parseLines(text: string): string[] {
  * "Đoàn viên / Thanh niên". Trả về hai danh sách (đoàn viên, thanh niên) cho máy chủ.
  */
 export function PeopleInput({ onChange, className, split, columns }: { onChange: (v: { doan: string; youth: string; total: number }) => void; className?: string; /** Rộng: nhập bên trái, danh sách bên phải. */ split?: boolean; /** Trả hai cột (nhập, danh sách) trực tiếp vào lưới của phần tử cha. */ columns?: boolean }) {
+  const t = useT();
   const [text, setText] = useState("");
   const [defaultDoan, setDefaultDoan] = useState(true);
   const [overrides, setOverrides] = useState<Record<string, boolean>>({}); // họ tên (chữ thường) -> true: đoàn viên
@@ -34,21 +36,21 @@ export function PeopleInput({ onChange, className, split, columns }: { onChange:
   return (
     <div className={cn(columns ? "contents" : split ? "grid gap-3 md:grid-cols-2" : "space-y-2", className)}>
       <div className="space-y-1">
-        {columns && <div className="text-[13px] font-medium">Họ tên học sinh <span className="font-normal text-muted">(không bắt buộc)</span></div>}
-        <Textarea value={text} onChange={(e) => setText(e.target.value)} className={wide ? "h-[42vh] min-h-72 resize-none" : "min-h-32"} placeholder={"Nguyễn Văn An\nTrần Thị Bình\nLê Văn Cường"} />
-        <p className="text-xs text-muted">Mỗi dòng một họ tên. Có thể dán từ Excel hoặc Word.</p>
+        {columns && <div className="text-[13px] font-medium">{t("pi.names")} <span className="font-normal text-muted">({t("pi.optional")})</span></div>}
+        <Textarea value={text} onChange={(e) => setText(e.target.value)} className={wide ? "h-[42vh] min-h-72 resize-none" : "min-h-32"} placeholder={t("pi.ph")} />
+        <p className="text-xs text-muted">{t("pi.hint")}</p>
       </div>
       <div className="min-w-0 space-y-2">
-        {columns && <div className="text-[13px] font-medium">Phân loại từng người</div>}
+        {columns && <div className="text-[13px] font-medium">{t("pi.classify")}</div>}
         {names.length === 0 ? (
-          <div className="flex h-full min-h-24 items-center justify-center rounded-lg border border-dashed border-border bg-slate-50/60 p-4 text-center text-sm text-muted">Danh sách sẽ hiện ở đây. Mỗi người có nút gạt Đoàn viên / Thanh niên.</div>
+          <div className="flex h-full min-h-24 items-center justify-center rounded-lg border border-dashed border-border bg-slate-50/60 p-4 text-center text-sm text-muted">{t("pi.empty")}</div>
         ) : (
           <>
-            <div className="text-sm font-medium"><span className="text-emerald-700">{doan.length} đoàn viên</span> · <span className="text-amber-700">{youth.length} thanh niên</span></div>
+            <div className="text-sm font-medium"><span className="text-emerald-700">{t("pi.nDoan", { n: doan.length })}</span> · <span className="text-amber-700">{t("mt.nYouth", { n: youth.length })}</span></div>
             <div className="flex flex-wrap items-center gap-1.5 text-xs">
-              <span className="text-muted">Đặt cả danh sách là:</span>
-              <button type="button" onClick={() => { setDefaultDoan(true); setOverrides({}); }} className={cn("rounded-full border px-2.5 py-0.5", doan.length === names.length ? "border-emerald-600 bg-emerald-600 text-white" : "border-border hover:bg-slate-50")}>Tất cả đoàn viên</button>
-              <button type="button" onClick={() => { setDefaultDoan(false); setOverrides({}); }} className={cn("rounded-full border px-2.5 py-0.5", youth.length === names.length ? "border-amber-500 bg-amber-500 text-white" : "border-border hover:bg-slate-50")}>Tất cả thanh niên</button>
+              <span className="text-muted">{t("pi.setAll")}</span>
+              <button type="button" onClick={() => { setDefaultDoan(true); setOverrides({}); }} className={cn("rounded-full border px-2.5 py-0.5", doan.length === names.length ? "border-emerald-600 bg-emerald-600 text-white" : "border-border hover:bg-slate-50")}>{t("pi.allDoan")}</button>
+              <button type="button" onClick={() => { setDefaultDoan(false); setOverrides({}); }} className={cn("rounded-full border px-2.5 py-0.5", youth.length === names.length ? "border-amber-500 bg-amber-500 text-white" : "border-border hover:bg-slate-50")}>{t("pi.allYouth")}</button>
             </div>
             <ul className={cn("divide-y divide-border overflow-y-auto rounded-lg border border-border bg-white", wide ? "max-h-[42vh]" : "max-h-64")}>
               {names.map((n, i) => {
@@ -58,14 +60,14 @@ export function PeopleInput({ onChange, className, split, columns }: { onChange:
                     <span className="w-6 shrink-0 text-right text-xs text-muted">{i + 1}</span>
                     <span className="min-w-0 flex-1 truncate">{n}</span>
                     <span className="inline-flex shrink-0 overflow-hidden rounded-md border border-border text-xs font-medium">
-                      <button type="button" onClick={() => setOverrides({ ...overrides, [n.toLowerCase()]: true })} className={cn("px-2 py-1", d ? "bg-emerald-600 text-white" : "bg-white text-slate-500 hover:bg-slate-50")}>Đoàn viên</button>
-                      <button type="button" onClick={() => setOverrides({ ...overrides, [n.toLowerCase()]: false })} className={cn("px-2 py-1", !d ? "bg-amber-500 text-white" : "bg-white text-slate-500 hover:bg-slate-50")}>Thanh niên</button>
+                      <button type="button" onClick={() => setOverrides({ ...overrides, [n.toLowerCase()]: true })} className={cn("px-2 py-1", d ? "bg-emerald-600 text-white" : "bg-white text-slate-500 hover:bg-slate-50")}>{t("members.doanVien")}</button>
+                      <button type="button" onClick={() => setOverrides({ ...overrides, [n.toLowerCase()]: false })} className={cn("px-2 py-1", !d ? "bg-amber-500 text-white" : "bg-white text-slate-500 hover:bg-slate-50")}>{t("members.youth")}</button>
                     </span>
                   </li>
                 );
               })}
             </ul>
-            <p className="text-xs text-muted">Thanh niên là học sinh chưa vào Đoàn, vẫn có tài khoản và dùng được hệ thống. Khi được kết nạp, Admin bấm “Kết nạp vào Đoàn” ở hồ sơ.</p>
+            <p className="text-xs text-muted">{t("pi.youthNote")}</p>
           </>
         )}
       </div>

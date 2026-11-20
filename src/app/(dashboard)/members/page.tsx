@@ -1,3 +1,5 @@
+import { getLocale, getT } from "@/lib/i18n/server";
+import { intlLocale } from "@/lib/i18n/format";
 import { getEduPolicy } from "@/lib/services/edu-policy";
 import Link from "next/link";
 import { ClickRow } from "@/components/ui/click-row";
@@ -13,15 +15,16 @@ import { Avatar, DataTable, EmptyState, PageHeader, Pagination, Stat, Td, Th } f
 import { ActionsMenu } from "@/components/ui/actions-menu";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { MemberTable } from "@/components/members/member-table";
-import { GRADE_OPTIONS, MEMBER_SORTS, gradeOf, memberOrderBy } from "@/lib/member-sort";
+import { gradeOptions, sortOptions, gradeOf, memberOrderBy } from "@/lib/member-sort";
 import { ImportMembersButton } from "@/components/members/import-members";
 import { inOrder, memberIdsByName } from "@/lib/services/member-name-sort";
 
-export const metadata = { title: "Đoàn viên & thanh niên" };
+export async function generateMetadata() { const t = await getT(); return { title: t("members.title") }; }
 const PAGE_SIZE = 15;
 
 export default async function MembersPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const user = await requireRole(["ADMIN", "SECRETARY", "DEPARTMENT_ACCOUNT"]);
+  const t = await getT(), nf = intlLocale(await getLocale());
   const sp = await searchParams;
   const q = str(sp.q), dept = str(sp.dept), cohort = str(sp.cohort), status = str(sp.status), kind = str(sp.kind), khoi = gradeOf(str(sp.khoi)), sort = str(sp.sort), obj = str(sp.obj) === "gv" ? "gv" : str(sp.obj) === "hs" ? "hs" : "";
   const page = pageParam(sp.page);
@@ -59,42 +62,42 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   return (
     <>
       <PageHeader
-        title="Đoàn viên & thanh niên"
-        description={user.role !== "ADMIN" ? `Đoàn viên và thanh niên Chi đoàn ${user.departmentName}` : undefined}
+        title={t("members.title")}
+        description={user.role !== "ADMIN" ? t("members.titleOf", { name: user.departmentName ?? "" }) : undefined}
         actions={user.role === "ADMIN" && (
           <ActionsMenu>
-            <a href={`/api/members/export${exportQuery}`} className={buttonClass("secondary")}><Download className="size-4" />Xuất<span className="max-sm:hidden"> Excel</span></a>
+            <a href={`/api/members/export${exportQuery}`} className={buttonClass("secondary")}><Download className="size-4" />{t("members.export")}<span className="max-sm:hidden"> Excel</span></a>
             {policy.profiles && policy.placement && <ImportMembersButton />}
-            {policy.profiles && policy.placement && <Link href="/members/new" className={buttonClass()}><Plus className="size-4" />Thêm<span className="max-sm:hidden"> thành viên</span></Link>}
+            {policy.profiles && policy.placement && <Link href="/members/new" className={buttonClass()}><Plus className="size-4" />{t("members.add")}<span className="max-sm:hidden"> {t("members.addMember")}</span></Link>}
           </ActionsMenu>
         )}
       />
       <div className="mb-4 grid max-w-md grid-cols-3 gap-6">
-        <Stat label={obj === "gv" ? "Giáo viên" : "Học sinh"} value={scopeTotal.toLocaleString("vi-VN")} />
-        <Stat label="Đoàn viên" value={scopeDoanVien.toLocaleString("vi-VN")} />
-        <Stat label={obj === "gv" ? "Chưa vào Đoàn" : "Thanh niên"} value={(scopeTotal - scopeDoanVien).toLocaleString("vi-VN")} />
+        <Stat label={obj === "gv" ? t("members.teachers") : t("members.students")} value={scopeTotal.toLocaleString(nf)} />
+        <Stat label={t("members.doanVien")} value={scopeDoanVien.toLocaleString(nf)} />
+        <Stat label={obj === "gv" ? t("members.notJoined") : t("members.youth")} value={(scopeTotal - scopeDoanVien).toLocaleString(nf)} />
       </div>
       <FilterBar oneRow slotId={user.role === "ADMIN" ? "member-select-slot" : undefined} fields={[
-        { type: "search", name: "q", placeholder: "Tìm theo tên hoặc mã..." },
-        ...(user.role === "ADMIN" ? [{ type: "select" as const, name: "obj", label: "Đối tượng", options: [{ value: "hs", label: "Học sinh" }, { value: "gv", label: "Giáo viên" }] }] : []),
-        ...(user.role === "ADMIN" ? [{ type: "select" as const, name: "dept", label: "Chi đoàn", options: departments.map((d) => ({ value: d.id, label: d.name })) }] : []),
-        ...(user.role === "ADMIN" ? [{ type: "select" as const, name: "khoi", label: "Khối", options: GRADE_OPTIONS }] : []),
-        { type: "select", name: "kind", label: "Loại", options: [{ value: "doanvien", label: "Đoàn viên" }, { value: "thanhnien", label: "Thanh niên (chưa vào Đoàn)" }] },
-        { type: "select", name: "cohort", label: "Khóa", options: cohorts.filter((c) => c.cohort).map((c) => ({ value: String(c.cohort), label: `Khóa ${c.cohort}` })) },
-        { type: "select", name: "status", label: "Trạng thái", options: [
-          { value: "ACTIVE", label: "Đang sinh hoạt" }, { value: "TRANSFERRED", label: "Đã chuyển sinh hoạt" },
-          { value: "GRADUATED", label: "Đã ra trường" }, { value: "LOCKED", label: "Tài khoản bị khóa" }] },
-        { type: "select", name: "sort", label: "Sắp xếp", options: MEMBER_SORTS },
+        { type: "search", name: "q", placeholder: t("members.searchPh") },
+        ...(user.role === "ADMIN" ? [{ type: "select" as const, name: "obj", label: t("members.f.obj"), options: [{ value: "hs", label: t("members.students") }, { value: "gv", label: t("members.teachers") }] }] : []),
+        ...(user.role === "ADMIN" ? [{ type: "select" as const, name: "dept", label: t("members.f.dept"), options: departments.map((d) => ({ value: d.id, label: d.name })) }] : []),
+        ...(user.role === "ADMIN" ? [{ type: "select" as const, name: "khoi", label: t("members.f.grade"), options: gradeOptions(t) }] : []),
+        { type: "select", name: "kind", label: t("members.f.kind"), options: [{ value: "doanvien", label: t("members.doanVien") }, { value: "thanhnien", label: t("members.f.kindYouth") }] },
+        { type: "select", name: "cohort", label: t("members.f.cohort"), options: cohorts.filter((c) => c.cohort).map((c) => ({ value: String(c.cohort), label: t("members.f.cohortN", { n: c.cohort ?? "" }) })) },
+        { type: "select", name: "status", label: t("members.f.status"), options: [
+          { value: "ACTIVE", label: t("members.st.ACTIVE") }, { value: "TRANSFERRED", label: t("members.st.TRANSFERRED") },
+          { value: "GRADUATED", label: t("members.st.GRADUATED") }, { value: "LOCKED", label: t("members.st.LOCKED") }] },
+        { type: "select", name: "sort", label: t("members.f.sort"), options: sortOptions(t) },
       ]} />
       {members.length === 0 ? (
-        <div className="rounded-lg border border-border bg-white/85"><EmptyState title={q || dept || cohort || status || kind || khoi ? "Không có ai khớp bộ lọc" : "Chưa có thành viên nào"} description={q || dept || cohort || status || kind || khoi ? "Thử đổi hoặc bỏ bớt bộ lọc." : user.role === "ADMIN" ? "Thêm thành viên đầu tiên, hoặc nhập cả danh sách từ Excel ở nút “Nhập” phía trên." : "Chi đoàn của bạn chưa có thành viên."}
-          action={q || dept || cohort || status || kind || khoi ? <Link href="/members" className={buttonClass("secondary")}>Xóa bộ lọc</Link> : user.role === "ADMIN" ? <Link href="/members/new" className={buttonClass()}>Thêm thành viên đầu tiên</Link> : undefined} /></div>
+        <div className="rounded-lg border border-border bg-white/85"><EmptyState title={q || dept || cohort || status || kind || khoi ? t("members.noMatch") : t("members.none")} description={q || dept || cohort || status || kind || khoi ? t("members.tryFilters") : user.role === "ADMIN" ? t("members.noneAdminHint") : t("members.noneChapterHint")}
+          action={q || dept || cohort || status || kind || khoi ? <Link href="/members" className={buttonClass("secondary")}>{t("members.clearFilters")}</Link> : user.role === "ADMIN" ? <Link href="/members/new" className={buttonClass()}>{t("members.addFirst")}</Link> : undefined} /></div>
       ) : (
         <>
         <CompactList items={members.map((m) => ({
           id: m.id, title: m.fullName, subtitle: `${m.code} · ${m.department.name}`, leading: <Avatar name={m.fullName} src={m.avatarUrl} size={28} />,
-          href: `/members/${m.id}`, hrefLabel: "Xem hồ sơ",
-          details: [["Mã đoàn viên", m.code], ["Chi đoàn", m.department.name], ["Ngày vào Đoàn", m.isDoanVien ? formatDate(m.joinedAt) : "Chưa vào Đoàn"]],
+          href: `/members/${m.id}`, hrefLabel: t("members.viewProfile"),
+          details: [[t("members.code"), m.code], [t("members.f.dept"), m.department.name], [t("members.joinedAt"), m.isDoanVien ? formatDate(m.joinedAt) : t("members.notJoined")]],
         }))} />
         <div className="max-sm:hidden">
         <MemberTable canManage={user.role === "ADMIN"} canDelete={policy.profiles} showDepartment allItems={allItems} rows={members.map((m) => ({

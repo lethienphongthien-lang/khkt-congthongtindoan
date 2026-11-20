@@ -1,3 +1,4 @@
+import { getT } from "@/lib/i18n/server";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth/session";
@@ -8,6 +9,7 @@ import { ArticleForm } from "@/components/cms/forms";
 export const maxDuration = 60;
 
 export default async function EditForumTopicPage({ params }: { params: Promise<{ id: string }> }) {
+  const t = await getT();
   const user = await requireRole(["ADMIN", "SECRETARY"]);
   const isAdmin = user.role === "ADMIN";
   const { id } = await params;
@@ -28,7 +30,7 @@ export default async function EditForumTopicPage({ params }: { params: Promise<{
 
   return (
     <>
-      <PageHeader title="Sửa chủ đề diễn đàn" description={a.title} />
+      <PageHeader title={t("cms.fo.editTitle")} description={a.title} />
       <ArticleForm
         id={a.id}
         draftOnly={!isAdmin}

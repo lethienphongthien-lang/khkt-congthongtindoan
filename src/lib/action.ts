@@ -2,6 +2,8 @@ import "server-only";
 import { ForbiddenError } from "@/lib/permissions";
 import { ZodError } from "zod";
 import { EDU_LABEL, type EduDomain } from "@/lib/edu-policy-types";
+import { getT as getReqT } from "@/lib/i18n/server";
+import { makeT } from "@/lib/i18n/translate";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 
 export type ActionResult<T = undefined> =
@@ -9,6 +11,9 @@ export type ActionResult<T = undefined> =
   | { ok: false; error: string; fieldErrors?: Record<string, string[]> };
 
 export class UserError extends Error {}
+
+/** Hàm dịch theo cookie ngôn ngữ; ngoài ngữ cảnh request (cron...) thì dùng tiếng Việt. */
+const getT = async () => { try { return await getReqT(); } catch { return makeT("vi"); } };
 
 /** Lỗi do trigger của database (migration shared_delete_and_write_guard) khi EduConnect khóa quyền ghi hoặc lớp có dữ liệu: đưa nguyên thông báo tiếng Việt cho người dùng. */
 function eduDbMessage(e: unknown): string | null {
@@ -27,18 +32,19 @@ export async function run<T>(fn: () => Promise<ActionResult<T> | { message?: str
     return { ok: true, data: (res as { data?: T } | undefined)?.data, message: (res as { message?: string } | undefined)?.message };
   } catch (e) {
     if (isRedirectError(e)) throw e;
-    if (e instanceof UserError || e instanceof ForbiddenError) return { ok: false, error: e.message };
+    if (e instanceof ForbiddenError) { const t = await getT(); return { ok: false, error: e.message === "Bạn không có quyền thực hiện thao tác này" ? t("ui.err.forbidden") : e.message }; }
+    if (e instanceof UserError) return { ok: false, error: e.message };
     if (e instanceof ZodError) {
       const fieldErrors: Record<string, string[]> = {};
       for (const issue of e.issues) {
         const key = issue.path.join(".") || "_";
         (fieldErrors[key] ??= []).push(issue.message);
       }
-      return { ok: false, error: e.issues[0]?.message ?? "Dữ liệu không hợp lệ", fieldErrors };
+      return { ok: false, error: e.issues[0]?.message ?? (await getT())("ui.err.invalid"), fieldErrors };
     }
     const dbMsg = eduDbMessage(e);
     if (dbMsg) return { ok: false, error: dbMsg };
     console.error("[action]", e);
-    return { ok: false, error: "Đã có lỗi xảy ra, vui lòng thử lại" };
+    return { ok: false, error: (await getT())("ui.err.generic") };
   }
 }

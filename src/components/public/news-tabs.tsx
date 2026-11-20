@@ -4,14 +4,18 @@ import { useState } from "react";
 import { Eye } from "lucide-react";
 import { Thumb, type ThumbSource } from "./thumb";
 import { cn } from "@/utils";
+import { useT, useLocale } from "@/lib/i18n/client";
+import { intlLocale } from "@/lib/i18n/format";
 
 export type TabItem = ThumbSource & { id: string; title: string; href: string; date: string; views: number };
 
 /** Khung hai tab "Tin mới / Tin xem nhiều" ở cột phải đầu trang chủ. */
 export function NewsTabs({ latest, popular, className }: { latest: TabItem[]; popular: TabItem[]; className?: string }) {
   const [tab, setTab] = useState<"latest" | "popular">("latest");
+  const t = useT();
+  const locale = useLocale();
   const items = tab === "latest" ? latest : popular;
-  const tabs = [["latest", "Tin mới"], ["popular", "Tin xem nhiều"]] as const;
+  const tabs = [["latest", t("public.tabs.latest")], ["popular", t("public.tabs.popular")]] as const;
   return (
     <section className={cn("rounded bg-white/85 shadow-sm", className)}>
       <div role="tablist" className="flex border-b border-border">
@@ -26,11 +30,11 @@ export function NewsTabs({ latest, popular, className }: { latest: TabItem[]; po
             <Thumb a={a} always className="h-[68px] w-24 shrink-0" />
             <div className="min-w-0">
               <Link href={a.href} className="line-clamp-3 font-serif text-[15px] leading-snug font-semibold group-hover:text-primary">{a.title}</Link>
-              <p className="mt-0.5 flex items-center gap-2 text-xs text-muted">{a.date}{tab === "popular" && <span className="inline-flex items-center gap-1"><Eye className="size-3" />{a.views.toLocaleString("vi-VN")}</span>}</p>
+              <p className="mt-0.5 flex items-center gap-2 text-xs text-muted">{a.date}{tab === "popular" && <span className="inline-flex items-center gap-1"><Eye className="size-3" />{a.views.toLocaleString(intlLocale(locale))}</span>}</p>
             </div>
           </li>
         ))}
-        {items.length === 0 && <li className="py-6 text-center text-sm text-muted">Chưa có tin.</li>}
+        {items.length === 0 && <li className="py-6 text-center text-sm text-muted">{t("public.tabs.empty")}</li>}
       </ul>
     </section>
   );

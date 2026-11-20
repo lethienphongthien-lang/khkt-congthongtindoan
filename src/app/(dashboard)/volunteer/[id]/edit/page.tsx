@@ -1,3 +1,4 @@
+import { getT } from "@/lib/i18n/server";
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth/session";
@@ -5,9 +6,10 @@ import { PageHeader } from "@/components/ui/misc";
 import { VolunteerForm } from "@/components/volunteer/volunteer-form";
 import { toLocalInput } from "@/utils";
 
-export const metadata = { title: "Sửa đăng ký tình nguyện" };
+export async function generateMetadata() { return { title: (await getT())("cms.vol.edit") }; }
 
 export default async function EditVolunteerPage({ params }: { params: Promise<{ id: string }> }) {
+  const t = await getT();
   const user = await requireRole(["ADMIN", "SECRETARY", "DEPARTMENT_ACCOUNT"]);
   const req = await db.volunteerRequest.findUnique({ where: { id: (await params).id }, include: { department: { select: { name: true } } } });
   if (!req || (user.role !== "ADMIN" && req.departmentId !== user.departmentId)) notFound();
@@ -15,7 +17,7 @@ export default async function EditVolunteerPage({ params }: { params: Promise<{ 
   const s = toLocalInput(req.startAt), e = toLocalInput(req.endAt);
   return (
     <>
-      <PageHeader title="Sửa đăng ký tình nguyện" description={`Chi đoàn ${req.department.name}${req.status === "APPROVED" ? ". Buổi đã duyệt, đoàn viên sẽ nhận thông báo khi bạn lưu thay đổi" : ""}`} />
+      <PageHeader title={t("cms.vol.edit")} description={`${t("cms.vol.editDesc", { name: req.department.name })}${req.status === "APPROVED" ? t("cms.vol.editApproved") : ""}`} />
       <VolunteerForm initial={{ id: req.id, task: req.task, date: s.slice(0, 10), startTime: s.slice(11, 16), endTime: e.slice(11, 16), location: req.location, hours: req.hours, points: req.points, note: req.note ?? "" }} />
     </>
   );

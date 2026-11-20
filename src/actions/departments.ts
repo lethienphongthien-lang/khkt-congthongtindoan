@@ -18,13 +18,16 @@ import { syncSchoolYear } from "@/lib/services/rollover";
 import { createMemberWithAccount, findOrCreateClass, nextMemberCodes } from "@/lib/services/member-account";
 import type { Credential } from "@/actions/members";
 import { NAME_MSG, NAME_RE } from "@/lib/validation/rules";
+import { getT } from "@/lib/i18n/server";
+import type { MessageKey } from "@/lib/i18n/translate";
+const tr = async (key: MessageKey, p?: Record<string, string | number>) => (await getT())(key, p);
 
 /** Tách danh sách họ tên (mỗi dòng một người) và kiểm tra. */
-function parseNames(text: string | undefined, label: string): string[] {
+async function parseNames(text: string | undefined, label: string): Promise<string[]> {
   const names = [...new Set((text ?? "").split(/\r?\n/).map((l) => l.trim().replace(/^\d+\s*[.)\-:]?\s+/, "").replace(/\s+/g, " ")).filter(Boolean))];
-  if (names.some((n) => n.length < 2 || n.length > 100)) throw new UserError(`Danh sách ${label}: mỗi dòng là một họ tên (2–100 ký tự)`);
+  if (names.some((n) => n.length < 2 || n.length > 100)) throw new UserError(await tr("act.d.namesLen", { label: label }));
   const bad = names.find((n) => !NAME_RE.test(n));
-  if (bad) throw new UserError(`Danh sách ${label}: “${bad}” không hợp lệ. ${NAME_MSG}`);
+  if (bad) throw new UserError(`${await tr("act.d.namesBad", { label: label, bad: bad })} ${NAME_MSG}`);
   return names;
 }
 /** Gộp hai danh sách thành các dòng có kèm loại; người trùng tên ở cả hai danh sách chỉ lấy một lần (ưu tiên đoàn viên). */
@@ -38,28 +41,28 @@ export async function saveDepartmentAction(id: string | null, input: unknown) {
     const admin = await requireRole(["ADMIN"]);
     const { startYear: given, members: memberText, youth: youthText, isTeacher: wantTeacher, ...data } = departmentSchema.parse(input);
     const current = id ? await db.department.findUnique({ where: { id }, select: { startYear: true, graduatedAt: true, isTeacher: true } }) : null;
-    if (id && !current) throw new UserError("Không tìm thấy Chi đoàn");
+    if (id && !current) throw new UserError(await tr("act.d.notFound"));
     const isTeacher = current ? current.isTeacher : wantTeacher; // loại Chi đoàn chỉ chọn lúc tạo
     if (!isTeacher) await assertEduWrite("classes"); // chi đoàn học sinh chính là lớp của EduConnect
-    if (current?.graduatedAt) throw new UserError("Chi đoàn đã ra trường, không thể chỉnh sửa");
+    if (current?.graduatedAt) throw new UserError(await tr("act.d.graduatedLocked"));
     // Khóa (năm vào lớp 10): nhập tay, hoặc giữ khóa cũ, hoặc suy ra từ tên khối (10A1 -> năm học hiện tại).
     const p = parseClassName(data.name);
     // Chi đoàn giáo viên không có khối/khóa
     const startYear = isTeacher ? null : given ?? current?.startYear ?? (p ? startYearFor(p.grade, schoolYearStart()) : null);
     const dup = await db.department.findFirst({ where: { name: data.name, startYear, ...(id ? { NOT: { id } } : {}) } });
-    if (dup?.deletedAt) throw new UserError("Chi đoàn này (cùng tên, cùng khóa) đã bị xóa cùng lớp ở EduConnect. Khôi phục lớp ở EduConnect (Thùng rác) hoặc tạo lớp mới trùng tên để chi đoàn được khôi phục.");
-    if (dup) throw new UserError("Chi đoàn này (cùng tên, cùng khóa) đã tồn tại");
+    if (dup?.deletedAt) throw new UserError(await tr("act.d.dupDeleted"));
+    if (dup) throw new UserError(await tr("act.d.dup"));
 
     if (id) {
       const dept = await db.department.update({ where: { id }, data: { ...data, startYear } });
       await audit(admin.id, "department.update", "Department", dept.id, { name: dept.name });
       revalidatePath("/departments");
-      return { message: "Đã cập nhật Chi đoàn" };
+      return { message: await tr("act.d.updated") };
     }
 
     // Tạo mới: nếu có danh sách họ tên thì tự tạo lớp + đoàn viên + tài khoản (mật khẩu tạm hiển thị một lần).
-    const people = mergeLists(parseNames(memberText, "đoàn viên"), parseNames(youthText, "thanh niên"));
-    if (people.length > 100) throw new UserError("Mỗi lần tạo tối đa 100 người, có thể nhập thêm bằng file Excel ở mục Đoàn viên & thanh niên");
+    const people = mergeLists(await parseNames(memberText, await tr("act.d.lblMembers")), await parseNames(youthText, await tr("act.d.lblYouth")));
+    if (people.length > 100) throw new UserError(await tr("act.d.max100create"));
     const names = people.map((p) => p.name);
     const hashed = await Promise.all(names.map(async () => { const password = generateTempPassword(); return { password, passwordHash: await hashPassword(password) }; }));
     const created: Credential[] = [];
@@ -78,7 +81,7 @@ export async function saveDepartmentAction(id: string | null, input: unknown) {
     }, { timeout: 60_000, maxWait: 10_000 });
     revalidatePath("/departments");
     const nYouth = people.filter((p) => !p.isDoanVien).length;
-    return { data: { created }, message: created.length ? `Đã tạo Chi đoàn ${dept.name} và ${created.length} tài khoản (${created.length - nYouth} đoàn viên, ${nYouth} thanh niên)` : "Đã tạo Chi đoàn" };
+    return { data: { created }, message: created.length ? await tr("act.d.createdWith", { name: dept.name, n: created.length, m: created.length - nYouth, y: nYouth }) : await tr("act.d.created") };
   });
 }
 
@@ -87,14 +90,14 @@ export async function deleteDepartmentAction(id: string) {
     const admin = await requireRole(["ADMIN"]);
     if (!(await db.department.findUnique({ where: { id }, select: { isTeacher: true } }))?.isTeacher) await assertEduWrite("classes");
     const dept = await db.department.findUnique({ where: { id }, include: { _count: { select: { members: { where: { deletedAt: null } } } } } });
-    if (!dept) throw new UserError("Không tìm thấy Chi đoàn");
-    if (dept._count.members > 0) throw new UserError("Chi đoàn còn đoàn viên, hãy chuyển đoàn viên sang Chi đoàn khác trước khi xóa");
+    if (!dept) throw new UserError(await tr("act.d.notFound"));
+    if (dept._count.members > 0) throw new UserError(await tr("act.d.hasMembers"));
     // Chi đoàn gắn liền với lớp: chi đoàn chỉ bị xóa (mềm) khi xóa lớp ở EduConnect.
-    if (await hasLinkedClass(id)) throw new UserError(`Chi đoàn ${dept.name} là lớp của EduConnect. Hãy xóa lớp ở EduConnect trước (chi đoàn sẽ bị xóa theo).`);
+    if (await hasLinkedClass(id)) throw new UserError(await tr("act.d.linkedClass", { name: dept.name }));
     await db.department.delete({ where: { id } });
     await audit(admin.id, "department.delete", "Department", id, { name: dept.name });
     revalidatePath("/departments");
-    return { message: "Đã xóa Chi đoàn" };
+    return { message: await tr("act.d.deleted") };
   });
 }
 
@@ -109,7 +112,7 @@ export async function assignSecretaryAction(input: unknown) {
     const d = secretarySchema.parse(input);
     await assignClassOfficer(admin.id, d.departmentId, "SECRETARY", d.memberId);
     revalidatePath("/departments"); revalidatePath(`/departments/${d.departmentId}`);
-    return { message: "Đã phân công bí thư" };
+    return { message: await tr("act.d.secAssigned") };
   });
 }
 export async function removeSecretaryAction(departmentId: string) {
@@ -117,7 +120,7 @@ export async function removeSecretaryAction(departmentId: string) {
     const admin = await requireRole(["ADMIN"]);
     await assignClassOfficer(admin.id, departmentId, "SECRETARY", null, true);
     revalidatePath("/departments"); revalidatePath(`/departments/${departmentId}`);
-    return { message: "Đã gỡ chức bí thư" };
+    return { message: await tr("act.d.secRemoved") };
   });
 }
 export async function assignMonitorAction(input: unknown) {
@@ -126,17 +129,17 @@ export async function assignMonitorAction(input: unknown) {
     const d = monitorSchema.parse(input);
     await assignClassOfficer(admin.id, d.departmentId, "RED_MONITOR", d.memberId);
     revalidatePath(`/departments/${d.departmentId}`);
-    return { message: "Đã phân công cờ đỏ" };
+    return { message: await tr("act.d.rfAssigned") };
   });
 }
 export async function removeMonitorAction(departmentId: string, userId: string) {
   return run(async () => {
     const admin = await requireRole(["ADMIN"]);
     const member = await db.member.findUnique({ where: { userId }, select: { id: true } });
-    if (!member) throw new UserError("Không tìm thấy học sinh");
+    if (!member) throw new UserError(await tr("act.d.studentNotFound"));
     await assignClassOfficer(admin.id, departmentId, "RED_MONITOR", member.id, true);
     revalidatePath(`/departments/${departmentId}`);
-    return { message: "Đã gỡ chức cờ đỏ" };
+    return { message: await tr("act.d.rfRemoved") };
   });
 }
 export async function setDeputyAction(departmentId: string, memberId: string, remove = false) {
@@ -145,7 +148,7 @@ export async function setDeputyAction(departmentId: string, memberId: string, re
     await setDeputy(departmentId, memberId, remove);
     await db.auditLog.create({ data: { userId: admin.id, action: `department.DEPUTY.${remove ? "remove" : "assign"}`, target: "Department", targetId: departmentId, metadata: { memberId } } });
     revalidatePath(`/departments/${departmentId}`);
-    return { message: remove ? "Đã gỡ lớp phó học tập" : "Đã thêm lớp phó học tập" };
+    return { message: remove ? await tr("act.d.depRemoved") : await tr("act.d.depAdded") };
   });
 }
 export async function setClassPresidentAction(input: unknown) {
@@ -154,7 +157,7 @@ export async function setClassPresidentAction(input: unknown) {
     const d = z.object({ departmentId: z.string().min(1), memberId: z.string().nullable() }).parse(input);
     await assignClassOfficer(admin.id, d.departmentId, "PRESIDENT", d.memberId, d.memberId === null);
     revalidatePath(`/departments/${d.departmentId}`);
-    return { message: "Đã cập nhật lớp trưởng" };
+    return { message: await tr("act.d.presUpdated") };
   });
 }
 
@@ -166,8 +169,8 @@ export async function createDepartmentAccountAction(departmentId: string) {
   return run<{ username: string; password: string }>(async () => {
     const admin = await requireRole(["ADMIN"]);
     const dept = await db.department.findUnique({ where: { id: departmentId } });
-    if (!dept || dept.graduatedAt) throw new UserError("Không tìm thấy Chi đoàn đang học");
-    if (dept.accountId) throw new UserError("Chi đoàn này đã có tài khoản");
+    if (!dept || dept.graduatedAt) throw new UserError(await tr("act.d.activeNotFound"));
+    if (dept.accountId) throw new UserError(await tr("act.d.hasAccount"));
     const base = dept.name.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/[^a-z0-9]/g, "");
     let username = `chidoan.${base}`;
     for (let i = 0; await db.user.findUnique({ where: { username } }); i++) username = `chidoan.${base}${i + 2}`;
@@ -179,7 +182,7 @@ export async function createDepartmentAccountAction(departmentId: string) {
     });
     await audit(admin.id, "department.create_account", "Department", dept.id, { username });
     revalidatePath(`/departments/${dept.id}`);
-    return { data: { username, password }, message: `Đã cấp tài khoản ${username} cho Chi đoàn ${dept.name}` };
+    return { data: { username, password }, message: await tr("act.d.accountIssued", { u: username, name: dept.name }) };
   });
 }
 
@@ -187,13 +190,13 @@ export async function resetDepartmentAccountPasswordAction(departmentId: string)
   return run<{ username: string; password: string }>(async () => {
     const admin = await requireRole(["ADMIN"]);
     const dept = await db.department.findUnique({ where: { id: departmentId }, include: { account: true } });
-    if (!dept?.account) throw new UserError("Chi đoàn chưa có tài khoản");
+    if (!dept?.account) throw new UserError(await tr("act.d.noAccount"));
     const password = generateTempPassword();
     const passwordHash = await hashPassword(password);
     await db.user.update({ where: { id: dept.account.id }, data: { passwordHash, mustChangePassword: true, status: "ACTIVE" } });
     await audit(admin.id, "department.reset_account_password", "Department", dept.id, { username: dept.account.username });
     revalidatePath(`/departments/${dept.id}`);
-    return { data: { username: dept.account.username, password }, message: "Đã cấp lại mật khẩu" };
+    return { data: { username: dept.account.username, password }, message: await tr("act.d.pwReissued") };
   });
 }
 
@@ -204,8 +207,8 @@ export async function syncSchoolYearAction() {
     await assertEduWrite("placement");
     const r = await syncSchoolYear(admin.id);
     invalidatePublic();
-    if (r.source === "educonnect") return { message: r.linked || r.movedToDoan || r.retired || r.graduated ? `Năm học ${r.schoolYear}–${r.schoolYear + 1} theo EduConnect: ${r.linked} chi đoàn mới, chuyển ${r.movedToDoan} đoàn viên, đóng ${r.retired} chi đoàn cũ, ${r.graduated} chi đoàn ra trường${r.unplaced ? `, ${r.unplaced} đoàn viên chưa được xếp lớp` : ""}` : `Năm học ${r.schoolYear}–${r.schoolYear + 1}: đã khớp với EduConnect, không có thay đổi` };
-    return { message: r.renamed || r.graduated ? `Năm học ${r.schoolYear}–${r.schoolYear + 1}: đổi tên ${r.renamed} Chi đoàn, ${r.graduated} Chi đoàn ra trường` : `Năm học ${r.schoolYear}–${r.schoolYear + 1}: không có thay đổi` };
+    if (r.source === "educonnect") return { message: r.linked || r.movedToDoan || r.retired || r.graduated ? await tr("act.d.syncEdu", { y1: r.schoolYear, y2: r.schoolYear + 1, a: r.linked, b: r.movedToDoan, c: r.retired, d: r.graduated }) + (r.unplaced ? ", " + await tr("act.d.unplaced", { n: r.unplaced }) : "") : await tr("act.d.syncSame", { y1: r.schoolYear, y2: r.schoolYear + 1 }) };
+    return { message: r.renamed || r.graduated ? await tr("act.d.syncRenamed", { y1: r.schoolYear, y2: r.schoolYear + 1, a: r.renamed, b: r.graduated }) : await tr("act.d.syncNone", { y1: r.schoolYear, y2: r.schoolYear + 1 }) };
   });
 }
 
@@ -215,10 +218,10 @@ export async function addMembersToDepartmentAction(departmentId: string, namesTe
     await assertEduWrite("profiles", "placement");
     const admin = await requireRole(["ADMIN"]);
     const dept = await db.department.findUnique({ where: { id: departmentId } });
-    if (!dept || dept.graduatedAt) throw new UserError("Không tìm thấy Chi đoàn đang học");
-    const people = mergeLists(parseNames(namesText, "đoàn viên"), parseNames(youthText, "thanh niên"));
-    if (!people.length) throw new UserError("Nhập ít nhất một họ tên");
-    if (people.length > 100) throw new UserError("Mỗi lần thêm tối đa 100 người, có thể nhập thêm bằng file Excel");
+    if (!dept || dept.graduatedAt) throw new UserError(await tr("act.d.activeNotFound"));
+    const people = mergeLists(await parseNames(namesText, await tr("act.d.lblMembers")), await parseNames(youthText, await tr("act.d.lblYouth")));
+    if (!people.length) throw new UserError(await tr("act.d.atLeastOne"));
+    if (people.length > 100) throw new UserError(await tr("act.d.max100add"));
     const names = people.map((p) => p.name);
     const hashed = await Promise.all(names.map(async () => { const password = generateTempPassword(); return { password, passwordHash: await hashPassword(password) }; }));
     const created: Credential[] = [];
@@ -233,6 +236,6 @@ export async function addMembersToDepartmentAction(departmentId: string, namesTe
     }, { timeout: 60_000, maxWait: 10_000 });
     revalidatePath(`/departments/${dept.id}`); revalidatePath("/members");
     const nYouth = people.filter((p) => !p.isDoanVien).length;
-    return { data: { created }, message: `Đã thêm ${created.length} người vào Chi đoàn ${dept.name} (${created.length - nYouth} đoàn viên, ${nYouth} thanh niên)` };
+    return { data: { created }, message: await tr("act.d.addedN", { n: created.length, name: dept.name, m: created.length - nYouth, y: nYouth }) };
   });
 }

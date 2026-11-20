@@ -5,6 +5,7 @@ import { invalidatePublic } from "@/lib/public-cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { run, UserError } from "@/lib/action";
+import { getT } from "@/lib/i18n/server";
 import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/session";
 
@@ -15,39 +16,42 @@ const refresh = () => { revalidatePath("/ke-hoach"); revalidatePath("/cms", "lay
 
 export async function createCategoryAction(kind: string, name: string) {
   return run<{ id: string }>(async () => {
+    const t = await getT();
     const admin = await requireRole(["ADMIN"]);
     const k = z.enum(KINDS).parse(kind);
     const n = nameSchema.parse(name);
-    if (await db.articleCategory.findUnique({ where: { kind_name: { kind: k, name: n } } })) throw new UserError("Danh mục này đã có");
+    if (await db.articleCategory.findUnique({ where: { kind_name: { kind: k, name: n } } })) throw new UserError(t("cms.sa.32"));
     const last = await db.articleCategory.findFirst({ where: { kind: k }, orderBy: { sortOrder: "desc" }, select: { sortOrder: true } });
     const c = await db.articleCategory.create({ data: { kind: k, name: n, sortOrder: (last?.sortOrder ?? 0) + 1 } });
     await audit(admin.id, "category.create", "ArticleCategory", c.id, { name: n });
     refresh();
-    return { data: { id: c.id }, message: "Đã thêm danh mục" };
+    return { data: { id: c.id }, message: t("cms.sa.33") };
   });
 }
 
 export async function renameCategoryAction(id: string, name: string) {
   return run(async () => {
+    const t = await getT();
     const admin = await requireRole(["ADMIN"]);
     const n = nameSchema.parse(name);
     const cur = await db.articleCategory.findUnique({ where: { id } });
-    if (!cur) throw new UserError("Không tìm thấy danh mục");
+    if (!cur) throw new UserError(t("cms.sa.34"));
     const dup = await db.articleCategory.findFirst({ where: { kind: cur.kind, name: n, NOT: { id } } });
-    if (dup) throw new UserError("Đã có danh mục trùng tên");
+    if (dup) throw new UserError(t("cms.sa.35"));
     await db.articleCategory.update({ where: { id }, data: { name: n } });
     await audit(admin.id, "category.rename", "ArticleCategory", id, { name: n });
     refresh();
-    return { message: "Đã đổi tên danh mục" };
+    return { message: t("cms.sa.36") };
   });
 }
 
 /** Chuyển danh mục lên (-1) hoặc xuống (+1) trong danh sách. */
 export async function moveCategoryAction(id: string, dir: -1 | 1) {
   return run(async () => {
+    const t = await getT();
     await requireRole(["ADMIN"]);
     const cur = await db.articleCategory.findUnique({ where: { id } });
-    if (!cur) throw new UserError("Không tìm thấy danh mục");
+    if (!cur) throw new UserError(t("cms.sa.34"));
     const list = await db.articleCategory.findMany({ where: { kind: cur.kind }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] });
     const i = list.findIndex((c) => c.id === id), j = i + dir;
     if (j < 0 || j >= list.length) return;
@@ -59,12 +63,13 @@ export async function moveCategoryAction(id: string, dir: -1 | 1) {
 
 export async function deleteCategoryAction(id: string) {
   return run(async () => {
+    const t = await getT();
     const admin = await requireRole(["ADMIN"]);
     const cur = await db.articleCategory.findUnique({ where: { id }, include: { _count: { select: { articles: true } } } });
-    if (!cur) throw new UserError("Không tìm thấy danh mục");
+    if (!cur) throw new UserError(t("cms.sa.34"));
     await db.articleCategory.delete({ where: { id } }); // các bài trong danh mục chuyển về "chưa phân loại"
     await audit(admin.id, "category.delete", "ArticleCategory", id, { name: cur.name, articles: cur._count.articles });
     refresh();
-    return { message: cur._count.articles ? `Đã xóa danh mục; ${cur._count.articles} bài chuyển về "Chưa phân loại"` : "Đã xóa danh mục" };
+    return { message: cur._count.articles ? t("cms.sa.catDelN", { n: cur._count.articles }) : t("cms.sa.37") };
   });
 }

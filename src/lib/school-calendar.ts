@@ -35,9 +35,9 @@ export function semesterRange(c: SchoolCalendar, sem: 1 | 2): Range {
   return sem === 1 ? { from: y.from, to: split } : { from: split, to: y.to };
 }
 
-export const weekLabel = (c: SchoolCalendar, n: number) => {
+export const weekLabel = (c: SchoolCalendar, n: number, word = "Tuần") => {
   const r = weekRange(c, n)!;
-  return `Tuần ${n} (${fmtDM(r.from)} – ${fmtDM(new Date(r.to.getTime() - DAY))})`;
+  return `${word} ${n} (${fmtDM(r.from)} – ${fmtDM(new Date(r.to.getTime() - DAY))})`;
 };
 
 /** Tuần hiện tại của năm học (null nếu đang ngoài các tuần học, ví dụ nghỉ hè). */

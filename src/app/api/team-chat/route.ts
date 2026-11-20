@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getT } from "@/lib/i18n/server";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { canUseTeamChat, changedSince, recentMessages } from "@/lib/services/team-chat";
@@ -7,9 +8,10 @@ export const dynamic = "force-dynamic";
 
 /** Lấy tin: `?since=<ISO>` tin mới/đổi sau mốc; `?before=<ISO>` tải tin cũ hơn; không tham số: 20 tin gần nhất (`limit` tối đa 50). `read=1` đánh dấu đã đọc. */
 export async function GET(req: Request) {
+  const t = await getT();
   const user = await getCurrentUser();
-  if (!user || user.mustChangePassword) return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
-  if (!canUseTeamChat(user)) return NextResponse.json({ error: "Bạn không còn trong kênh chat này" }, { status: 403 });
+  if (!user || user.mustChangePassword) return NextResponse.json({ error: t("misc.api.unauth") }, { status: 401 });
+  if (!canUseTeamChat(user)) return NextResponse.json({ error: t("misc.api.notInChannel") }, { status: 403 });
   const sp = new URL(req.url).searchParams;
   const date = (v: string | null) => { const d = v ? new Date(v) : null; return d && !Number.isNaN(d.getTime()) ? d : null; };
   const since = date(sp.get("since")), before = date(sp.get("before"));

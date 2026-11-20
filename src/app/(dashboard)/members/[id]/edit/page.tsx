@@ -1,3 +1,4 @@
+import { getT } from "@/lib/i18n/server";
 import { getEduPolicy } from "@/lib/services/edu-policy";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
@@ -7,10 +8,11 @@ import { PageHeader } from "@/components/ui/misc";
 import { MemberForm } from "@/components/members/member-form";
 import { ALL_DETAIL_FIELDS } from "@/lib/member-detail-fields";
 
-export const metadata = { title: "Sửa đoàn viên" };
+export async function generateMetadata() { const t = await getT(); return { title: t("members.editMeta") }; }
 
 export default async function EditMemberPage({ params }: { params: Promise<{ id: string }> }) {
   await requireRole(["ADMIN"]);
+  const t = await getT();
   const { id } = await params;
   const [m, departments] = await Promise.all([
     db.member.findUnique({ where: { id }, include: { detail: true } }),
@@ -23,7 +25,7 @@ export default async function EditMemberPage({ params }: { params: Promise<{ id:
   const policy = await getEduPolicy();
   return (
     <>
-      <PageHeader title={`Sửa: ${m.fullName}`} description={`${m.isDoanVien ? "Mã đoàn viên" : "Mã thành viên"} ${m.code}`} />
+      <PageHeader title={t("members.editTitle", { name: m.fullName })} description={`${m.isDoanVien ? t("members.code") : t("members.codeGeneric")} ${m.code}`} />
       <MemberForm id={id} departments={departments} detail={detail} lock={{ profile: !policy.profiles, placement: !policy.placement }} initial={{
         fullName: m.fullName, gender: m.gender ?? "", dateOfBirth: toDateInput(m.dateOfBirth), joinedAt: toDateInput(m.joinedAt),
         cohort: m.cohort ?? "", isDoanVien: m.isDoanVien, departmentId: m.departmentId, status: m.status,

@@ -3,11 +3,13 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cdnImage, cdnSrcSet } from "@/lib/image-url";
+import { useT } from "@/lib/i18n/client";
 
 export type HeroSlide = { id: string; title: string; href: string; coverUrl: string; date: string; summary?: string | null };
 
 /** Ảnh bìa lớn tự trượt cho các tin nổi bật: 5 giây một ảnh, dừng khi rê chuột/chạm, có mũi tên, chấm và vuốt ngang. */
 export function HeroSlider({ slides, interval = 5000, className }: { slides: HeroSlide[]; interval?: number; className?: string }) {
+  const t = useT();
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
   const touch = useRef<number | null>(null);
@@ -21,7 +23,7 @@ export function HeroSlider({ slides, interval = 5000, className }: { slides: Her
   if (!n) return null;
   const cur = slides[i];
   return (
-    <section className={`group relative self-start overflow-hidden rounded ${className ?? ""}`} aria-roledescription="carousel" aria-label="Tin nổi bật"
+    <section className={`group relative self-start overflow-hidden rounded ${className ?? ""}`} aria-roledescription="carousel" aria-label={t("public.hero.label")}
       onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}
       onTouchStart={(e) => { touch.current = e.touches[0].clientX; setPaused(true); }}
       onTouchEnd={(e) => { const s = touch.current; touch.current = null; setPaused(false); if (s == null) return; const dx = e.changedTouches[0].clientX - s; if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1); }}>
@@ -36,10 +38,10 @@ export function HeroSlider({ slides, interval = 5000, className }: { slides: Her
         ))}
         {n > 1 && (
           <>
-            <button type="button" aria-label="Tin trước" onClick={() => go(-1)} className="absolute top-1/2 left-2 hidden -translate-y-1/2 rounded-full bg-black/40 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/60 sm:block"><ChevronLeft className="size-5" /></button>
-            <button type="button" aria-label="Tin sau" onClick={() => go(1)} className="absolute top-1/2 right-2 hidden -translate-y-1/2 rounded-full bg-black/40 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/60 sm:block"><ChevronRight className="size-5" /></button>
+            <button type="button" aria-label={t("public.hero.prev")} onClick={() => go(-1)} className="absolute top-1/2 left-2 hidden -translate-y-1/2 rounded-full bg-black/40 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/60 sm:block"><ChevronLeft className="size-5" /></button>
+            <button type="button" aria-label={t("public.hero.next")} onClick={() => go(1)} className="absolute top-1/2 right-2 hidden -translate-y-1/2 rounded-full bg-black/40 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/60 sm:block"><ChevronRight className="size-5" /></button>
             <div className="absolute inset-x-0 bottom-2 flex justify-center gap-1.5">
-              {slides.map((s, k) => <button key={s.id} type="button" aria-label={`Tin ${k + 1}`} aria-current={k === i} onClick={() => setI(k)} className={`h-1.5 rounded-full shadow transition-all ${k === i ? "w-6 bg-[#ffd400]" : "w-1.5 bg-white/80"}`} />)}
+              {slides.map((s, k) => <button key={s.id} type="button" aria-label={t("public.hero.item", { n: k + 1 })} aria-current={k === i} onClick={() => setI(k)} className={`h-1.5 rounded-full shadow transition-all ${k === i ? "w-6 bg-[#ffd400]" : "w-1.5 bg-white/80"}`} />)}
             </div>
           </>
         )}

@@ -1,4 +1,5 @@
 "use client";
+import { useT } from "@/lib/i18n/client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -34,13 +35,14 @@ function urlBase64ToUint8Array(input: string) {
   return Uint8Array.from(raw, (c) => c.charCodeAt(0));
 }
 
-async function postJson(url: string, body: unknown) {
+async function postJson(url: string, body: unknown, failMsg = "") {
   const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  if (!res.ok) throw new Error("Không lưu được đăng ký thông báo");
+  if (!res.ok) throw new Error(failMsg);
 }
 
 export function NotificationProvider({ publicKey, latestId, children }: { publicKey: string | null; latestId: string | null; children: React.ReactNode }) {
   const router = useRouter();
+  const tr = useT();
   const [permission, setPermission] = useState<PermissionState>("unsupported");
   const [subscribed, setSubscribed] = useState(false);
   const [needsInstall, setNeedsInstall] = useState(false);
@@ -106,31 +108,31 @@ export function NotificationProvider({ publicKey, latestId, children }: { public
   }, [poll]);
 
   const enable = useCallback(async () => {
-    if (!publicKey) return void toast.error("Máy chủ chưa cấu hình thông báo đẩy");
+    if (!publicKey) return void toast.error(tr("app.notif.noKey"));
     try {
       const perm = await Notification.requestPermission();
       setPermission(perm);
-      if (perm !== "granted") return void toast.error("Bạn chưa cho phép thông báo");
+      if (perm !== "granted") return void toast.error(tr("app.notif.notAllowed"));
       const reg = await navigator.serviceWorker.ready;
       const sub = (await reg.pushManager.getSubscription()) ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) }));
-      await postJson("/api/push/subscribe", sub.toJSON());
+      await postJson("/api/push/subscribe", sub.toJSON(), tr("app.notif.saveFail"));
       setSubscribed(true);
-      toast.success("Đã bật thông báo đẩy");
+      toast.success(tr("app.notif.enabled"));
       playSound();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Không bật được thông báo");
+      toast.error(e instanceof Error ? e.message : tr("app.notif.enableFail"));
     }
-  }, [publicKey, playSound]);
+  }, [publicKey, playSound, tr]);
 
   const disable = useCallback(async () => {
     try {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
-      if (sub) { await postJson("/api/push/unsubscribe", { endpoint: sub.endpoint }).catch(() => {}); await sub.unsubscribe(); }
+      if (sub) { await postJson("/api/push/unsubscribe", { endpoint: sub.endpoint }, "").catch(() => {}); await sub.unsubscribe(); }
       setSubscribed(false);
-      toast.success("Đã tắt thông báo đẩy trên thiết bị này");
-    } catch { toast.error("Không tắt được thông báo"); }
-  }, []);
+      toast.success(tr("app.notif.disabled"));
+    } catch { toast.error(tr("app.notif.disableFail")); }
+  }, [tr]);
 
   const value = useMemo<Ctx>(() => ({
     permission, subscribed, needsInstall, pushAvailable: !!publicKey, soundOn, setSoundOn, enable, disable, testSound: playSound,

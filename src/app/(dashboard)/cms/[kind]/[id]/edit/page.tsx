@@ -1,8 +1,10 @@
+import { getT } from "@/lib/i18n/server";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth/session";
 import { ADMIN_ONLY_KINDS } from "@/lib/services/kind";
-import { CMS_SLUG, KIND_LABEL } from "@/lib/services/public";
+import { CMS_SLUG } from "@/lib/services/public";
+import { kindLabelT, kindActionT } from "@/lib/i18n/kind-labels";
 import { toLocalInput } from "@/utils";
 import { PageHeader } from "@/components/ui/misc";
 import { ArticleForm } from "@/components/cms/forms";
@@ -10,6 +12,7 @@ import { ArticleForm } from "@/components/cms/forms";
 export const maxDuration = 60; // trợ lý AI có thể cần vài chục giây
 
 export default async function EditArticlePage({ params }: { params: Promise<{ kind: string; id: string }> }) {
+  const t = await getT();
   const user = await requireRole(["ADMIN", "SECRETARY"]);
   const isAdmin = user.role === "ADMIN";
   const { kind: slug, id } = await params;
@@ -21,7 +24,7 @@ export default async function EditArticlePage({ params }: { params: Promise<{ ki
   if (!isAdmin && ADMIN_ONLY_KINDS.includes(a.kind)) notFound();
   return (
     <>
-      <PageHeader title={`Sửa ${KIND_LABEL[a.kind].toLowerCase()}`} />
+      <PageHeader title={t("cms.k.editTitle", { label: kindLabelT(t, a.kind).toLowerCase() })} />
       <ArticleForm id={a.id} draftOnly={!isAdmin} kind={a.kind} departments={departments} categories={categories} files={a.attachments.map((f) => ({ name: f.name, url: f.url, publicId: f.publicId, size: f.size, mime: f.mime ?? undefined }))} image={a.coverUrl && a.coverPublicId ? { imageUrl: a.coverUrl, publicId: a.coverPublicId } : null}
         initial={{ title: a.title, summary: a.summary ?? "", content: a.content, eventAt: a.eventAt ? toLocalInput(a.eventAt) : "", eventLocation: a.eventLocation ?? "", published: a.published, publishedAt: a.publishedAt ? toLocalInput(a.publishedAt) : "", departmentId: a.departmentId ?? "", categoryId: a.categoryId ?? "" }} />
     </>

@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { run, UserError } from "@/lib/action";
+import { getT } from "@/lib/i18n/server";
 import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/session";
 import { generateText, aiConfigured } from "@/lib/ai/gemini";
@@ -23,6 +24,7 @@ const schema = z.object({
 
 export async function aiAvailableAction() {
   return run<{ enabled: boolean }>(async () => {
+    const t = await getT();
     await requireRole(["ADMIN", "SECRETARY"]);
     return { data: { enabled: aiConfigured() } };
   });
@@ -31,16 +33,17 @@ export async function aiAvailableAction() {
 /** Trợ lý soạn bài: viết nháp từ ý, nhuận sắc, rút gọn, sửa chính tả, tạo tóm tắt. Kết quả luôn là bản nháp để người soạn xem lại. */
 export async function aiAssistAction(input: unknown) {
   return run<{ text: string; title?: string; summary?: string; remaining: number }>(async () => {
+    const t = await getT();
     const user = await requireRole(["ADMIN", "SECRETARY"]);
     const d = schema.parse(input);
     const raw = d.input.trim();
-    if (d.mode === "draft") { if (raw.length < 8) throw new UserError("Hãy gõ vài ý chính (ít nhất 8 ký tự) để AI viết"); }
-    else if (plainText(raw, 50).length < 10) throw new UserError("Chưa có nội dung để xử lý, hãy viết hoặc dán nội dung vào trình soạn thảo trước");
-    if (!aiConfigured()) throw new UserError("Chưa bật trợ lý AI: quản trị hệ thống cần cấu hình GEMINI_API_KEY");
+    if (d.mode === "draft") { if (raw.length < 8) throw new UserError(t("cms.sa.54")); }
+    else if (plainText(raw, 50).length < 10) throw new UserError(t("cms.sa.55"));
+    if (!aiConfigured()) throw new UserError(t("cms.sa.56"));
 
     const since = new Date(Date.now() - 24 * 3600_000);
     const used = await db.auditLog.count({ where: { userId: user.id, action: "ai.assist", createdAt: { gte: since } } });
-    if (used >= DAILY_LIMIT) throw new UserError(`Bạn đã dùng hết ${DAILY_LIMIT} lượt AI trong 24 giờ, hãy quay lại sau`);
+    if (used >= DAILY_LIMIT) throw new UserError(t("cms.sa.aiLimit", { n: DAILY_LIMIT }));
 
     const { prompt, maxTokens } = buildPrompt(d.mode, d.kind, raw, d.title);
     const out = await generateText(SYSTEM, prompt, { maxTokens, temperature: d.mode === "draft" ? 0.8 : 0.3, json: d.mode === "draft" });
@@ -75,17 +78,18 @@ export type ReviewResult = { verdict: "ok" | "fix" | "risk"; summary: string; pl
 /** Admin: AI soát nhanh bài chờ duyệt (chính tả, giọng văn, nội dung nhạy cảm). Chỗ còn "[ghi rõ ...]" được đếm bằng mã, không nhờ AI. */
 export async function aiReviewArticleAction(articleId: string) {
   return run<ReviewResult & { remaining: number }>(async () => {
+    const t = await getT();
     const user = await requireRole(["ADMIN"]);
-    if (!aiConfigured()) throw new UserError("Chưa bật trợ lý AI: quản trị hệ thống cần cấu hình GEMINI_API_KEY");
+    if (!aiConfigured()) throw new UserError(t("cms.sa.56"));
     const a = await db.article.findUnique({ where: { id: articleId }, select: { title: true, summary: true, content: true, kind: true } });
-    if (!a) throw new UserError("Không tìm thấy bài viết");
+    if (!a) throw new UserError(t("cms.sa.7"));
     const text = `Tiêu đề: ${a.title}\nTóm tắt: ${plainText(a.summary ?? "", 1000)}\nNội dung: ${plainText(a.content, 11000)}`;
     const placeholders = countPlaceholders(`${a.summary ?? ""} ${a.content}`);
     const remaining = await takeAiQuota(user.id, "ai.assist", 40);
     const out = await generateText(SYSTEM, `Bạn là biên tập viên kiểm duyệt bài đăng trên cổng thông tin của trường THPT. Hãy soát bài sau (loại: ${a.kind}). Phần "Tóm tắt" là đoạn dẫn riêng, việc nó nhắc lại ý của nội dung là bình thường, KHÔNG coi là lỗi trùng lặp; chỉ báo lỗi khi chắc chắn, không bịa lỗi và trả về DUY NHẤT một đối tượng JSON:\n{"verdict": "ok" (có thể đăng) | "fix" (cần sửa nhỏ) | "risk" (có nội dung nhạy cảm cần xem kỹ),\n "summary": "một câu nhận xét tổng quát",\n "spelling": [{"wrong": "cụm từ sai", "fix": "cách sửa"}] (tối đa 8 lỗi chính tả hoặc dùng từ rõ ràng, để mảng rỗng nếu không có),\n "tone": "một câu nhận xét giọng văn có phù hợp trang chính thức của trường không",\n "sensitive": ["mô tả ngắn từng điểm nhạy cảm: thông tin cá nhân, nội dung chính trị sai lệch, xúc phạm, quảng cáo, số liệu chưa kiểm chứng"] (để rỗng nếu không có)}\n\nBài:\n"""\n${text}\n"""`, { maxTokens: 1500, temperature: 0.2, json: true });
     await audit(user.id, "ai.assist", "Article", articleId, { mode: "review" });
     const j = parseJson<{ verdict?: string; summary?: string; spelling?: { wrong?: string; fix?: string }[]; tone?: string; sensitive?: string[] }>(out);
-    if (!j) throw new UserError("AI trả về kết quả không đọc được, hãy thử lại");
+    if (!j) throw new UserError(t("cms.sa.57"));
     const verdict = j.verdict === "risk" ? "risk" : j.verdict === "fix" || placeholders > 0 ? "fix" : "ok";
     return { data: {
       verdict: placeholders > 0 && verdict === "ok" ? "fix" : verdict, summary: clip(j.summary, 300), placeholders, tone: clip(j.tone, 300),
@@ -106,9 +110,10 @@ const quizGenSchema = z.object({
 /** Admin: AI sinh bộ câu hỏi cho trò chơi từ chủ đề. Kết quả được kiểm tra chặt rồi điền vào biểu mẫu để người soạn sửa. */
 export async function aiGenerateQuizAction(input: unknown) {
   return run<{ title: string; description: string; questions: GenQuestion[]; remaining: number }>(async () => {
+    const t = await getT();
     const user = await requireRole(["ADMIN"]);
     const d = quizGenSchema.parse(input);
-    if (!aiConfigured()) throw new UserError("Chưa bật trợ lý AI: quản trị hệ thống cần cấu hình GEMINI_API_KEY");
+    if (!aiConfigured()) throw new UserError(t("cms.sa.56"));
     const remaining = await takeAiQuota(user.id, "ai.assist", 40);
     const names = { CHOICE: "CHOICE (trắc nghiệm 4 lựa chọn, 1 đáp án đúng)", TF: "TF (đúng/sai: một nhận định)", FILL: "FILL (điền từ: đáp án ngắn một đến vài từ)", ORDER: "ORDER (sắp xếp 3 đến 5 mục theo đúng thứ tự)" };
     const out = await generateText(SYSTEM, `Hãy soạn bộ ${d.count} câu hỏi đố vui cho học sinh THPT về chủ đề: "${d.topic}".\nDạng câu được dùng (trộn đều): ${d.kinds.map((k) => names[k]).join("; ")}.\nChỉ dùng kiến thức chính xác, phổ thông, có thể kiểm chứng; KHÔNG bịa. Mỗi câu có lời giải thích ngắn.\nTrả về DUY NHẤT JSON: {"title": "tên bộ trò chơi hấp dẫn", "description": "mô tả 1 câu", "questions": [{"type": "CHOICE|TF|FILL|ORDER", "text": "câu hỏi", "options": [...], "correct": số,"explanation": "lời giải thích"}]}\nQuy ước: CHOICE: options là 4 lựa chọn, correct là chỉ số (0-3) của đáp án đúng, hãy xáo vị trí đáp án đúng; TF: options luôn là ["Đúng","Sai"], correct là 0 nếu nhận định đúng, 1 nếu sai; FILL: options là danh sách đáp án chấp nhận được (1-3 cách viết), correct = 0; ORDER: options là các mục theo ĐÚNG thứ tự, correct = 0.`, { maxTokens: 3500, temperature: 0.7, json: true });
@@ -126,7 +131,7 @@ export async function aiGenerateQuizAction(input: unknown) {
       else continue;
       qs.push({ ui, text, options: ui === "FILL" ? opts.slice(0, 5) : opts, correct, explanation: expl });
     }
-    if (qs.length < 3) throw new UserError("AI chưa soạn được đủ câu hợp lệ, hãy thử lại hoặc đổi chủ đề cho cụ thể hơn");
+    if (qs.length < 3) throw new UserError(t("cms.sa.58"));
     return { data: { title: clip(j?.title, 120) || d.topic, description: clip(j?.description, 300), questions: qs.slice(0, d.count), remaining } };
   });
 }

@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { KeyRound } from "lucide-react";
 import { resetDepartmentPasswordsAction } from "@/actions/members";
+import { useT } from "@/lib/i18n/client";
 import { Button } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/ui/modal";
 import { Alert } from "@/components/ui/misc";
@@ -15,6 +16,7 @@ type ClassOption = { id: string; name: string; count: number; hasAccount: boolea
  * Mật khẩu chỉ nằm trong bộ nhớ trình duyệt này; đóng trang là mất nên CSV tự tải ngay khi xong.
  */
 export function ClassPasswordManager({ classes: all0, mode = "members" }: { classes: ClassOption[]; mode?: "members" | "account" }) {
+  const t = useT();
   const isAcc = mode === "account";
   const classes = isAcc ? all0.filter((c) => c.hasAccount).map((c) => ({ ...c, count: 1 })) : all0;
   const [all, setAll] = useState(false);
@@ -41,7 +43,7 @@ export function ClassPasswordManager({ classes: all0, mode = "members" }: { clas
     const out: Credential[] = [];
     for (const c of selected) {
       const res = await resetDepartmentPasswordsAction(c.id, mode);
-      if (!res.ok || !res.data) { setError(`Lớp ${c.name}: ${res.ok ? "không có dữ liệu" : res.error}. Đã cấp lại ${out.length} tài khoản, hãy tải CSV phần đã xong rồi chọn lại các lớp còn lại.`); break; }
+      if (!res.ok || !res.data) { setError(t("ui.cp.err", { name: c.name, err: res.ok ? t("ui.cp.noData") : res.error, n: out.length })); break; }
       out.push(...res.data.rows); setRows([...out]); setDoneClasses((n) => n + 1);
     }
     running.current = false;
@@ -53,15 +55,15 @@ export function ClassPasswordManager({ classes: all0, mode = "members" }: { clas
     const pct = selected.length ? (doneClasses / selected.length) * 100 : 0;
     return (
       <div className="max-w-xl space-y-3 text-sm">
-        <p className="font-medium">{phase === "running" ? "Đang cấp lại mật khẩu... đừng đóng trang." : "Hoàn tất."} Đã xử lý {doneClasses}/{selected.length} lớp ({rows.length} tài khoản).</p>
+        <p className="font-medium">{phase === "running" ? t("ui.cp.running") : t("ui.cp.done")} {t("ui.cp.progress", { done: doneClasses, total: selected.length, rows: rows.length })}</p>
         <div className="h-2 overflow-hidden rounded bg-border"><div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} /></div>
         {error && <Alert tone="red">{error}</Alert>}
         {phase === "done" && (
           <>
-            <p className="text-muted">Tệp CSV đã tự tải về. Mật khẩu chỉ hiện ở đây một lần, hãy cất tệp cẩn thận và gửi riêng cho từng người. Khi đăng nhập họ sẽ bị buộc đổi mật khẩu.</p>
+            <p className="text-muted">{t("ui.cp.csvNote")}</p>
             <div className="flex gap-2">
-              {rows.length > 0 && <Button variant="secondary" onClick={() => save(rows)}>Tải lại CSV</Button>}
-              <Button variant="secondary" onClick={() => { setPhase("form"); setRows([]); setPicked(new Set()); setAll(false); setError(""); }}>Làm lớp khác</Button>
+              {rows.length > 0 && <Button variant="secondary" onClick={() => save(rows)}>{t("ui.cp.redownload")}</Button>}
+              <Button variant="secondary" onClick={() => { setPhase("form"); setRows([]); setPicked(new Set()); setAll(false); setError(""); }}>{t("ui.cp.another")}</Button>
             </div>
           </>
         )}
@@ -71,22 +73,22 @@ export function ClassPasswordManager({ classes: all0, mode = "members" }: { clas
 
   return (
     <div className="flex max-w-3xl flex-col gap-4 text-sm">
-      <p className="text-muted">{isAcc ? "Cấp mật khẩu tạm thời mới cho tài khoản chung của các Chi đoàn đã chọn" : "Cấp mật khẩu tạm thời mới cho tất cả tài khoản đoàn viên đang hoạt động của các lớp đã chọn"} và tải CSV. Mỗi người phải đổi mật khẩu khi đăng nhập lại, và các thiết bị đăng nhập nhanh của họ bị thu hồi.</p>
+      <p className="text-muted">{isAcc ? t("ui.cp.introAcc") : t("ui.cp.introMem")}{t("ui.cp.introTail")}</p>
       <fieldset className="space-y-2">
-        <legend className="mb-1 font-medium">Lớp (Chi đoàn)</legend>
-        <label className="flex items-center gap-2"><input type="checkbox" className="size-4" checked={all} onChange={() => setAll(!all)} />Tất cả lớp</label>
+        <legend className="mb-1 font-medium">{t("ui.cp.classes")}</legend>
+        <label className="flex items-center gap-2"><input type="checkbox" className="size-4" checked={all} onChange={() => setAll(!all)} />{t("ui.cp.allClasses")}</label>
         {!all && (
           <div className="grid max-h-56 grid-cols-2 gap-2 overflow-y-auto rounded-md border border-border p-3 sm:grid-cols-3">
             {classes.map((c) => <label key={c.id} className="flex items-center gap-2"><input type="checkbox" className="size-4" checked={picked.has(c.id)} onChange={() => toggle(c.id)} />{c.name} <span className="text-muted">({c.count})</span></label>)}
-            {!classes.length && <p className="col-span-full text-muted">Chưa có lớp nào.</p>}
+            {!classes.length && <p className="col-span-full text-muted">{t("ui.cp.noClass")}</p>}
           </div>
         )}
       </fieldset>
-      {selected.length > 0 && <Alert tone="amber">Sẽ cấp lại mật khẩu cho <b>{total}</b> tài khoản của {selected.length} lớp.{total === 0 && " Không có tài khoản nào phù hợp."}</Alert>}
+      {selected.length > 0 && <Alert tone="amber">{t("ui.cp.willReset", { total: "\u0000", n: selected.length }).split("\u0000").flatMap((p, i) => i ? [<b key={i}>{total}</b>, p] : [p])}{total === 0 && t("ui.cp.noMatch")}</Alert>}
       <div>
         {selected.length > 0 && total > 0 && (
-          <ConfirmButton trigger={<><KeyRound className="size-4" />Cấp lại mật khẩu & tải CSV</>} title={`Cấp lại mật khẩu cho ${total} tài khoản?`} danger confirmLabel="Cấp lại"
-            description="Mật khẩu cũ sẽ không dùng được nữa và mọi người bị đăng xuất khỏi các thiết bị. Mật khẩu mới chỉ hiện trong tệp CSV tải về ngay sau đó."
+          <ConfirmButton trigger={<><KeyRound className="size-4" />{t("ui.cp.trigger")}</>} title={t("ui.cp.confirmTitle", { total })} danger confirmLabel={t("ui.cp.confirmBtn")}
+            description={t("ui.cp.confirmDesc")}
             onConfirm={run} />
         )}
       </div>

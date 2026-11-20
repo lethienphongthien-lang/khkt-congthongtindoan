@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useT } from "@/lib/i18n/client";
 import { useState } from "react";
 import { cn } from "@/utils";
 import { buttonClass } from "./button";
@@ -26,6 +27,7 @@ export type CompactItem = {
 
 /** Danh sách gọn cho mobile (ẩn từ sm trở lên). Ghép với bảng bọc trong `max-sm:hidden`. */
 export function CompactList({ items }: { items: CompactItem[] }) {
+  const t = useT();
   const [sel, setSel] = useState<CompactItem | null>(null);
   return (
     <>
@@ -61,7 +63,7 @@ export function CompactList({ items }: { items: CompactItem[] }) {
             )}
             {(sel.href || sel.actions) && (
               <div className="mt-4 flex flex-wrap items-center gap-2">
-                {sel.href && <Link href={sel.href} className={buttonClass("primary", "md", "flex-1 whitespace-nowrap")}>{sel.hrefLabel ?? "Xem chi tiết"}</Link>}
+                {sel.href && <Link href={sel.href} className={buttonClass("primary", "md", "flex-1 whitespace-nowrap")}>{sel.hrefLabel ?? t("ui.viewDetail")}</Link>}
                 {sel.actions}
               </div>
             )}
