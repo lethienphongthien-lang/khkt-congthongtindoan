@@ -24,7 +24,7 @@ export async function SectionHead({ title, href }: { title: string; href?: strin
 export function LeadStory({ a, badge, textFirst, className, imageClass = "aspect-[16/10]", fill }: { a: CardArticle; badge?: string; textFirst?: boolean; /** Ảnh giãn cho vừa chiều cao hàng (bằng các cột bên cạnh) từ cỡ md trở lên */ fill?: boolean; className?: string; imageClass?: string }) {
   const text = (
     <div className={textFirst ? "mb-1.5" : "mt-1.5"}>
-      <h3 className={cn("font-bold leading-snug transition-colors group-hover:text-primary", textFirst ? "font-serif text-xl sm:text-2xl lg:text-[26px]" : "line-clamp-2 text-base sm:text-lg")}>{a.title}</h3>
+      <h3 className={cn("font-bold leading-snug transition-colors group-hover:text-primary", textFirst ? "font-sans text-xl sm:text-2xl lg:text-[26px]" : "line-clamp-2 text-base sm:text-lg")}>{a.title}</h3>
       {a.summary && <p className={cn("mt-1 text-sm text-slate-600", textFirst ? "line-clamp-3" : "line-clamp-3")}>{a.summary}</p>}
       {!textFirst && <p className="mt-0.5 text-xs text-muted">{a.publishedAt && formatDate(a.publishedAt)}</p>}
     </div>
@@ -93,7 +93,7 @@ export function CardRow({ items }: { items: CardArticle[] }) {
           <div className="aspect-[16/10] w-full overflow-hidden rounded bg-slate-200">
             {a.coverUrl ? <FadeImage src={cdnImage(a.coverUrl, 640)} wrapperClassName="size-full" className="transition-transform duration-500 group-hover:scale-105" /> : <Thumb a={a} always className="size-full border-0" />}
           </div>
-          <h3 className="mt-1 line-clamp-2 font-serif text-[15px] leading-snug font-semibold group-hover:text-primary">{a.title}</h3>
+          <h3 className="mt-1 line-clamp-2 font-sans text-[15px] leading-snug font-semibold group-hover:text-primary">{a.title}</h3>
         </Link>
       ))}
     </div>

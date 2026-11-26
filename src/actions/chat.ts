@@ -9,8 +9,7 @@ import { articleHref, KIND_LABEL } from "@/lib/services/public";
 import { CHAT_RECENT_DAYS, publicFacts } from "@/lib/services/chat-facts";
 import { getT, getLocale } from "@/lib/i18n/server";
 
-/** Hạn mức chatbot công khai: mỗi địa chỉ IP và cả hệ thống (tránh cạn khóa AI dùng chung). */
-const PER_IP_HOUR = 10;
+/** Hạn mức chatbot công khai: chỉ giới hạn toàn hệ thống mỗi ngày (tránh cạn khóa AI dùng chung); không giới hạn theo IP. */
 const GLOBAL_DAY = 400;
 
 const STOP = new Set("là và của có không cho với các những một này đó ở trong khi nào gì sao thế nào được bị cần muốn hỏi xin hãy ạ nhé thì mà để đã sẽ đang rất cũng hay hoặc như tôi mình em bạn anh chị".split(" "));
@@ -84,13 +83,7 @@ export async function chatAskAction(input: unknown) {
     if (!aiConfigured()) throw new UserError(t("community.sa.chatOff"));
 
     // hạn mức
-    const { ip } = await getRequestMeta();
-    const since = (ms: number) => new Date(Date.now() - ms);
-    const [mine, all] = await Promise.all([
-      ip ? db.auditLog.count({ where: { action: "ai.chat", ipAddress: ip, createdAt: { gte: since(3600_000) } } }) : Promise.resolve(0),
-      db.auditLog.count({ where: { action: "ai.chat", createdAt: { gte: since(24 * 3600_000) } } }),
-    ]);
-    if (mine >= PER_IP_HOUR) throw new UserError(t("community.sa.chatLimit", { n: PER_IP_HOUR }));
+    const all = await db.auditLog.count({ where: { action: "ai.chat", createdAt: { gte: new Date(Date.now() - 24 * 3600_000) } } });
     if (all >= GLOBAL_DAY) throw new UserError(t("community.sa.chatBusy"));
 
     // tìm tài liệu liên quan trong nội dung công khai

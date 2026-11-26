@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import { getAuthSecret } from "@/lib/env";
 
 export const SESSION_COOKIE = "doan_session";
-const SESSION_DAYS = 7;
+export const SESSION_DAYS = 30;
 
 export type SessionUser = {
   id: string;

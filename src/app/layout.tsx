@@ -8,7 +8,7 @@ import { AppSplash, SPLASH_CSS } from "@/components/layout/app-splash";
 
 // Ảnh khởi động iOS (portrait) theo từng cỡ máy: public/splash/<rộng>x<cao>@<tỉ lệ>.png (sinh bằng scripts/gen-splash.mjs)
 // Phông chữ viết tay cho khẩu hiệu trên banner (có tiếng Việt)
-const script = Dancing_Script({ subsets: ["vietnamese", "latin"], weight: ["600", "700"], variable: "--font-script", display: "swap" });
+const script = Dancing_Script({ subsets: ["vietnamese", "latin"], weight: ["600", "700"], variable: "--font-dancing", display: "swap" });
 
 const IOS_SPLASH: [number, number, number][] = [[430, 932, 3], [393, 852, 3], [428, 926, 3], [390, 844, 3], [375, 812, 3], [414, 896, 3], [414, 896, 2], [414, 736, 3], [375, 667, 2], [320, 568, 2], [834, 1194, 2], [1024, 1366, 2], [810, 1080, 2], [768, 1024, 2]];
 
