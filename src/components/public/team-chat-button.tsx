@@ -11,6 +11,19 @@ import type { ChatMessageDTO } from "@/lib/services/team-chat";
 import { useT, useLocale } from "@/lib/i18n/client";
 import { intlLocale } from "@/lib/i18n/format";
 
+/** Giờ cho tin hôm nay; tin cũ hơn kèm ngày (và năm nếu khác năm nay) để khỏi nhầm tin cách cả tháng. */
+function stamp(iso: string, loc: string) {
+  const tz = "Asia/Ho_Chi_Minh";
+  const d = new Date(iso);
+  const time = d.toLocaleTimeString(loc, { hour: "2-digit", minute: "2-digit", timeZone: tz });
+  const day = (x: Date) => x.toLocaleDateString("en-CA", { timeZone: tz });
+  const now = new Date();
+  if (day(d) === day(now)) return time;
+  const sameYear = day(d).slice(0, 4) === day(now).slice(0, 4);
+  const date = d.toLocaleDateString(loc, { day: "2-digit", month: "2-digit", ...(sameYear ? {} : { year: "numeric" }), timeZone: tz });
+  return `${time} · ${date}`;
+}
+
 export function TeamChatButton() {
   const t = useT();
   const locale = useLocale();
@@ -232,7 +245,7 @@ export function TeamChatButton() {
                         <Avatar name={m.authorName} src={m.authorAvatar} size={28} />
                       </div>
                     )}
-                    <div className={cn("max-w-[80%]", isMe && "text-right")}>
+                    <div className={cn("max-w-[80%]", isMe && "flex flex-col items-end")}>
                       {!isMe && (
                         <div className="mb-0.5 flex items-center gap-1.5 text-[11px] text-slate-500">
                           <span className="font-semibold text-slate-700 truncate">{m.authorName}</span>
@@ -241,7 +254,7 @@ export function TeamChatButton() {
                       )}
                       <div
                         className={cn(
-                          "rounded-2xl px-3 py-2 text-xs leading-relaxed shadow-xs whitespace-pre-wrap sm:text-sm",
+                          "rounded-2xl px-3 py-2 text-left text-xs leading-relaxed shadow-xs whitespace-pre-wrap sm:text-sm",
                           isMe
                             ? "rounded-tr-sm bg-[#005ba6] text-white"
                             : "rounded-tl-sm bg-white text-slate-800"
@@ -283,10 +296,7 @@ export function TeamChatButton() {
                         )}
                       </div>
                       <div className="mt-0.5 px-1 text-[10px] text-slate-400">
-                        {new Date(m.createdAt).toLocaleTimeString(intlLocale(locale), {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        {stamp(m.createdAt, intlLocale(locale))}
                       </div>
                     </div>
                   </div>
