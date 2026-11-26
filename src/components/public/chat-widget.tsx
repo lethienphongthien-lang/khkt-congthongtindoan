@@ -7,6 +7,27 @@ import { cn } from "@/utils";
 import { useT } from "@/lib/i18n/client";
 
 type Msg = { role: "user" | "bot"; text: string; sources?: ChatSource[]; error?: boolean };
+
+/** Biến đường dẫn trong câu trả lời (https://… hoặc /bai-viet/…) thành liên kết bấm được; bỏ dấu câu/ngoặc đóng ở cuối. */
+const LINK_RE = /(https?:\/\/[^\s<>"']+|(?<![\w/:.])\/[a-z0-9][a-z0-9\-_/%.]*[a-z0-9\-_/])/gi;
+function linkify(text: string): React.ReactNode[] {
+  const out: React.ReactNode[] = [];
+  let last = 0;
+  for (const m of text.matchAll(LINK_RE)) {
+    let url = m[0];
+    let tail = "";
+    while (/[).,;:!?\]]$/.test(url)) { tail = url.slice(-1) + tail; url = url.slice(0, -1); }
+    const i = m.index!;
+    out.push(text.slice(last, i));
+    out.push(url.startsWith("/")
+      ? <Link key={i} href={url} className="font-medium text-primary underline break-all">{url}</Link>
+      : <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline break-all">{url}</a>);
+    out.push(tail);
+    last = i + m[0].length;
+  }
+  out.push(text.slice(last));
+  return out;
+}
 const SUGGEST = ["community.chat.s1", "community.chat.s2", "community.chat.s3"] as const;
 
 /** Chatbot hỏi đáp nổi ở góc dưới trang công khai. Chỉ trả lời từ nội dung công khai của website. */
@@ -86,7 +107,7 @@ export function ChatWidget() {
             {msgs.map((m, i) => (
               <div key={i} className={cn("flex", m.role === "user" && "justify-end")}>
                 <div className={cn("max-w-[88%] whitespace-pre-wrap rounded-2xl px-3 py-2 shadow-sm", m.role === "user" ? "rounded-tr-sm bg-primary text-white" : m.error ? "rounded-tl-sm bg-red-50 text-red-700" : "rounded-tl-sm bg-white")}>
-                  {m.text}
+                  {m.role === "bot" && !m.error ? linkify(m.text) : m.text}
                   {m.sources && m.sources.length > 0 && (
                     <div className="mt-2 space-y-0.5 border-t border-border pt-1.5 text-xs">
                       <div className="text-muted">{t("community.chat.more")}</div>
