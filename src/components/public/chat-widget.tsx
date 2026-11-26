@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { MessageCircle, Send, Sparkles, X } from "lucide-react";
+import { MessageCircle, Plus, Send, Sparkles, X } from "lucide-react";
 import { chatAskAction, type ChatSource } from "@/actions/chat";
 import { cn } from "@/utils";
 import { useT } from "@/lib/i18n/client";
@@ -28,6 +28,8 @@ function linkify(text: string): React.ReactNode[] {
   out.push(text.slice(last));
   return out;
 }
+const STORE_KEY = "doan_chat_history_v1";
+const MAX_SAVED = 60;
 const SUGGEST = ["community.chat.s1", "community.chat.s2", "community.chat.s3"] as const;
 
 /** Chatbot hỏi đáp nổi ở góc dưới trang công khai. Chỉ trả lời từ nội dung công khai của website. */
@@ -39,6 +41,26 @@ export function ChatWidget() {
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
   const end = useRef<HTMLDivElement>(null);
+  const loaded = useRef(false);
+
+  // Lịch sử đoạn chat lưu trong trình duyệt (localStorage): tắt/mở lại hay tải lại trang vẫn còn
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) setMsgs(arr.filter((m) => m && (m.role === "user" || m.role === "bot") && typeof m.text === "string").slice(-MAX_SAVED));
+      }
+    } catch { /* trình duyệt chặn lưu trữ: bỏ qua */ }
+    loaded.current = true;
+  }, []);
+  useEffect(() => {
+    if (!loaded.current) return;
+    try {
+      if (msgs.length) localStorage.setItem(STORE_KEY, JSON.stringify(msgs.slice(-MAX_SAVED)));
+      else localStorage.removeItem(STORE_KEY);
+    } catch { /* đầy bộ nhớ hoặc bị chặn */ }
+  }, [msgs]);
   useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [msgs, busy, open]);
 
   // Đồng bộ đóng/ẩn khi khung chat khác (Kênh BCH & Bí thư) đang mở để không đè lên nhau
@@ -99,6 +121,7 @@ export function ChatWidget() {
         <div role="dialog" aria-label={t("community.chat.dialog")} className="flex h-[min(44rem,calc(100dvh-6rem))] w-[min(30rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-border bg-white shadow-2xl">
           <div className="flex items-center gap-2 bg-primary px-3 py-2.5 text-white">
             <Sparkles className="size-4" /><div className="flex-1 text-sm font-semibold">{t("community.chat.title")} <span className="ml-1 rounded bg-white/20 px-1.5 py-0.5 text-[10px] font-bold tracking-wide">AI</span></div>
+            {msgs.length > 0 && <button type="button" onClick={() => { if (!busy) { setMsgs([]); setQ(""); } }} disabled={busy} className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium hover:bg-white/15 disabled:opacity-50"><Plus className="size-3.5" />{t("community.chat.new")}</button>}
             <button type="button" onClick={handleClose} aria-label={t("community.chat.close")} className="rounded p-1 hover:bg-white/15"><X className="size-4" /></button>
           </div>
           <div className="flex-1 space-y-2.5 overflow-y-auto bg-slate-50 p-3 text-sm">
